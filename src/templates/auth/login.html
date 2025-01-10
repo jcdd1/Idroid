@@ -28,6 +28,7 @@
     <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
 
     <div class="form-floating">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" class="form-control" id="username" name="username" placeholder="name">
         <label for="username">Usuario</label>
     </div>

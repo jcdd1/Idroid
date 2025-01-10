@@ -1,1 +1,7 @@
 {% extends './layout.html' %}
+
+
+{% block body %}
+<h1> {{ current_user.username}}</h1>
+<a class="btn btn-secondary" href="{{ url_for('logout') }}">Logout</a>
+{% endblock %}

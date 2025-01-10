@@ -25,7 +25,7 @@ class ModelLog():
         try:
             result = db.session.execute(
             text("SELECT user_id, role, warehouse_id, username FROM users WHERE user_id = :user_id"),
-            {'id': user_id}
+            {'user_id': user_id}
         ).fetchone()
             
             if result is not None:

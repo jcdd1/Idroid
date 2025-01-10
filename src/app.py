@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 from flask_login import LoginManager, login_user, logout_user, login_required
-
+from flask_wtf.csrf import CSRFProtect
 
 
 #Modelos
@@ -19,6 +19,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 login_manager_app = LoginManager(app)
+csrf = CSRFProtect()
 
 @login_manager_app.user_loader
 def load_user(user_id):
@@ -35,7 +36,7 @@ def login():
         logged_user =  ModelLog.login(db,user)
         
         if logged_user != None:
-            #login_user(logged_user)
+            login_user(logged_user)
             return redirect(url_for('menu'))
         else:
             flash("Usuario o contraseña invalida")
@@ -43,11 +44,27 @@ def login():
         return render_template("auth/login.html")
     else:
         return render_template("auth/login.html")
+    
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 @app.route('/menu', methods=['GET', 'POST'])
+@login_required
 def menu():
     return render_template("menu/menu.html")
 
+
+#Manejo de errores en el servidor
+def status_401(error):
+    return redirect(url_for('login'))
+
+def status_404(error):
+    return "<h1> Página no encontrada</h>", 404
+
 if __name__=='__main__':
-    
+    app.register_error_handler(401, status_401)
+    app.register_error_handler(404, status_404)
+    csrf.init_app(app)
     app.run(host='0.0.0.0', port = '8080')
