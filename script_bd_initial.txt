@@ -1,0 +1,80 @@
+-- Crear la base de datos (opcional si no existe ya)
+CREATE DATABASE sistema_inventarios;
+
+-- Extensión para encriptación de contraseñas
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Create products table
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    imei VARCHAR(50) UNIQUE NOT NULL,
+    storage INTEGER NOT NULL, -- Changed from gb to storage
+    battery INTEGER NOT NULL,
+    color VARCHAR(50) NOT NULL,
+    description TEXT,
+    cost NUMERIC(12, 2) NOT NULL,
+    current_status VARCHAR(50) NOT NULL DEFAULT 'In Warehouse' -- Possible statuses: In Warehouse, Under Repair, Sold
+);
+
+-- Create warehouses table
+CREATE TABLE warehouses (
+    warehouse_id SERIAL PRIMARY KEY,
+    warehouse_name VARCHAR(100) NOT NULL
+);
+
+-- Create users table
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    role VARCHAR(50) NOT NULL, -- Possible roles: Admin, Operator
+    warehouse_id INTEGER REFERENCES warehouses (warehouse_id),
+    username VARCHAR(50) UNIQUE NOT NULL, -- Login username
+    userpassword VARCHAR(255) NOT NULL       -- Encrypted password
+);
+
+-- Create inventory movements table
+CREATE TABLE inventory_movements (
+    movement_id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES products (product_id),
+    origin_warehouse_id INTEGER REFERENCES warehouses (warehouse_id),
+    destination_warehouse_id INTEGER REFERENCES warehouses (warehouse_id),
+    sender_user_id INTEGER REFERENCES users (user_id),
+    receiver_user_id INTEGER REFERENCES users (user_id),
+    send_date TIMESTAMP NOT NULL,
+    receive_date TIMESTAMP,
+    movement_status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- Statuses: Pending, Confirmed
+    movement_description TEXT
+);
+
+-- Create invoices table
+CREATE TABLE invoices (
+    invoice_id SERIAL PRIMARY KEY,
+    type VARCHAR(10) NOT NULL, -- Possible values: invoice, order
+    document_number VARCHAR(50) UNIQUE NOT NULL,
+    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    product_id INTEGER REFERENCES products (product_id),
+    client VARCHAR(100)
+);
+
+-- Insert initial warehouses
+INSERT INTO warehouses (warehouse_name) VALUES
+('Main Warehouse'),
+('Secondary Warehouse');
+
+-- Insert initial users with encrypted passwords
+INSERT INTO users (name, role, warehouse_id, username, userpassword)
+VALUES
+('John Perez', 'Admin', 1, 'jperez', crypt('admin123', gen_salt('bf'))),
+('Mary Lopez', 'Operator', 2, 'mlopez', crypt('operator456', gen_salt('bf')));
+
+-- Insert initial products
+INSERT INTO products (imei, storage, battery, color, description, cost, current_status)
+VALUES
+('123456789012345', 128, 5000, 'Black', 'Brand new product in perfect condition', 750000.00, 'In Warehouse'),
+('987654321098765', 256, 4000, 'White', 'Product with minor scratches', 850000.00, 'In Warehouse');
+
+-- Insert example inventory movement
+INSERT INTO inventory_movements (product_id, origin_warehouse_id, destination_warehouse_id, sender_user_id, send_date, movement_description)
+VALUES
+(1, 1, 2, 1, CURRENT_TIMESTAMP, 'Transferred to Secondary Warehouse for technical review');
+
