@@ -1,46 +1,64 @@
 {% extends './layout.html' %}
 
-
 {% block customCSS %}
-<!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}"> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styleLogin.css') }}">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+{% endblock %}
+
+{% block title %} 
+    Login 
 {% endblock %}
 
 
 {% block body %}
+<div class="wrapper">
+    <span class="bg-animate"></span>
+    <span class="bg-animate2"></span>
 
-<form class="form-signin" action="/login" method="POST">
-    <!-- <img class="mb-4" src="{{ url_for('static', filename='imagenes/foto.jpg') }}" alt="" width="100" height="60"> -->
-    {%with messages = get_flashed_messages() %}
+    <!-- Formulario de inicio de sesión -->
+    <div class="form-box login">
+        <h2 class="animation" style="--i:0; --j:21;">Please sign in</h2>
+        <form action="/login" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="input-box animation" style="--i:1; --j:22;">
+                <input type="username" name="username" required>
+                <label>Username</label>
+                <i class='bx bxs-user'></i>
+            </div>
+            <div class="input-box animation" style="--i:2; --j:23;">
+                <input type="password" name="password" required>
+                <label>Password</label>
+                <i class='bx bxs-lock-alt'></i>
+            </div>
+            <button type="submit" class="btn animation" style="--i:3; --j:24;">Ingresar</button>
+            <div class="logreg-link animation" style="--i:4; --j:25;">
+            </div>
 
-    {%if messages %}
+            {%with messages = get_flashed_messages() %}
 
-    <br/>
-    {% for message in messages %}
-    <div class="alert alert-primary alert-dismissible" role="alert">
-        <strong>{{ message }}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-
-    {% endfor %}
-    {% endif %}
-
-    {% endwith %}
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
-
-    <div class="form-floating">
+            {%if messages %}
         
-        <input type="text" class="form-control" id="username" name="username" placeholder="name">
-        <label for="username">Usuario</label>
-    </div>
-    <div class="form-floating">
-        <input type="text" class="form-control" id="password" name="password" placeholder="Password">
-        <label for="password">Password</label>
+            <br/>
+            {% for message in messages %}
+            <div class="alert alert-primary alert-dismissible" role="alert">
+                <strong>{{ message }}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        
+            {% endfor %}
+            {% endif %}
+        
+            {% endwith %}
+        </form>
     </div>
 
-    <button class="btn btn-primary w-100 py-2" type="submit">Sign in</button>
-    <p class="mt-5 mb-3 text-body-secondary">&copy; 2017–2024</p>
-</form>
+    <!-- Información adicional -->
+    <div class="info-text login">
+        <a href="#">
+            <img src="{{ url_for('static', filename='images/logo2.png') }}" alt="Logo">
+        </a>
+
+    </div>
 
 
 {% endblock %}
