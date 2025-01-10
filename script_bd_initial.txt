@@ -1,38 +1,50 @@
--- Crear la base de datos (opcional si no existe ya)
-CREATE DATABASE sistema_inventarios;
-
--- Extensión para encriptación de contraseñas
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- Create products table
 CREATE TABLE products (
     product_id SERIAL PRIMARY KEY,
     imei VARCHAR(50) UNIQUE NOT NULL,
-    storage INTEGER NOT NULL, -- Changed from gb to storage
+    storage INTEGER NOT NULL,
     battery INTEGER NOT NULL,
     color VARCHAR(50) NOT NULL,
     description TEXT,
     cost NUMERIC(12, 2) NOT NULL,
-    current_status VARCHAR(50) NOT NULL DEFAULT 'In Warehouse' -- Possible statuses: In Warehouse, Under Repair, Sold
+    current_status VARCHAR(50) NOT NULL DEFAULT 'In Warehouse',
+    acquisition_date DATE
 );
 
--- Create warehouses table
+-- Crear la tabla de facturas
+CREATE TABLE invoices (
+    invoice_id SERIAL PRIMARY KEY,
+    type VARCHAR(10) NOT NULL, -- invoice, order, etc.
+    document_number VARCHAR(50) UNIQUE NOT NULL,
+    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    client VARCHAR(100)
+);
+
+-- Crear la tabla intermedia para la relación muchos a muchos
+CREATE TABLE invoice_products (
+    invoice_product_id SERIAL PRIMARY KEY,
+    invoice_id INTEGER REFERENCES invoices (invoice_id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products (product_id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL, -- Cantidad del producto en la factura
+    price NUMERIC(12, 2) NOT NULL -- Precio del producto en la factura
+);
+
+-- Crear la tabla de almacenes
 CREATE TABLE warehouses (
     warehouse_id SERIAL PRIMARY KEY,
     warehouse_name VARCHAR(100) NOT NULL
 );
 
--- Create users table
+-- Crear la tabla de usuarios
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    role VARCHAR(50) NOT NULL, -- Possible roles: Admin, Operator
+    role VARCHAR(50) NOT NULL, -- Roles: Admin, Operator
     warehouse_id INTEGER REFERENCES warehouses (warehouse_id),
-    username VARCHAR(50) UNIQUE NOT NULL, -- Login username
-    userpassword VARCHAR(255) NOT NULL       -- Encrypted password
+    username VARCHAR(50) UNIQUE NOT NULL,
+    userpassword VARCHAR(255) NOT NULL -- Contraseña encriptada
 );
 
--- Create inventory movements table
+-- Crear la tabla de movimientos de inventario
 CREATE TABLE inventory_movements (
     movement_id SERIAL PRIMARY KEY,
     product_id INTEGER REFERENCES products (product_id),
@@ -42,39 +54,50 @@ CREATE TABLE inventory_movements (
     receiver_user_id INTEGER REFERENCES users (user_id),
     send_date TIMESTAMP NOT NULL,
     receive_date TIMESTAMP,
-    movement_status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- Statuses: Pending, Confirmed
+    movement_status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Confirmed
     movement_description TEXT
 );
 
--- Create invoices table
-CREATE TABLE invoices (
-    invoice_id SERIAL PRIMARY KEY,
-    type VARCHAR(10) NOT NULL, -- Possible values: invoice, order
-    document_number VARCHAR(50) UNIQUE NOT NULL,
-    date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    product_id INTEGER REFERENCES products (product_id),
-    client VARCHAR(100)
-);
 
--- Insert initial warehouses
-INSERT INTO warehouses (warehouse_name) VALUES
-('Main Warehouse'),
-('Secondary Warehouse');
-
--- Insert initial users with encrypted passwords
-INSERT INTO users (name, role, warehouse_id, username, userpassword)
-VALUES
-('John Perez', 'Admin', 1, 'jperez', crypt('admin123', gen_salt('bf'))),
-('Mary Lopez', 'Operator', 2, 'mlopez', crypt('operator456', gen_salt('bf')));
-
--- Insert initial products
-INSERT INTO products (imei, storage, battery, color, description, cost, current_status)
-VALUES
-('123456789012345', 128, 5000, 'Black', 'Brand new product in perfect condition', 750000.00, 'In Warehouse'),
-('987654321098765', 256, 4000, 'White', 'Product with minor scratches', 850000.00, 'In Warehouse');
-
--- Insert example inventory movement
-INSERT INTO inventory_movements (product_id, origin_warehouse_id, destination_warehouse_id, sender_user_id, send_date, movement_description)
-VALUES
-(1, 1, 2, 1, CURRENT_TIMESTAMP, 'Transferred to Secondary Warehouse for technical review');
-
+-- Insertar 40 productos
+INSERT INTO products (imei, storage, battery, color, description, cost, current_status, acquisition_date) VALUES
+('IMEI001', 64, 80, 'Black', 'Product 1 description', 500.00, 'In Warehouse', '2023-01-01'),
+('IMEI002', 128, 90, 'White', 'Product 2 description', 600.00, 'In Warehouse', '2023-01-02'),
+('IMEI003', 256, 85, 'Red', 'Product 3 description', 700.00, 'In Warehouse', '2023-01-03'),
+('IMEI004', 512, 95, 'Blue', 'Product 4 description', 800.00, 'In Warehouse', '2023-01-04'),
+('IMEI005', 64, 70, 'Gray', 'Product 5 description', 450.00, 'In Warehouse', '2023-01-05'),
+('IMEI006', 128, 80, 'Black', 'Product 6 description', 550.00, 'In Warehouse', '2023-01-06'),
+('IMEI007', 256, 85, 'White', 'Product 7 description', 650.00, 'In Warehouse', '2023-01-07'),
+('IMEI008', 512, 90, 'Red', 'Product 8 description', 750.00, 'In Warehouse', '2023-01-08'),
+('IMEI009', 64, 75, 'Blue', 'Product 9 description', 500.00, 'In Warehouse', '2023-01-09'),
+('IMEI010', 128, 85, 'Gray', 'Product 10 description', 600.00, 'In Warehouse', '2023-01-10'),
+('IMEI011', 256, 95, 'Black', 'Product 11 description', 700.00, 'In Warehouse', '2023-01-11'),
+('IMEI012', 512, 80, 'White', 'Product 12 description', 800.00, 'In Warehouse', '2023-01-12'),
+('IMEI013', 64, 70, 'Red', 'Product 13 description', 450.00, 'In Warehouse', '2023-01-13'),
+('IMEI014', 128, 85, 'Blue', 'Product 14 description', 550.00, 'In Warehouse', '2023-01-14'),
+('IMEI015', 256, 90, 'Gray', 'Product 15 description', 650.00, 'In Warehouse', '2023-01-15'),
+('IMEI016', 512, 75, 'Black', 'Product 16 description', 750.00, 'In Warehouse', '2023-01-16'),
+('IMEI017', 64, 85, 'White', 'Product 17 description', 500.00, 'In Warehouse', '2023-01-17'),
+('IMEI018', 128, 95, 'Red', 'Product 18 description', 600.00, 'In Warehouse', '2023-01-18'),
+('IMEI019', 256, 80, 'Blue', 'Product 19 description', 700.00, 'In Warehouse', '2023-01-19'),
+('IMEI020', 512, 70, 'Gray', 'Product 20 description', 800.00, 'In Warehouse', '2023-01-20'),
+('IMEI021', 64, 75, 'Black', 'Product 21 description', 450.00, 'In Warehouse', '2023-01-21'),
+('IMEI022', 128, 90, 'White', 'Product 22 description', 550.00, 'In Warehouse', '2023-01-22'),
+('IMEI023', 256, 85, 'Red', 'Product 23 description', 650.00, 'In Warehouse', '2023-01-23'),
+('IMEI024', 512, 90, 'Blue', 'Product 24 description', 750.00, 'In Warehouse', '2023-01-24'),
+('IMEI025', 64, 80, 'Gray', 'Product 25 description', 500.00, 'In Warehouse', '2023-01-25'),
+('IMEI026', 128, 70, 'Black', 'Product 26 description', 600.00, 'In Warehouse', '2023-01-26'),
+('IMEI027', 256, 85, 'White', 'Product 27 description', 700.00, 'In Warehouse', '2023-01-27'),
+('IMEI028', 512, 95, 'Red', 'Product 28 description', 800.00, 'In Warehouse', '2023-01-28'),
+('IMEI029', 64, 75, 'Blue', 'Product 29 description', 450.00, 'In Warehouse', '2023-01-29'),
+('IMEI030', 128, 85, 'Gray', 'Product 30 description', 550.00, 'In Warehouse', '2023-01-30'),
+('IMEI031', 256, 90, 'Black', 'Product 31 description', 650.00, 'In Warehouse', '2023-01-31'),
+('IMEI032', 512, 80, 'White', 'Product 32 description', 750.00, 'In Warehouse', '2023-02-01'),
+('IMEI033', 64, 70, 'Red', 'Product 33 description', 500.00, 'In Warehouse', '2023-02-02'),
+('IMEI034', 128, 75, 'Blue', 'Product 34 description', 600.00, 'In Warehouse', '2023-02-03'),
+('IMEI035', 256, 85, 'Gray', 'Product 35 description', 700.00, 'In Warehouse', '2023-02-04'),
+('IMEI036', 512, 90, 'Black', 'Product 36 description', 800.00, 'In Warehouse', '2023-02-05'),
+('IMEI037', 64, 95, 'White', 'Product 37 description', 450.00, 'In Warehouse', '2023-02-06'),
+('IMEI038', 128, 80, 'Red', 'Product 38 description', 550.00, 'In Warehouse', '2023-02-07'),
+('IMEI039', 256, 70, 'Blue', 'Product 39 description', 650.00, 'In Warehouse', '2023-02-08'),
+('IMEI040', 512, 75, 'Gray', 'Product 40 description', 750.00, 'In Warehouse', '2023-02-09');

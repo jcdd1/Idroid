@@ -15,14 +15,15 @@ class ModelProduct():
         return [
             Products(
                 product_id=row[0],
-                productname=row[8],
+                productname=row[9],
                 imei=row[1],
                 storage=row[2],
                 battery=row[3],
                 color=row[4],
                 description=row[5],
                 cost=row[6],
-                current_status=row[7]
+                current_status=row[7],
+                acquisition_date = row[8]
             )
             for row in result
         ]

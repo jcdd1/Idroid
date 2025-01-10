@@ -1,13 +1,30 @@
 {% extends './menu.html' %}
 
 {% block body %}
+
+<h1>Productos</h1>
+    
+<!-- Formulario de búsqueda -->
+<form method="GET" action="{{ url_for('show_products') }}">
+    <input type="text" name="productname" placeholder="Nombre del producto" value="{{ request.args.get('productname', '') }}">
+    <input type="text" name="imei" placeholder="IMEI" value="{{ request.args.get('imei', '') }}">
+    <input type="text" name="color" placeholder="Color" value="{{ request.args.get('color', '') }}">
+    <input type="text" name="current_status" placeholder="Estado" value="{{ request.args.get('current_status', '') }}">
+    <button type="submit">Buscar</button>
+</form>
+
     <table border="1">
         <thead>
             <tr>
                 <th>Nombre</th>
                 <th>IMEI</th>
-                <th>Precio</th>
+                <th>Almacenamiento</th>
+                <th>Batería</th>
                 <th>Color</th>
+                <th>Descripción</th>
+                <th>Precio</th>
+                <th>Estado</th>
+                <th>Fecha de adquisición</th>
             </tr>
         </thead>
         <tbody>
@@ -15,8 +32,13 @@
             <tr>
                 <td>{{ product.productname }}</td>
                 <td>{{ product.imei }}</td>
-                <td>{{ product.cost }}</td>
+                <td>{{ product.storage }}</td>
+                <td>{{ product.battery }}</td>
                 <td>{{ product.color }}</td>
+                <td>{{ product.description }}</td>
+                <td>{{ product.cost }}</td>
+                <td>{{ product.current_status }}</td>
+                <td>{{ product.acquisition_date }}</td>
             </tr>
             {% endfor %}
         </tbody>
