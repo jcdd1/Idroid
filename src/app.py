@@ -20,6 +20,7 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 login_manager_app = LoginManager(app)
 csrf = CSRFProtect()
+csrf.init_app(app)
 
 @login_manager_app.user_loader
 def load_user(user_id):
@@ -66,5 +67,4 @@ def status_404(error):
 if __name__=='__main__':
     app.register_error_handler(401, status_401)
     app.register_error_handler(404, status_404)
-    csrf.init_app(app)
     app.run(host='0.0.0.0', port = '8080')
