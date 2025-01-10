@@ -11,9 +11,11 @@ from flask_wtf.csrf import CSRFProtect
 #Modelos
 from models.ModelLog import ModelLog
 
+from models.ModelProduct import ModelProduct
 # Entities
 
 from models.entities.users import User
+from models.entities.product import Products
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -54,7 +56,28 @@ def logout():
 @app.route('/menu', methods=['GET', 'POST'])
 @login_required
 def menu():
-    return render_template("menu/menu.html")
+    return render_template("menu.html")
+
+
+@app.route('/products', methods=['GET'])
+@login_required
+def show_products():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    products = ModelProduct.get_products_paginated(db, per_page, offset)
+    total = ModelProduct.count_products(db)
+    total_pages = (total + per_page - 1) // per_page
+    print(products)
+    return render_template(
+        'menu/products.html',
+        products=products,
+        page=page,
+        total_pages=total_pages
+    )
+
+
 
 
 #Manejo de errores en el servidor

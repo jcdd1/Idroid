@@ -1,0 +1,37 @@
+{% extends './menu.html' %}
+
+{% block body %}
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>IMEI</th>
+                <th>Precio</th>
+                <th>Color</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.productname }}</td>
+                <td>{{ product.imei }}</td>
+                <td>{{ product.cost }}</td>
+                <td>{{ product.color }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Controles de navegación -->
+    <div>
+        {% if page > 1 %}
+            <a href="{{ url_for('show_products', page=page-1) }}">Anterior</a>
+        {% endif %}
+
+        Página {{ page }} de {{ total_pages }}
+
+        {% if page < total_pages %}
+            <a href="{{ url_for('show_products', page=page+1) }}">Siguiente</a>
+        {% endif %}
+    </div>
+{% endblock %}
