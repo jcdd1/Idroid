@@ -8,12 +8,13 @@ from flask_login import LoginManager, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFProtect
 
 
+
 #Modelos
 from models.ModelLog import ModelLog
-
+from models.ModelWarehouse import ModelWarehouse
 from models.ModelProduct import ModelProduct
-# Entities
 
+# Entities
 from models.entities.users import User
 from models.entities.product import Products
 
@@ -77,6 +78,44 @@ def show_products():
         total_pages=total_pages
     )
 
+@app.route('/add_product', methods=['GET', 'POST'])
+def add_product():
+    if request.method == 'GET':
+        # Renderiza el formulario con los almacenes cargados desde la base de datos
+        warehouses = ModelWarehouse.get_all_warehouses(db)
+        return render_template('menu/add_product.html', warehouses=warehouses)
+    
+    if request.method == 'POST':
+        # Valida si los datos han sido enviados
+        if not request.form:
+            flash("No data submitted!", "danger")
+            return redirect(url_for('menu/add_product'))
+
+        # Obtiene los datos del formulario
+        productname = request.form.get('productname')
+        imei = request.form.get('imei')
+        storage = request.form.get('storage', type=int)
+        battery = request.form.get('battery', type=int)
+        color = request.form.get('color')
+        description = request.form.get('description', "")
+        cost = request.form.get('cost', type=float)
+        warehouse_id = request.form.get('warehouse', type=int)
+
+        # Valida campos obligatorios
+        if not (productname and imei and storage and battery and color and cost and warehouse_id):
+            flash("All fields are required!", "danger")
+            return redirect(url_for('add_product'))
+
+        # Llama al modelo para agregar el producto con movimiento inicial
+        success = ModelProduct.add_product_with_initial_movement(
+            db, productname, imei, storage, battery, color, description, cost, warehouse_id
+        )
+        if success:
+            flash("Product added successfully!", "success")
+            return redirect(url_for('show_products'))
+        else:
+            flash("Error adding product. Please try again.", "danger")
+            return redirect(url_for('add_product'))
 
 
 

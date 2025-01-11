@@ -1,0 +1,42 @@
+{% extends './menu.html' %}
+
+{% block body %}
+
+<body>
+    <h1>Add New Product</h1>
+
+    <form action="{{ url_for('add_product') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="productname">Product Name:</label>
+        <input type="text" id="productname" name="productname" required><br>
+
+        <label for="imei">IMEI:</label>
+        <input type="text" id="imei" name="imei" required><br>
+
+        <label for="storage">Storage (GB):</label>
+        <input type="number" id="storage" name="storage" required><br>
+
+        <label for="battery">Battery (%):</label>
+        <input type="number" id="battery" name="battery" required><br>
+
+        <label for="color">Color:</label>
+        <input type="text" id="color" name="color" required><br>
+
+        <label for="description">Description:</label>
+        <textarea id="description" name="description"></textarea><br>
+
+        <label for="cost">Cost:</label>
+        <input type="number" id="cost" name="cost" step="0.01" required><br>
+
+        <label for="warehouse">Initial Warehouse:</label>
+        <select id="warehouse" name="warehouse" required>
+            {% for warehouse in warehouses %}
+                <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+            {% endfor %}
+        </select><br>
+
+        <button type="submit">Add Product</button>
+    </form>
+</body>
+</html>
+{% endblock %}
