@@ -1,39 +1,49 @@
-{% extends './menu.html' %}
+{% extends 'menu.html' %}
 
-{% block body %}
+{% block dynamicContent %}
+<h1 class="text-success">Productos</h1>
 
-<h1>Productos</h1>
-
+<!-- Mensajes Flash -->
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
-    <br/>
-    {% for category, message in messages %}
-        {% if category == 'success' %}
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <strong>{{ message }}</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endif %}
-    {% endfor %}
+    <div class="mt-3">
+        {% for category, message in messages %}
+            {% if category == 'success' %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <strong>{{ message }}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
 {% endif %}
 {% endwith %}
-    
+
 <!-- Formulario de búsqueda -->
-<form method="GET" action="{{ url_for('show_products') }}">
-    <input type="text" name="imei" placeholder="Search by IMEI" value="{{ imei }}">
-    <input type="text" name="productname" placeholder="Search by Name" value="{{ productname }}">
-    <select name="current_status">
-        <option value="" {% if not current_status %}selected{% endif %}>All Statuses</option>
-        <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>In Warehouse</option>
-        <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
-        <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Sold</option>
-    </select>
-    <button type="submit">Search</button>
+<form method="GET" action="{{ url_for('show_products') }}" class="row g-3 mt-4">
+    <div class="col-md-4">
+        <input type="text" name="imei" class="form-control border-success" placeholder="Search by IMEI">
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="productname" class="form-control border-success" placeholder="Search by Name">
+    </div>
+    <div class="col-md-3">
+        <select name="current_status" class="form-select border-success">
+            <option value="" {% if not current_status %}selected{% endif %}>All Statuses</option>
+            <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>In Warehouse</option>
+            <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+            <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Sold</option>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <button type="submit" class="btn btn-success w-100">Search</button>
+    </div>
 </form>
 
-
-    <table border="1">
-        <thead>
+<!-- Tabla de productos -->
+<div class="table-responsive mt-4">
+    <table class="table table-striped">
+        <thead class="table-success">
             <tr>
                 <th>Nombre</th>
                 <th>IMEI</th>
@@ -62,17 +72,19 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
 
-    <!-- Controles de navegación -->
-    <div>
-        {% if page > 1 %}
-            <a href="{{ url_for('show_products', page=page-1) }}">Anterior</a>
-        {% endif %}
+<!-- Paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+    {% if page > 1 %}
+        <a href="{{ url_for('show_products', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
+    {% endif %}
 
-        Página {{ page }} de {{ total_pages }}
+    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
 
-        {% if page < total_pages %}
-            <a href="{{ url_for('show_products', page=page+1) }}">Siguiente</a>
-        {% endif %}
-    </div>
+    {% if page < total_pages %}
+        <a href="{{ url_for('show_products', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
+    {% endif %}
+</div>
 {% endblock %}
+

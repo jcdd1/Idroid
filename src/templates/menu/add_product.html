@@ -1,42 +1,58 @@
-{% extends './menu.html' %}
+{% extends 'menu.html' %}
 
-{% block body %}
+{% block dynamicContent %}
+<h1 class="text-success">Añadir nuevo producto</h1>
 
-<body>
-    <h1>Add New Product</h1>
+<!-- Formulario de Añadir Producto -->
+<form action="{{ url_for('add_product') }}" method="POST" class="row g-3 mt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <form action="{{ url_for('add_product') }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label for="productname">Product Name:</label>
-        <input type="text" id="productname" name="productname" required><br>
+    <div class="col-md-6">
+        <label for="productname" class="form-label">Nombre del Producto:</label>
+        <input type="text" id="productname" name="productname" class="form-control border-success" required>
+    </div>
 
-        <label for="imei">IMEI:</label>
-        <input type="text" id="imei" name="imei" required><br>
+    <div class="col-md-6">
+        <label for="imei" class="form-label">IMEI:</label>
+        <input type="text" id="imei" name="imei" class="form-control border-success" required>
+    </div>
 
-        <label for="storage">Storage (GB):</label>
-        <input type="number" id="storage" name="storage" required><br>
+    <div class="col-md-6">
+        <label for="storage" class="form-label">Almacenamiento (GB):</label>
+        <input type="number" id="storage" name="storage" class="form-control border-success" required>
+    </div>
 
-        <label for="battery">Battery (%):</label>
-        <input type="number" id="battery" name="battery" required><br>
+    <div class="col-md-6">
+        <label for="battery" class="form-label">Batería (%):</label>
+        <input type="number" id="battery" name="battery" class="form-control border-success" required>
+    </div>
 
-        <label for="color">Color:</label>
-        <input type="text" id="color" name="color" required><br>
+    <div class="col-md-6">
+        <label for="color" class="form-label">Color:</label>
+        <input type="text" id="color" name="color" class="form-control border-success" required>
+    </div>
 
-        <label for="description">Description:</label>
-        <textarea id="description" name="description"></textarea><br>
+    <div class="col-md-6">
+        <label for="description" class="form-label">Descripción:</label>
+        <textarea id="description" name="description" class="form-control border-success"></textarea>
+    </div>
 
-        <label for="cost">Cost:</label>
-        <input type="number" id="cost" name="cost" step="0.01" required><br>
+    <div class="col-md-6">
+        <label for="cost" class="form-label">Costo:</label>
+        <input type="number" id="cost" name="cost" step="0.01" class="form-control border-success" required>
+    </div>
 
-        <label for="warehouse">Initial Warehouse:</label>
-        <select id="warehouse" name="warehouse" required>
+    <div class="col-md-6">
+        <label for="warehouse" class="form-label">Almacén Inicial:</label>
+        <select id="warehouse" name="warehouse" class="form-select border-success" required>
             {% for warehouse in warehouses %}
                 <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
             {% endfor %}
-        </select><br>
+        </select>
+    </div>
 
-        <button type="submit">Add Product</button>
-    </form>
-</body>
-</html>
+    <div class="col-12 text-center">
+        <button type="submit" class="btn btn-success px-5 py-3 mt-3 button-add-product">Añadir Producto</button>
+    </div>
+</form>
 {% endblock %}

@@ -1,0 +1,81 @@
+/* Estilo general */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+}
+
+/* Navbar superior */
+.navbar {
+    background-color: #e8f5e9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.logo-navbar {
+    width: 150px;
+    height: 125px;
+}
+
+.titulo-navbar {
+    color: #388e3c;
+    font-weight: bold;
+    font-size: 2.8rem;
+}
+
+.logout-button {
+    background-color: #2e7d32 !important;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+    background-color: #1b5e20 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Navbar lateral */
+.menu-lateral {
+    background: linear-gradient(180deg, #388e3c, #1b5e20);
+    color: #ffffff;
+    width: 250px; 
+    height: 100vh;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.menu-titulo {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #ffffff;
+}
+
+.menu-boton {
+    font-size: 1.5rem; 
+    color: #ffffff !important;
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.menu-boton:hover {
+    background-color: #66bb6a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Contenido principal */
+.contenido-titulo {
+    font-size: 1.5rem;
+    color: #2e7d32;
+}
+
+.contenido-texto {
+    color: #388e3c;
+}
