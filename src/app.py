@@ -4,7 +4,7 @@ from sqlalchemy import text
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
-from flask_login import LoginManager, login_user, logout_user, login_required
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
 
 
@@ -35,6 +35,10 @@ def index():
 
 @app.route('/login', methods=['GET','POST'])
 def login():
+
+    if current_user.is_authenticated:
+        return redirect(url_for('menu'))
+
     if request.method =='POST':
         user = User(0, "","","",request.form['username'], request.form['password'])
         logged_user =  ModelLog.login(db,user)
@@ -63,20 +67,39 @@ def menu():
 @app.route('/products', methods=['GET'])
 @login_required
 def show_products():
+    # Parámetros de búsqueda
+    imei = request.args.get('imei')  # Valor del IMEI
+    productname = request.args.get('productname')  # Nombre del producto
+    current_status = request.args.get('current_status')  # Estado actual
+
+    # Paginación
     page = request.args.get('page', 1, type=int)
     per_page = 10
     offset = (page - 1) * per_page
 
-    products = ModelProduct.get_products_paginated(db, per_page, offset)
-    total = ModelProduct.count_products(db)
+    # Verifica si hay filtros
+    if imei or productname or current_status:
+        # Aplica filtro si hay parámetros
+        products, total = ModelProduct.filter_products(
+            db, imei=imei, productname=productname, current_status=current_status, limit=per_page, offset=offset
+        )
+    else:
+        # Muestra todos los productos si no hay filtros
+        products = ModelProduct.get_products_paginated(db, limit=per_page, offset=offset)
+        total = ModelProduct.count_products(db)
+
     total_pages = (total + per_page - 1) // per_page
-    print(products)
+
     return render_template(
         'menu/products.html',
         products=products,
         page=page,
-        total_pages=total_pages
+        total_pages=total_pages,
+        imei=imei,
+        productname=productname,
+        current_status=current_status
     )
+
 
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():

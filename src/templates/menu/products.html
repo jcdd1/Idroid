@@ -20,12 +20,17 @@
     
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_products') }}">
-    <input type="text" name="productname" placeholder="Nombre del producto" value="{{ request.args.get('productname', '') }}">
-    <input type="text" name="imei" placeholder="IMEI" value="{{ request.args.get('imei', '') }}">
-    <input type="text" name="color" placeholder="Color" value="{{ request.args.get('color', '') }}">
-    <input type="text" name="current_status" placeholder="Estado" value="{{ request.args.get('current_status', '') }}">
-    <button type="submit">Buscar</button>
+    <input type="text" name="imei" placeholder="Search by IMEI" value="{{ imei }}">
+    <input type="text" name="productname" placeholder="Search by Name" value="{{ productname }}">
+    <select name="current_status">
+        <option value="" {% if not current_status %}selected{% endif %}>All Statuses</option>
+        <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>In Warehouse</option>
+        <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+        <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Sold</option>
+    </select>
+    <button type="submit">Search</button>
 </form>
+
 
     <table border="1">
         <thead>

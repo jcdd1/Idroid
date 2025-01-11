@@ -59,6 +59,17 @@ CREATE TABLE inventory_movements (
 );
 
 
+-- Insertar 3 almacenes
+INSERT INTO warehouses (warehouse_name) VALUES
+('Main Warehouse'),
+('Secondary Warehouse'),
+('Repair Center');
+
+-- Insertar 2 usuarios
+INSERT INTO users (name, role, warehouse_id, username, userpassword) VALUES
+('John Perez', 'Admin', 1, 'jperez', crypt('admin123', gen_salt('bf'))),
+('Mary Lopez', 'Operator', 2, 'mlopez', crypt('operator456', gen_salt('bf')));
+
 -- Insertar 40 productos
 INSERT INTO products (imei, storage, battery, color, description, cost, current_status, acquisition_date) VALUES
 ('IMEI001', 64, 80, 'Black', 'Product 1 description', 500.00, 'In Warehouse', '2023-01-01'),
@@ -101,3 +112,16 @@ INSERT INTO products (imei, storage, battery, color, description, cost, current_
 ('IMEI038', 128, 80, 'Red', 'Product 38 description', 550.00, 'In Warehouse', '2023-02-07'),
 ('IMEI039', 256, 70, 'Blue', 'Product 39 description', 650.00, 'In Warehouse', '2023-02-08'),
 ('IMEI040', 512, 75, 'Gray', 'Product 40 description', 750.00, 'In Warehouse', '2023-02-09');
+
+-- Insertar 10 facturas
+INSERT INTO invoices (type, document_number, date, client) VALUES
+('invoice', 'INV001', '2025-01-01', 'Client A'),
+('invoice', 'INV002', '2025-01-02', 'Client B'),
+('invoice', 'INV003', '2025-01-03', 'Client C'),
+('invoice', 'INV004', '2025-01-04', 'Client D'),
+('invoice', 'INV005', '2025-01-05', 'Client E'),
+('invoice', 'INV006', '2025-01-06', 'Client F'),
+('invoice', 'INV007', '2025-01-07', 'Client G'),
+('invoice', 'INV008', '2025-01-08', 'Client H'),
+('invoice', 'INV009', '2025-01-09', 'Client I'),
+('invoice', 'INV010', '2025-01-10', 'Client J');

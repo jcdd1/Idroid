@@ -70,3 +70,55 @@ class ModelProduct():
             print(f"Error adding product: {e}")
             db.session.rollback()  # Rollback on error
             return False
+
+    @staticmethod
+    def filter_products(db, imei=None, productname=None, current_status=None, limit=10, offset=0):
+        try:
+            print(imei, " ", productname, " ", current_status)
+            query = text("""
+            WITH filtered_products AS (
+                SELECT * 
+                FROM products
+                WHERE 
+                    (:imei IS NOT NULL AND imei = :imei)
+                    OR (
+                        (:productname IS NOT NULL AND productname ILIKE :productname)
+                        AND (:current_status IS NULL OR current_status ILIKE :current_status)
+                    )
+                    OR (
+                        :imei IS NULL AND :productname IS NULL AND :current_status IS NOT NULL
+                        AND current_status ILIKE :current_status
+                    )
+                    OR (
+                         :productname IS NOT NULL AND productname ILIKE :productname)
+            )
+            SELECT 
+                (SELECT COUNT(*) FROM filtered_products) AS total_count, -- Total de productos filtrados
+                fp.*
+            FROM filtered_products fp
+            LIMIT :limit OFFSET :offset;
+            """)
+
+            params = {
+                'imei': imei,
+                'productname': f'%{productname}%' if productname else "",
+                'current_status': f'%{current_status}%' if current_status else "",
+                'limit': limit,
+                'offset': offset
+            }
+            # Usa mappings() para obtener un diccionario
+            result = db.session.execute(query, params).mappings().fetchall()
+            
+            # Extrae los resultados
+            total_count = result[0]['total_count'] if result else 0
+            products = [row for row in result]
+
+            return products, total_count
+
+        except Exception as e:
+            print(f"Error filtering products: {e}")
+            return [], 0
+
+        
+
+
