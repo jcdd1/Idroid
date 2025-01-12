@@ -7,7 +7,7 @@ class ModelInvoice:
     def get_invoices_paginated(db, limit, offset):
         query = text("""
             SELECT 
-                invoice_id, type, document_number, date, client
+                *
             FROM invoices
             ORDER BY invoice_id ASC
             LIMIT :limit OFFSET :offset;
@@ -20,7 +20,8 @@ class ModelInvoice:
                 type=row[1],
                 document_number=row[2],
                 date=row[3],
-                client=row[4]
+                client=row[4],
+                status=row[5],
             )
             for row in result
         ]
@@ -122,3 +123,13 @@ class ModelInvoice:
             print(f"Error updating invoice: {e}")
             db.session.rollback()
             return False
+
+    @staticmethod
+    def get_active_invoices(db):
+        query = text("""
+            SELECT invoice_id, document_number 
+            FROM invoices 
+            WHERE status = 'active'
+        """)
+        result = db.session.execute(query).fetchall()
+        return [{"invoice_id": row[0], "document_number": row[1]} for row in result]

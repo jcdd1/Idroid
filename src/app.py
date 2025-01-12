@@ -13,7 +13,7 @@ from flask_wtf.csrf import CSRFProtect
 from models.ModelLog import ModelLog
 from models.ModelWarehouse import ModelWarehouse
 from models.ModelProduct import ModelProduct
-from models.invoice_model import ModelInvoice
+from models.ModelInvoice import ModelInvoice
 
 # Entities
 from models.entities.users import User
@@ -34,8 +34,7 @@ def load_user(user_id):
 def index():
     return redirect(url_for('login'))
 
-
-@app.route('/facturas', methods=['GET'])
+@app.route('/invoices', methods=['GET'])
 @login_required
 def show_invoices():
     # Parámetros de búsqueda
@@ -72,11 +71,12 @@ def show_invoices():
 
 
 
-@app.route('/editar_factura', methods=['POST'])
+@app.route('/edit_invoice', methods=['POST'])
 @login_required
 def edit_invoice():
     # Obtener el ID de la factura
     invoice_id = request.form.get('invoice_id')
+    print(invoice_id)
     invoice = ModelInvoice.get_invoice_by_id(db, invoice_id)
 
     if not invoice:
@@ -100,12 +100,8 @@ def edit_invoice():
 
 
 
-
-
 @app.route('/login', methods=['GET','POST'])
 def login():
-
-
 
     if current_user.is_authenticated:
         return redirect(url_for('menu'))
@@ -133,11 +129,6 @@ def logout():
 @login_required
 def menu():
     return render_template("menu.html")
-
-@app.route('/invoices', methods=['GET', 'POST'])
-@login_required
-def show_invoice():
-    return render_template("menu/invoices.html")
 
 
 @app.route('/products', methods=['GET'])
