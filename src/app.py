@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, Response, session, flash
 from config import Config
 from sqlalchemy import text
@@ -88,6 +89,14 @@ def edit_invoice():
     invoice.document_number = request.form.get('document_number')
     invoice.date = request.form.get('date')
     invoice.client = request.form.get('client')
+
+    # Si la fecha no está en el formulario o está vacía, asigna None
+    if not invoice.date:
+        invoice.date = None
+    else:
+        # Convierte la fecha al formato datetime, si está presente
+        invoice.date = datetime.strptime(invoice.date, '%Y-%m-%dT%H:%M')
+
 
     success = ModelInvoice.update_invoice(db, invoice)
 
