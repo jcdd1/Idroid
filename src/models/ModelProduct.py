@@ -7,8 +7,28 @@ class ModelProduct():
     @staticmethod
     def get_products_paginated(db, limit, offset):
         query = text("""
-            SELECT * FROM products
-            LIMIT :limit OFFSET :offset
+                SELECT 
+                    p.*,
+                    w.warehouse_name
+                FROM 
+                    products p
+                JOIN 
+                    (
+                        SELECT 
+                            product_id,
+                            destination_warehouse_id,
+                            MAX(receive_date) AS last_receive_date
+                        FROM 
+                            inventory_movements
+                        WHERE 
+                            receive_date IS NOT NULL
+                        GROUP BY 
+                            product_id, destination_warehouse_id
+                    ) im ON p.product_id = im.product_id
+                JOIN 
+                    warehouses w ON im.destination_warehouse_id = w.warehouse_id
+
+                LIMIT :limit OFFSET :offset
         """)
         result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
         # Convierte las tuplas a objetos Product
@@ -23,7 +43,8 @@ class ModelProduct():
                 description=row[5],
                 cost=row[6],
                 current_status=row[7],
-                acquisition_date = row[8]
+                acquisition_date = row[8],
+                warehouse_name=row[10],
             )
             for row in result
         ]
@@ -77,32 +98,48 @@ class ModelProduct():
             print(imei, " ", productname, " ", current_status)
             query = text("""
             WITH filtered_products AS (
-                SELECT * 
+                SELECT *
                 FROM products
                 WHERE 
+                   
                     (:imei IS NOT NULL AND imei = :imei)
+
+                    
                     OR (
-                        (:productname IS NOT NULL AND productname ILIKE :productname)
-                        AND (:current_status IS NULL OR current_status ILIKE :current_status)
+                        :imei IS NULL 
+                        AND :productname IS NOT NULL 
+                        AND :current_status IS NOT NULL 
+                        AND productname ILIKE :productname 
+                        AND current_status = :current_status
                     )
+
+                    
                     OR (
-                        :imei IS NULL AND :productname IS NULL AND :current_status IS NOT NULL
+                        :imei IS NULL 
+                        AND :productname IS NOT NULL 
+                        AND productname ILIKE ':productname'
+                    )
+
+                    
+                    OR (
+                        :imei IS NULL 
+                        AND :productname IS NULL 
+                        AND :current_status IS NOT NULL 
                         AND current_status ILIKE :current_status
                     )
-                    OR (
-                         :productname IS NOT NULL AND productname ILIKE :productname)
-            )
+                )
             SELECT 
-                (SELECT COUNT(*) FROM filtered_products) AS total_count, -- Total de productos filtrados
+                (SELECT COUNT(*) FROM filtered_products) AS total_count,
                 fp.*
             FROM filtered_products fp
             LIMIT :limit OFFSET :offset;
+
             """)
 
             params = {
                 'imei': imei,
-                'productname': f'%{productname}%' if productname else "",
-                'current_status': f'%{current_status}%' if current_status else "",
+                'productname': f'%{productname}%' if productname else None,
+                'current_status': f'%{current_status}%' if current_status else None,
                 'limit': limit,
                 'offset': offset
             }

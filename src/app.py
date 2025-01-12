@@ -77,6 +77,8 @@ def show_products():
     per_page = 10
     offset = (page - 1) * per_page
 
+    warehouses_name = ModelWarehouse.get_all_warehouses(db)
+    print(warehouses_name)
     # Verifica si hay filtros
     if imei or productname or current_status:
         # Aplica filtro si hay parámetros
@@ -97,7 +99,8 @@ def show_products():
         total_pages=total_pages,
         imei=imei,
         productname=productname,
-        current_status=current_status
+        current_status=current_status,
+        warehouses_name = warehouses_name
     )
 
 

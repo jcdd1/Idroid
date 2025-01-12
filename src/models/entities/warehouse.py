@@ -1,7 +1,7 @@
 class Warehouse():
 
-    def __init__(self, productwarehouse_id,warehouse_name) -> None:
-        self.productwarehouse_id = productwarehouse_id
+    def __init__(self, warehouse_id,warehouse_name) -> None:
+        self.warehouse_id = warehouse_id
         self.warehouse_name = warehouse_name
 
     def get_id(self):

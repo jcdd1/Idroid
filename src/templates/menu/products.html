@@ -35,6 +35,15 @@
             <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Sold</option>
         </select>
     </div>
+    <div class="col-md-3">
+    <!-- Select para bodegas -->
+        <select name="warehouse_id" class="form-select border-success">
+            <option value="" {% if not warehouse_id %}selected{% endif %}>All Warehouses</option>
+            {% for warehouse in warehouses_name %}
+            <option value="{{ warehouse['warehouse_id'] }}" {% if warehouse_id == warehouse['warehouse_id'] %}selected{% endif %}>{{ warehouse['warehouse_name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <div class="col-md-1">
         <button type="submit" class="btn btn-success w-100">Search</button>
     </div>
@@ -45,15 +54,15 @@
     <table class="table table-striped">
         <thead class="table-success">
             <tr>
-                <th>Nombre</th>
+                <th>Producto</th>
                 <th>IMEI</th>
-                <th>Almacenamiento</th>
+                <th>Memoria</th>
                 <th>Batería</th>
                 <th>Color</th>
                 <th>Descripción</th>
                 <th>Precio</th>
                 <th>Estado</th>
-                <th>Fecha de adquisición</th>
+                <th>Bodega</th>
             </tr>
         </thead>
         <tbody>
@@ -67,7 +76,7 @@
                 <td>{{ product.description }}</td>
                 <td>{{ product.cost }}</td>
                 <td>{{ product.current_status }}</td>
-                <td>{{ product.acquisition_date }}</td>
+                <td>{{product.warehouse_name}}</th>
             </tr>
             {% endfor %}
         </tbody>
