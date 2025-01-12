@@ -101,7 +101,8 @@
 <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" action="{{ url_for('add_product') }}">
+            <form method="POST" action="{{ url_for('edit_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editProductModalLabel">Editar Producto</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

@@ -163,4 +163,36 @@ class ModelProduct():
 
         
 
-
+    @staticmethod
+    def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, current_status):
+        try:
+            query = text("""
+                UPDATE products
+                SET 
+                    productname = :productname,
+                    imei = :imei,
+                    storage = :storage,
+                    battery = :battery,
+                    color = :color,
+                    description = :description,
+                    cost = :cost,
+                    current_status = :current_status
+                WHERE product_id = :product_id
+            """)
+            db.session.execute(query, {
+                "productname": productname,
+                "imei": imei,
+                "storage": storage,
+                "battery": battery,
+                "color": color,
+                "description": description,
+                "cost": cost,
+                "current_status": current_status,
+                "product_id": product_id
+            })
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            return False
+       
