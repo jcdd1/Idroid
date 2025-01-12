@@ -9,7 +9,8 @@ class ModelProduct():
         query = text("""
                 SELECT 
                     p.*,
-                    w.warehouse_name
+                    w.warehouse_name,
+                    f.document_number
                 FROM 
                     products p
                 JOIN 
@@ -27,9 +28,12 @@ class ModelProduct():
                     ) im ON p.product_id = im.product_id
                 JOIN 
                     warehouses w ON im.destination_warehouse_id = w.warehouse_id
-
-                LIMIT :limit OFFSET :offset
-        """)
+                LEFT JOIN 
+                    invoice_products ip ON p.product_id = ip.product_id
+                LEFT JOIN 
+                    invoices f ON ip.invoice_id = f.invoice_id
+                LIMIT :limit OFFSET :offset;
+            """)
         result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
         # Convierte las tuplas a objetos Product
         return [
@@ -43,8 +47,9 @@ class ModelProduct():
                 description=row[5],
                 cost=row[6],
                 current_status=row[7],
-                acquisition_date=row[8][0] if isinstance(row[8], tuple) else row[8],
                 warehouse_name=row[10],
+                acquisition_date=row[8][0] if isinstance(row[8], tuple) else row[8],
+                document_number = row[11]
             )
             for row in result
         ]

@@ -67,6 +67,7 @@
                 <th>Precio</th>
                 <th>Estado</th>
                 <th>Bodega</th>
+                <th>Factura</th>
             </tr>
         </thead>
         <tbody>
@@ -81,6 +82,7 @@
                 <td>{{ product.cost }}</td>
                 <td>{{ product.current_status }}</td>
                 <td>{{product.warehouse_name}}</th>
+                <td>{{ product.document_number or 'Sin Factura' }}</td>
                 <td>
                     <!-- Convertir el producto a JSON serializable -->
                     <button type="button" class="btn btn-info btn-sm" 
@@ -149,10 +151,15 @@
                         <input type="text" class="form-control" id="warehouse_name" name="warehouse_name">
                     </div>
                 </div>
+                <div class="mb-3">
+                    <label for="document_number" class="form-label">Factura Asociada</label>
+                    <input type="text" class="form-control" id="document_number" name="document_number">
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
+
             </form>
         </div>
     </div>

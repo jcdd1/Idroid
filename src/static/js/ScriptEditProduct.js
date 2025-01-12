@@ -24,5 +24,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('current_status').value = product.current_status || "";
         document.getElementById('acquisition_date').value = product.acquisition_date || "";
         document.getElementById('warehouse_name').value = product.warehouse_name || "";
+        document.getElementById('document_number').value = product.document_number || "";
     });
 });
