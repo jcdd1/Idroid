@@ -78,7 +78,7 @@ def show_products():
     offset = (page - 1) * per_page
 
     warehouses_name = ModelWarehouse.get_all_warehouses(db)
-    print(warehouses_name)
+
     # Verifica si hay filtros
     if imei or productname or current_status:
         # Aplica filtro si hay parámetros
@@ -88,6 +88,8 @@ def show_products():
     else:
         # Muestra todos los productos si no hay filtros
         products = ModelProduct.get_products_paginated(db, limit=per_page, offset=offset)
+        # Convierte a JSON serializable
+
         total = ModelProduct.count_products(db)
 
     total_pages = (total + per_page - 1) // per_page

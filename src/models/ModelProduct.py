@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from .entities.product import Products
-
+import datetime
 
 class ModelProduct():
 
@@ -43,7 +43,7 @@ class ModelProduct():
                 description=row[5],
                 cost=row[6],
                 current_status=row[7],
-                acquisition_date = row[8],
+                acquisition_date=row[8][0] if isinstance(row[8], tuple) else row[8],
                 warehouse_name=row[10],
             )
             for row in result
