@@ -13,6 +13,7 @@ from flask_wtf.csrf import CSRFProtect
 from models.ModelLog import ModelLog
 from models.ModelWarehouse import ModelWarehouse
 from models.ModelProduct import ModelProduct
+from models.invoice_model import ModelInvoice
 
 # Entities
 from models.entities.users import User
@@ -33,8 +34,78 @@ def load_user(user_id):
 def index():
     return redirect(url_for('login'))
 
+
+@app.route('/facturas', methods=['GET'])
+@login_required
+def show_invoices():
+    # Parámetros de búsqueda
+    document_number = request.args.get('document_number', '')  
+    client_name = request.args.get('client_name', '')  
+    invoice_type = request.args.get('type', '')  
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+
+    # Consultar facturas
+    if document_number or client_name or invoice_type:
+        invoices, total = ModelInvoice.filter_invoices(
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, limit=per_page, offset=offset
+        )
+    else:
+        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        total = ModelInvoice.count_invoices(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/invoices.html',
+        invoices=invoices,
+        page=page,
+        total_pages=total_pages,
+        document_number=document_number,
+        client_name=client_name,
+        invoice_type=invoice_type
+    )
+
+
+
+@app.route('/editar_factura', methods=['POST'])
+@login_required
+def edit_invoice():
+    # Obtener el ID de la factura
+    invoice_id = request.form.get('invoice_id')
+    invoice = ModelInvoice.get_invoice_by_id(db, invoice_id)
+
+    if not invoice:
+        flash("Factura no encontrada.", "danger")
+        return redirect(url_for('show_invoices'))
+
+    # Actualizar los campos de la factura
+    invoice.type = request.form.get('type')
+    invoice.document_number = request.form.get('document_number')
+    invoice.date = request.form.get('date')
+    invoice.client = request.form.get('client')
+
+    success = ModelInvoice.update_invoice(db, invoice)
+
+    if success:
+        flash("Factura actualizada correctamente.", "success")
+    else:
+        flash("Error al actualizar la factura.", "danger")
+
+    return redirect(url_for('show_invoices'))
+
+
+
+
+
 @app.route('/login', methods=['GET','POST'])
 def login():
+
+
 
     if current_user.is_authenticated:
         return redirect(url_for('menu'))
@@ -62,6 +133,11 @@ def logout():
 @login_required
 def menu():
     return render_template("menu.html")
+
+@app.route('/invoices', methods=['GET', 'POST'])
+@login_required
+def show_invoice():
+    return render_template("menu/invoices.html")
 
 
 @app.route('/products', methods=['GET'])

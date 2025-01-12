@@ -27,3 +27,4 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('document_number').value = product.document_number || "";
     });
 });
+

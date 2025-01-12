@@ -1,0 +1,60 @@
+/* Estilos aplicables solo al modal dentro de dynamicContent */
+.content-container .modal-dynamic {
+    background-color: #0d1117; /* Fondo oscuro */
+    color: #c9d1d9; /* Texto claro */
+    border: 2px solid #2ea043; /* Borde verde */
+    border-radius: 10px; /* Esquinas redondeadas */
+    box-shadow: 0 4px 20px rgba(46, 160, 67, 0.5); /* Sombra verde */
+    animation: fadeInModal 0.5s ease-in-out;
+}
+
+.content-container .modal-dynamic .modal-header {
+    background-color: #2ea043; /* Fondo verde */
+    color: white; /* Texto blanco */
+    border-bottom: 2px solid #238636;
+}
+
+.content-container .modal-dynamic .modal-footer {
+    background-color: #161b22; /* Fondo oscuro */
+    border-top: 2px solid #238636;
+}
+
+.content-container .modal-dynamic .form-control {
+    background-color: #161b22; /* Fondo oscuro */
+    color: #c9d1d9; /* Texto claro */
+    border: 1px solid #2ea043;
+    border-radius: 5px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content-container .modal-dynamic .form-control:focus {
+    border-color: #238636; /* Verde brillante */
+    box-shadow: 0 0 10px #238636;
+}
+
+.content-container .modal-dynamic .btn-success {
+    background-color: #2ea043;
+    border: none;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.content-container .modal-dynamic .btn-success:hover {
+    background-color: #238636;
+    transform: scale(1.05);
+}
+
+.content-container .modal-dynamic .btn-close {
+    filter: invert(1); /* Cambia el color del botón de cierre */
+}
+
+/* Animación para el modal */
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
