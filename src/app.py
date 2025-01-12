@@ -145,6 +145,30 @@ def add_product():
             flash("Error adding product. Please try again.", "danger")
             return redirect(url_for('add_product'))
 
+@app.route('/edit_product', methods=['POST'])
+@login_required
+def edit_product():
+    product_id = request.form['product_id']
+    productname = request.form['productname']
+    imei = request.form['imei']
+    storage = request.form['storage']
+    battery = request.form['battery']
+    color = request.form['color']
+    description = request.form['description']
+    cost = request.form['cost']
+    current_status = request.form['current_status']
+
+    # Actualiza el producto en la base de datos
+    success = ModelProduct.update_product(
+        db, product_id, productname, imei, storage, battery, color, description, cost, current_status
+    )
+
+    if success:
+        flash("Producto actualizado exitosamente.", "success")
+    else:
+        flash("Error al actualizar el producto.", "danger")
+
+    return redirect(url_for('show_products'))
 
 
 #Manejo de errores en el servidor
