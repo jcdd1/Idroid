@@ -15,6 +15,8 @@ from models.ModelLog import ModelLog
 from models.ModelWarehouse import ModelWarehouse
 from models.ModelProduct import ModelProduct
 from models.ModelInvoice import ModelInvoice
+from models.ModelMovement import ModelMovement
+
 
 # Entities
 from models.entities.users import User
@@ -138,6 +140,69 @@ def logout():
 @login_required
 def menu():
     return render_template("menu.html")
+
+@app.route('/movements', methods=['GET'])
+@login_required
+def show_movements():
+    # Search parameters
+    movement_id = request.args.get('movement_id', '')  # Movement ID
+    product_id = request.args.get('product_id', '')  # Product ID
+    movement_status = request.args.get('movement_status', '')  # Movement status
+
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    # Query movements
+    if movement_id or product_id or movement_status:
+        movements, total = ModelMovement.filter_movements(
+            db, movement_id=movement_id, product_id=product_id, movement_status=movement_status, limit=per_page, offset=offset
+        )
+    else:
+        movements = ModelMovement.get_movements_paginated(db, limit=per_page, offset=offset)
+        total = ModelMovement.count_movements(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/movements.html',
+        movements=movements,
+        page=page,
+        total_pages=total_pages,
+        movement_id=movement_id,
+        product_id=product_id,
+        movement_status=movement_status
+    )
+
+@app.route('/edit_movement', methods=['POST'])
+@login_required
+def edit_movement():
+    # Get data from the form
+    movement_id = request.form.get('movement_id')
+    destination_warehouse_id = request.form.get('destination_warehouse_id')
+    movement_status = request.form.get('movement_status')
+    movement_description = request.form.get('movement_description')
+
+    # Validate that the movement exists
+    movement = ModelMovement.get_movement_by_id(db, movement_id)
+    if not movement:
+        flash("Movement not found.", "danger")
+        return redirect(url_for('show_movements'))
+
+    # Update movement
+    movement.destination_warehouse_id = destination_warehouse_id
+    movement.movement_status = movement_status
+    movement.movement_description = movement_description
+
+    success = ModelMovement.update_movement(db, movement)
+    if success:
+        flash("Movement updated successfully.", "success")
+    else:
+        flash("Error updating the movement.", "danger")
+
+    return redirect(url_for('show_movements'))
+
 
 
 @app.route('/products', methods=['GET'])
