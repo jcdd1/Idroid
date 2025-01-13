@@ -133,3 +133,25 @@ class ModelInvoice:
         """)
         result = db.session.execute(query).fetchall()
         return [{"invoice_id": row[0], "document_number": row[1]} for row in result]
+    
+
+    @staticmethod
+    def create_invoice(db, invoice_type, document_number, date, client, status):
+        try:
+            query = text("""
+                INSERT INTO invoices (type, document_number, date, client, status)
+                VALUES (:type, :document_number, :date, :client, :status)
+            """)
+            db.session.execute(query, {
+                'type': invoice_type,
+                'document_number': document_number,
+                'date': date,
+                'client': client,
+                'status': status
+            })
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error al insertar factura: {e}")
+            db.session.rollback()
+            return False

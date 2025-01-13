@@ -111,6 +111,43 @@ def edit_invoice():
     return redirect(url_for('show_invoices'))
 
 
+@app.route('/add_invoice', methods=['POST'])
+def add_invoice():
+    try:
+        # Obtener datos del formulario
+        invoice_type = request.form.get('type')
+        document_number = request.form.get('document_number')
+        date = request.form.get('date')
+        client = request.form.get('client')
+        status = request.form.get('status')
+
+        # Validar datos
+        if not invoice_type or not document_number or not date or not client or not status:
+            flash('Todos los campos son obligatorios.', 'error')
+            return redirect(url_for('invoices.show_invoices'))
+
+        # Crear la factura utilizando el modelo
+        success = ModelInvoice.create_invoice(
+            db=db,
+            invoice_type=invoice_type,
+            document_number=document_number,
+            date=date,
+            client=client,
+            status=status
+        )
+
+        if success:
+            flash('Factura creada exitosamente.', 'success')
+        else:
+            flash('Error al crear la factura.', 'error')
+
+    except Exception as e:
+        print(f"Error al crear la factura: {e}")
+        flash('Ocurrió un error al procesar la solicitud.', 'error')
+
+    # Redirigir al listado de facturas
+    return redirect(url_for('invoices.show_invoices'))
+
 
 @app.route('/login', methods=['GET','POST'])
 def login():
