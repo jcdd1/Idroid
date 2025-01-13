@@ -24,6 +24,13 @@
 {% endif %}
 {% endwith %}
 
+<!-- Botón para crear movimiento -->
+<div class="d-flex justify-content-end mb-3">
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createMovementModal">
+        <img src="{{ url_for('static', filename='images/motion.png') }}" alt="Añadir" style="width: 30px; height: 30px;"> Generar movimiento
+    </button>
+</div>
+
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_products') }}" class="row g-3 mt-4">
     <div class="col-md-4">
@@ -91,10 +98,142 @@
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
                 </td>
+                <td>
+                    <button type="button" class="btn btn-info btn-sm" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#addProductModal" 
+                            data-product='{{ product.to_dict() | tojson }}'>
+                        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+
+<!-- Modal para crear movimiento -->
+<div class="modal fade" id="createMovementModal" tabindex="-1" aria-labelledby="createMovementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('create_movement') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createMovementModalLabel">Crear Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label for="product_ids" class="form-label">Seleccionar Productos</label>
+                            <select class="form-select" id="product_ids" name="product_ids" multiple>
+                                {% for product in products %}
+                                    <option value="{{ product.product_id }}">{{ product.productname }} (ID: {{ product.product_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="origin_warehouse_id" class="form-label">Origen</label>
+                            <select class="form-select" id="origin_warehouse_id" name="origin_warehouse_id">
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="destination_warehouse_id" class="form-label">Destino</label>
+                            <select class="form-select" id="destination_warehouse_id" name="destination_warehouse_id">
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="movement_description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="movement_description" name="movement_description" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Crear Movimiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+<!-- Modal para añadir producto -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('add_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProductModalLabel">Añadir Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="productname" class="form-label">Nombre del Producto</label>
+                            <input type="text" class="form-control" id="productname" name="productname">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="imei" class="form-label">IMEI</label>
+                            <input type="text" class="form-control" id="imei" name="imei">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="storage" class="form-label">Memoria</label>
+                            <input type="number" class="form-control" id="storage" name="storage">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="battery" class="form-label">Batería</label>
+                            <input type="number" class="form-control" id="battery" name="battery">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="color" name="color">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cost" class="form-label">Precio</label>
+                            <input type="number" step="0.01" class="form-control" id="cost" name="cost">
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="current_status" class="form-label">Estado</label>
+                            <input type="text" class="form-control" id="current_status" name="current_status">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="acquisition_date" class="form-label">Fecha de Adquisición</label>
+                            <input type="date" class="form-control" id="acquisition_date" name="acquisition_date">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="warehouse_name" class="form-label">Bodega</label>
+                            <input type="text" class="form-control" id="warehouse_name" name="warehouse_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="document_number" class="form-label">Factura Asociada</label>
+                            <input type="text" class="form-control" id="document_number" name="document_number">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Añadir Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Modal para editar producto -->

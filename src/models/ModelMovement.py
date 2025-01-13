@@ -90,3 +90,45 @@ class ModelMovement:
             print(f"Error updating movement: {e}")
             db.session.rollback()
             return False
+        
+
+    @staticmethod
+    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description):
+        try:
+            query = text("""
+                INSERT INTO inventory_movements (
+                    product_id, 
+                    origin_warehouse_id, 
+                    destination_warehouse_id, 
+                    sender_user_id, 
+                    send_date, 
+                    receive_date, 
+                    movement_status, 
+                    movement_description
+                )
+                VALUES (
+                    :product_id, 
+                    :origin_warehouse_id, 
+                    :destination_warehouse_id, 
+                    1,  -- Asume un ID de usuario para enviar
+                    CURRENT_TIMESTAMP, 
+                    NULL, 
+                    'New', 
+                    :movement_description
+                )
+            """)
+            db.session.execute(query, {
+                'product_id': product_id,
+                'origin_warehouse_id': origin_warehouse_id,
+                'destination_warehouse_id': destination_warehouse_id,
+                'movement_description': movement_description
+            })
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error al crear el movimiento: {e}")
+            db.session.rollback()
+            return False
+        
+
+

@@ -10,6 +10,7 @@ from flask_wtf.csrf import CSRFProtect
 
 
 
+
 #Modelos
 from models.ModelLog import ModelLog
 from models.ModelWarehouse import ModelWarehouse
@@ -204,6 +205,48 @@ def edit_movement():
     return redirect(url_for('show_movements'))
 
 
+@app.route('/create_movement', methods=['POST'])
+def create_movement():
+    try:
+        # Obtener datos del formulario
+        product_ids = request.form.getlist('product_ids')  # Lista de IDs de productos
+        origin_warehouse_id = request.form.get('origin_warehouse_id')
+        destination_warehouse_id = request.form.get('destination_warehouse_id')
+        movement_description = request.form.get('movement_description')
+
+        # Validar datos
+        if not product_ids:
+            flash('Debes seleccionar al menos un producto.', 'error')
+            return redirect(url_for('movements.show_movements'))
+
+        if not origin_warehouse_id or not destination_warehouse_id:
+            flash('Debes especificar tanto el almacén de origen como el de destino.', 'error')
+            return redirect(url_for('movements.show_movements'))
+
+        if origin_warehouse_id == destination_warehouse_id:
+            flash('El almacén de origen y destino no pueden ser iguales.', 'error')
+            return redirect(url_for('movements.show_movements'))
+
+        # Crear movimiento para cada producto seleccionado
+        for product_id in product_ids:
+            success = ModelMovement.create_movement(
+                db=db,
+                product_id=product_id,
+                origin_warehouse_id=origin_warehouse_id,
+                destination_warehouse_id=destination_warehouse_id,
+                movement_description=movement_description
+            )
+            if not success:
+                flash(f'Error al crear movimiento para el producto ID {product_id}.', 'error')
+
+        # Si todo fue exitoso
+        flash('Movimiento(s) creado(s) exitosamente.', 'success')
+        return redirect(url_for('movements.show_movements'))
+
+    except Exception as e:
+        print(f"Error al crear el movimiento: {e}")
+        flash('Error al procesar la solicitud. Inténtalo de nuevo.', 'error')
+        return redirect(url_for('movements.show_movements'))
 
 @app.route('/products', methods=['GET'])
 @login_required
@@ -247,44 +290,43 @@ def show_products():
     )
 
 
-@app.route('/add_product', methods=['GET', 'POST'])
+@app.route('/add_product', methods=['POST'])
 def add_product():
-    if request.method == 'GET':
-        # Renderiza el formulario con los almacenes cargados desde la base de datos
-        warehouses = ModelWarehouse.get_all_warehouses(db)
-        return render_template('menu/add_product.html', warehouses=warehouses)
-    
-    if request.method == 'POST':
-        # Valida si los datos han sido enviados
-        if not request.form:
-            flash("No data submitted!", "danger")
-            return redirect(url_for('menu/add_product'))
+    productname = request.form.get('productname')
+    imei = request.form.get('imei')
+    storage = request.form.get('storage')
+    battery = request.form.get('battery')
+    color = request.form.get('color')
+    description = request.form.get('description')
+    cost = request.form.get('cost')
+    warehouse_id = request.form.get('warehouse_id')
 
-        # Obtiene los datos del formulario
-        productname = request.form.get('productname')
-        imei = request.form.get('imei')
-        storage = request.form.get('storage', type=int)
-        battery = request.form.get('battery', type=int)
-        color = request.form.get('color')
-        description = request.form.get('description', "")
-        cost = request.form.get('cost', type=float)
-        warehouse_id = request.form.get('warehouse', type=int)
+    # Validar datos
+    if not productname or not imei:
+        flash('El nombre del producto e IMEI son obligatorios.', 'error')
+        return redirect(url_for('show_products'))
 
-        # Valida campos obligatorios
-        if not (productname and imei and storage and battery and color and cost and warehouse_id):
-            flash("All fields are required!", "danger")
-            return redirect(url_for('add_product'))
+    # Intentar añadir el producto utilizando el modelo
+    success = ModelProduct.add_product_with_initial_movement(
+        db=db,
+        productname=productname,
+        imei=imei,
+        storage=storage,
+        battery=battery,
+        color=color,
+        description=description,
+        cost=cost,
+        warehouse_id=warehouse_id
+    )
 
-        # Llama al modelo para agregar el producto con movimiento inicial
-        success = ModelProduct.add_product_with_initial_movement(
-            db, productname, imei, storage, battery, color, description, cost, warehouse_id
-        )
-        if success:
-            flash("Product added successfully!", "success")
-            return redirect(url_for('show_products'))
-        else:
-            flash("Error adding product. Please try again.", "danger")
-            return redirect(url_for('add_product'))
+    # Mostrar mensaje según el resultado
+    if success:
+        flash('Producto añadido exitosamente.', 'success')
+    else:
+        flash('Error al añadir el producto.', 'error')
+
+    # Redirigir al listado de productos
+    return redirect(url_for('show_products'))
 
 @app.route('/edit_product', methods=['POST'])
 @login_required
