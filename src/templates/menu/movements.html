@@ -23,6 +23,13 @@
 {% endif %}
 {% endwith %}
 
+<!-- Botón para crear movimiento -->
+<div class="d-flex justify-content-end mb-3">
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createMovementModal">
+        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Añadir" style="width: 25px; height: 25px;"> Crear movimiento
+    </button>
+</div>
+
 <!-- Search Form -->
 <form method="GET" action="{{ url_for('show_movements') }}" class="row g-3 mt-4">
     <div class="col-md-4">
@@ -86,6 +93,58 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+
+<!-- Modal para crear movimiento -->
+<div class="modal fade" id="createMovementModal" tabindex="-1" aria-labelledby="createMovementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('create_movement') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createMovementModalLabel">Crear Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label for="product_ids" class="form-label">Seleccionar Productos</label>
+                            <select class="form-select" id="product_ids" name="product_ids" multiple>
+                                {% for product in products %}
+                                    <option value="{{ product.product_id }}">{{ product.productname }} (ID: {{ product.product_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="origin_warehouse_id" class="form-label">Origen</label>
+                            <select class="form-select" id="origin_warehouse_id" name="origin_warehouse_id">
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="destination_warehouse_id" class="form-label">Destino</label>
+                            <select class="form-select" id="destination_warehouse_id" name="destination_warehouse_id">
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="movement_description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="movement_description" name="movement_description" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Crear Movimiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Modal para editar movimiento -->

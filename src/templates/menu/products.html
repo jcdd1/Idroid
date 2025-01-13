@@ -24,10 +24,10 @@
 {% endif %}
 {% endwith %}
 
-<!-- Botón para crear movimiento -->
+<!-- Botón para crear producto -->
 <div class="d-flex justify-content-end mb-3">
-    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createMovementModal">
-        <img src="{{ url_for('static', filename='images/motion.png') }}" alt="Añadir" style="width: 30px; height: 30px;"> Generar movimiento
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Añadir" style="width: 25px; height: 25px;"> Crear producto
     </button>
 </div>
 
@@ -101,7 +101,7 @@
                 <td>
                     <button type="button" class="btn btn-info btn-sm" 
                             data-bs-toggle="modal" 
-                            data-bs-target="#addProductModal" 
+                            data-bs-target="#createMovementModal" 
                             data-product='{{ product.to_dict() | tojson }}'>
                         <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
@@ -119,20 +119,13 @@
         <div class="modal-content">
             <form method="POST" action="{{ url_for('create_movement') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="product_id" id="movement_product_id">
                 <div class="modal-header">
                     <h5 class="modal-title" id="createMovementModalLabel">Crear Movimiento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-12">
-                            <label for="product_ids" class="form-label">Seleccionar Productos</label>
-                            <select class="form-select" id="product_ids" name="product_ids" multiple>
-                                {% for product in products %}
-                                    <option value="{{ product.product_id }}">{{ product.productname }} (ID: {{ product.product_id }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
                         <div class="col-md-6">
                             <label for="origin_warehouse_id" class="form-label">Origen</label>
                             <select class="form-select" id="origin_warehouse_id" name="origin_warehouse_id">
@@ -163,6 +156,7 @@
         </div>
     </div>
 </div>
+
 
 
 
