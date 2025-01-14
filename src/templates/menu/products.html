@@ -41,14 +41,14 @@
         <input type="text" name="productname" class="form-control border-success" placeholder="Buscar por nombre">
     </div>
     <div class="col-md-4">
-        <input type="text" name="category" class="form-control border-success" placeholder="Buscar por category">
+        <input type="text" name="category" class="form-control border-success" placeholder="Buscar por categoría">
     </div>
     <div class="col-md-3">
         <select name="current_status" class="form-select border-success">
-            <option value="" {% if not current_status %}selected{% endif %}>All Statuses</option>
-            <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>In Warehouse</option>
-            <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
-            <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Sold</option>
+            <option value="" {% if not current_status %}selected{% endif %}>Todos los estados</option>
+            <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>En Almacén</option>
+            <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>En Reparación</option>
+            <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Vendido</option>
         </select>
     </div>
     <div class="col-md-3">
@@ -60,7 +60,7 @@
         </select>
     </div>
     <div class="col-md-1">
-        <button type="submit" class="btn btn-success w-100">Search</button>
+        <button type="submit" class="btn btn-success w-100">Buscar</button>
     </div>
 </form>
 
@@ -75,8 +75,13 @@
                 <th>Batería</th>
                 <th>Color</th>
                 <th>Descripción</th>
+                <th>Costo</th>
+                <th>Precio</th>
                 <th>Categoría</th>
+                <th>Unidades</th>
+                <th>Proveedor</th>
                 <th>Estado</th>
+                <th>Fecha Adquisición</th>
             </tr>
         </thead>
         <tbody>
@@ -86,21 +91,20 @@
                     data-bs-toggle="modal" 
                     data-bs-target="#viewMovementsModal" 
                     data-imei="{{ product.imei }}">
-                    <!-- data-product='{{ product.to_dict() | tojson }}'> -->
                     {{ product.productname }}
                 </td>
-                <td style="cursor: pointer; color: blue;" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#viewMovementsModal" 
-                    data-imei="{{ product.imei }}">
-                    {{ product.imei }}
-                </td>
+                <td>{{ product.imei }}</td>
                 <td>{{ product.storage }}</td>
                 <td>{{ product.battery }}</td>
                 <td>{{ product.color }}</td>
                 <td>{{ product.description }}</td>
+                <td>{{ product.cost }}</td>
+                <td>{{ product.price }}</td>
                 <td>{{ product.category }}</td>
+                <td>{{ product.units }}</td>
+                <td>{{ product.supplier }}</td>
                 <td>{{ product.current_status }}</td>
+                <td>{{ product.acquisition_date }}</td>
                 <td>
                     <button type="button" class="btn btn-info btn-sm" 
                             data-bs-toggle="modal" 
@@ -168,6 +172,14 @@
                             <input type="text" class="form-control" id="category" name="category">
                         </div>
                         <div class="col-md-6">
+                            <label for="units" class="form-label">Unidades</label>
+                            <input type="number" class="form-control" id="units" name="units">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="supplier" class="form-label">Proveedor</label>
+                            <input type="text" class="form-control" id="supplier" name="supplier">
+                        </div>
+                        <div class="col-md-6">
                             <label for="current_status" class="form-label">Estado</label>
                             <input type="text" class="form-control" id="current_status" name="current_status">
                         </div>
@@ -230,6 +242,14 @@
                         <div class="col-md-6">
                             <label for="category" class="form-label">Categoría</label>
                             <input type="text" class="form-control" id="category" name="category">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="units" class="form-label">Unidades</label>
+                            <input type="number" class="form-control" id="units" name="units">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="supplier" class="form-label">Proveedor</label>
+                            <input type="text" class="form-control" id="supplier" name="supplier">
                         </div>
                         <div class="col-md-6">
                             <label for="current_status" class="form-label">Estado</label>
@@ -315,34 +335,37 @@
 
 <!-- Modal para mostrar movimientos -->
 <div class="modal fade" id="viewMovementsModal" tabindex="-1" aria-labelledby="viewMovementsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewMovementsModalLabel">Movimientos del Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="viewMovementsModalLabel">Movimientos del Producto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID Movimiento</th>
-                            <th>Origen</th>
-                            <th>Destino</th>
-                            <th>Enviado por</th>
-                            <th>Recibido por</th>
-                            <th>Fecha Envío</th>
-                            <th>Fecha Recepción</th>
-                            <th>Estado</th>
-                            <th>Descripción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="movementsTableBody">
-                        <!-- Los movimientos se llenarán dinámicamente -->
-                    </tbody>
-                </table>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID Movimiento</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th>Enviado por</th>
+                                <th>Recibido por</th>
+                                <th>Fecha Envío</th>
+                                <th>Fecha Recepción</th>
+                                <th>Estado</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movementsTableBody">
+                            <!-- Los movimientos se llenarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary">Exportar Movimientos</button>
             </div>
         </div>
     </div>
