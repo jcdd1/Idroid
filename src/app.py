@@ -292,27 +292,30 @@ def show_products():
     imei = request.args.get('imei')  # Valor del IMEI
     productname = request.args.get('productname')  # Nombre del producto
     current_status = request.args.get('current_status')  # Estado actual
+    category = request.args.get('category')
+    warehouse = request.args.get('warehouse_name')
 
     # Paginación
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = 20
     offset = (page - 1) * per_page
 
     warehouses_name = ModelWarehouse.get_all_warehouses(db)
-
+    print(warehouse)
     # Verifica si hay filtros
-    if imei or productname or current_status:
+    if imei or productname or current_status or warehouse or category:
         # Aplica filtro si hay parámetros
         products, total = ModelProduct.filter_products(
-            db, imei=imei, productname=productname, current_status=current_status, limit=per_page, offset=offset
+            db, imei=imei, productname=productname, current_status=current_status, warehouse = warehouse, category = category,limit=per_page, offset=offset
         )
+        
     else:
         # Muestra todos los productos si no hay filtros
         products = ModelProduct.get_products_paginated(db, limit=per_page, offset=offset)
         # Convierte a JSON serializable
 
         total = ModelProduct.count_products(db)
-
+    
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(

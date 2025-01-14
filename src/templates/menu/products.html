@@ -34,10 +34,13 @@
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_products') }}" class="row g-3 mt-4">
     <div class="col-md-4">
-        <input type="text" name="imei" class="form-control border-success" placeholder="Search by IMEI">
+        <input type="text" name="imei" class="form-control border-success" placeholder="Buscar por IMEI">
     </div>
     <div class="col-md-4">
-        <input type="text" name="productname" class="form-control border-success" placeholder="Search by Name">
+        <input type="text" name="productname" class="form-control border-success" placeholder="Buscar por nombre">
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="category" class="form-control border-success" placeholder="Buscar por category">
     </div>
     <div class="col-md-3">
         <select name="current_status" class="form-select border-success">
@@ -48,10 +51,10 @@
         </select>
     </div>
     <div class="col-md-3">
-        <select name="warehouse_id" class="form-select border-success">
-            <option value="" {% if not warehouse_id %}selected{% endif %}>All Warehouses</option>
+        <select name="warehouse_name" class="form-select border-success">
+            <option value="" {% if not warehouse_name %}selected{% endif %}>Bodegas</option>
             {% for warehouse in warehouses_name %}
-            <option value="{{ warehouse['warehouse_id'] }}" {% if warehouse_id == warehouse['warehouse_id'] %}selected{% endif %}>{{ warehouse['warehouse_name'] }}</option>
+            <option value="{{ warehouse['warehouse_name'] }}" {% if warehouse_name == warehouse['warehouse_name'] %}selected{% endif %}>{{ warehouse['warehouse_name'] }}</option>
             {% endfor %}
         </select>
     </div>
