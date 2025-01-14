@@ -1,7 +1,9 @@
 import datetime
 class Products():
 
-    def __init__(self, product_id,productname, imei, storage, battery, color, description, cost, current_status, warehouse_name = None, acquisition_date = None,document_number = None, price = None, category = None) -> None:
+    def __init__(self, product_id,productname, imei, storage, battery, color, description, cost, 
+                 current_status, warehouse_name = None, acquisition_date = None,document_number = None, 
+                 price = None, category = None, units = None, supplier = None) -> None:
         self.product_id = product_id
         self.productname = productname
         self.imei = imei
@@ -16,6 +18,8 @@ class Products():
         self.document_number = document_number
         self.price = price
         self.category = category
+        self.units = units
+        self.supplier = supplier
 
     def get_id(self):
         # Flask-Login necesita que esto devuelva una cadena
@@ -36,5 +40,7 @@ class Products():
             "warehouse_name": self.warehouse_name,
             "acquisition_date": self.acquisition_date[0].strftime("%Y-%m-%d") if isinstance(self.acquisition_date, tuple) else self.acquisition_date.strftime("%Y-%m-%d"),
             "price": float(self.price) if self.price else None,
-            "category": self.category
+            "category": self.category,
+            'supplier': self.supplier,
+            "units": self.units
         }

@@ -3,6 +3,7 @@
 {% block customScripts %}
     <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -74,27 +75,32 @@
                 <th>Batería</th>
                 <th>Color</th>
                 <th>Descripción</th>
-                <th>Costo</th>
-                <th>Precio</th>
                 <th>Categoría</th>
                 <th>Estado</th>
-                <th>Fecha Adquisición</th>
             </tr>
         </thead>
         <tbody>
             {% for product in products %}
             <tr>
-                <td>{{ product.productname }}</td>
-                <td>{{ product.imei }}</td>
+                <td style="cursor: pointer; color: blue;" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#viewMovementsModal" 
+                    data-imei="{{ product.imei }}">
+                    <!-- data-product='{{ product.to_dict() | tojson }}'> -->
+                    {{ product.productname }}
+                </td>
+                <td style="cursor: pointer; color: blue;" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#viewMovementsModal" 
+                    data-imei="{{ product.imei }}">
+                    {{ product.imei }}
+                </td>
                 <td>{{ product.storage }}</td>
                 <td>{{ product.battery }}</td>
                 <td>{{ product.color }}</td>
                 <td>{{ product.description }}</td>
-                <td>{{ product.cost }}</td>
-                <td>{{ product.price }}</td>
                 <td>{{ product.category }}</td>
                 <td>{{ product.current_status }}</td>
-                <td>{{ product.acquisition_date }}</td>
                 <td>
                     <button type="button" class="btn btn-info btn-sm" 
                             data-bs-toggle="modal" 
@@ -303,6 +309,41 @@
                     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para mostrar movimientos -->
+<div class="modal fade" id="viewMovementsModal" tabindex="-1" aria-labelledby="viewMovementsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewMovementsModalLabel">Movimientos del Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID Movimiento</th>
+                            <th>Origen</th>
+                            <th>Destino</th>
+                            <th>Enviado por</th>
+                            <th>Recibido por</th>
+                            <th>Fecha Envío</th>
+                            <th>Fecha Recepción</th>
+                            <th>Estado</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movementsTableBody">
+                        <!-- Los movimientos se llenarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>

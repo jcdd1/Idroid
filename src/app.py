@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, Response, session, flash
+from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify
 from config import Config
 from sqlalchemy import text
 from flask_sqlalchemy import SQLAlchemy
@@ -392,6 +392,19 @@ def edit_product():
         flash("Error al actualizar el producto.", "danger")
 
     return redirect(url_for('show_products'))
+
+@app.route('/movements/<string:imei>', methods=['GET'])
+def get_movements_by_imei(imei):
+    try:
+        
+        # Supongamos que este método devuelve una lista de movimientos
+        movements = ModelMovement.get_movements_by_imei(db, imei)
+        # Devuelve los movimientos como JSON
+        return jsonify({"movements": [movement for movement in movements]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 #Manejo de errores en el servidor

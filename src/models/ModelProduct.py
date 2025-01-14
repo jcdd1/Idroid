@@ -9,18 +9,7 @@ class ModelProduct():
     def get_products_paginated(db, limit, offset):
         query = text("""
             SELECT 
-                p.product_id,
-                p.imei,
-                p.storage,
-                p.battery,
-                p.color,
-                p.description,
-                p.cost,
-                p.current_status,
-                p.acquisition_date,
-                p.productname,
-                p.price,
-                p.category,
+                p.*,  
                 w.warehouse_name,
                 f.document_number
             FROM 
@@ -62,8 +51,11 @@ class ModelProduct():
                 productname=row[9],
                 price=row[10],
                 category=row[11],
-                warehouse_name=row[12] if not isinstance(row[11], tuple) else row[11][0],  # Extraer de tupla si es necesario
-                document_number=row[13] if not isinstance(row[12], tuple) else row[12][0]
+                units = row[12],
+                supplier=row[13],
+                warehouse_name=row[14] if not isinstance(row[11], tuple) else row[11][0],  # Extraer de tupla si es necesario
+                document_number=row[15] if not isinstance(row[12], tuple) else row[12][0]
+
             )
             for row in result
         ]
@@ -185,6 +177,8 @@ class ModelProduct():
                                 productname=row['productname'],
                                 price=row['price'],
                                 category=row['category'],
+                                units = row['units'],
+                                supplier=row['supplier'],
                                 warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
                                 document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
                             )
@@ -259,6 +253,8 @@ class ModelProduct():
                                 productname=row['productname'],
                                 price=row['price'],
                                 category=row['category'],
+                                units = row['units'],
+                                supplier=row['supplier'],
                                 warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
                                 document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
                             )
@@ -335,6 +331,8 @@ class ModelProduct():
                                 productname=row['productname'],
                                 price=row['price'],
                                 category=row['category'],
+                                units = row['units'],
+                                supplier=row['supplier'],
                                 warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
                                 document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
                             )
@@ -410,6 +408,8 @@ class ModelProduct():
                                 productname=row['productname'],
                                 price=row['price'],
                                 category=row['category'],
+                                units = row['units'],
+                                supplier=row['supplier'],
                                 warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
                                 document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
                             )
@@ -483,6 +483,8 @@ class ModelProduct():
                                 productname=row['productname'],
                                 price=row['price'],
                                 category=row['category'],
+                                units = row['units'],
+                                supplier=row['supplier'],
                                 warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
                                 document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
                             )
@@ -494,61 +496,6 @@ class ModelProduct():
                 case _:
                     return f"x is {imei}, y is {productname}."
 
-
-
-            # query = text("""
-            # WITH filtered_products AS (
-            #     SELECT *
-            #     FROM products
-            #     WHERE 
-                   
-            #         (:imei IS NOT NULL AND imei = :imei)
-
-                    
-            #         OR (
-            #             :imei IS NULL 
-            #             AND :productname IS NOT NULL 
-            #             AND :current_status IS NOT NULL 
-            #             AND productname ILIKE :productname 
-            #             AND current_status = :current_status
-            #         )
-
-                    
-            #         OR (
-            #             :imei IS NULL 
-            #             AND :productname IS NOT NULL 
-            #             AND productname ILIKE ':productname'
-            #         )
-
-                    
-            #         OR (
-            #             :imei IS NULL 
-            #             AND :productname IS NULL 
-            #             AND :current_status IS NOT NULL 
-            #             AND current_status ILIKE :current_status
-            #         )
-            #     )
-            # SELECT 
-            #     (SELECT COUNT(*) FROM filtered_products) AS total_count,
-            #     fp.*
-            # FROM filtered_products fp
-            # LIMIT :limit OFFSET :offset;
-
-            # """)
-
-            # params = {
-            #     'imei': imei,
-            #     'productname': f'%{productname}%' if productname else None,
-            #     'current_status': f'%{current_status}%' if current_status else None,
-            #     'limit': limit,
-            #     'offset': offset
-            # }
-            # # Usa mappings() para obtener un diccionario
-            # result = db.session.execute(query, params).mappings().fetchall()
-            
-            # # Extrae los resultados
-            # total_count = result[0]['total_count'] if result else 0
-            # products = [row for row in result]
 
             return products, total_count
 

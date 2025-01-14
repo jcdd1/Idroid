@@ -129,6 +129,32 @@ class ModelMovement:
             print(f"Error al crear el movimiento: {e}")
             db.session.rollback()
             return False
-        
+            
 
+    @staticmethod
+    def get_movements_by_imei(db, imei):
+        query = text("""
+            SELECT 
+                movement_id, product_id, origin_warehouse_id, destination_warehouse_id,
+                sender_user_id, receiver_user_id, send_date, receive_date, movement_status, movement_description
+            FROM inventory_movements
+            WHERE product_id = (SELECT product_id FROM products WHERE imei = :imei)
+            ORDER BY send_date DESC
+        """)
+        result = db.session.execute(query, {"imei": imei}).fetchall()
 
+        return [
+            {
+                "movement_id": row[0],
+                "product_id": row[1],
+                "origin_warehouse_id": row[2],
+                "destination_warehouse_id": row[3],
+                "sender_user_id": row[4],
+                "receiver_user_id": row[5],
+                "send_date": row[6],
+                "receive_date": row[7],
+                "movement_status": row[8],
+                "movement_description": row[9]
+            }
+            for row in result
+        ]
