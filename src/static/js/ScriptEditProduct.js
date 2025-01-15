@@ -4,27 +4,26 @@ document.addEventListener('DOMContentLoaded', function () {
         const button = event.relatedTarget; // Botón que disparó el modal
         const productData = button.getAttribute('data-product'); // Datos JSON
 
-        // Verifica si el producto está presente en el atributo
         if (!productData) {
             console.error("No se encontraron datos para el producto.");
             return;
         }
 
-        const product = JSON.parse(productData); // Convertir JSON string a objeto
+        const product = JSON.parse(productData);
 
-        // Rellenar los campos del modal con los datos del producto
-        document.getElementById('product_id').value = product.product_id || "";
-        document.getElementById('productname').value = product.productname || "";
-        document.getElementById('imei').value = product.imei || "";
-        document.getElementById('storage').value = product.storage || "";
-        document.getElementById('battery').value = product.battery || "";
-        document.getElementById('color').value = product.color || "";
-        document.getElementById('description').value = product.description || "";
-        document.getElementById('cost').value = product.cost || "";
-        document.getElementById('current_status').value = product.current_status || "";
-        document.getElementById('acquisition_date').value = product.acquisition_date || "";
-        document.getElementById('warehouse_name').value = product.warehouse_name || "";
-        document.getElementById('document_number').value = product.document_number || "";
+        // Asigna valores a los campos del modal
+        document.getElementById('edit_product_id').value = product.product_id || "";
+        document.getElementById('edit_productname').value = product.productname || "";
+        document.getElementById('edit_imei').value = product.imei || "";
+        document.getElementById('edit_storage').value = product.storage || "";
+        document.getElementById('edit_battery').value = product.battery || "";
+        document.getElementById('edit_color').value = product.color || "";
+        document.getElementById('edit_cost').value = product.cost || "";
+        document.getElementById('edit_price').value = product.price || "";
+        document.getElementById('edit_category').value = product.category || "";
+        document.getElementById('edit_units').value = product.units || "";
+        document.getElementById('edit_supplier').value = product.supplier || "";
+        document.getElementById('edit_current_status').value = product.current_status || "";
+        document.getElementById('edit_acquisition_date').value = product.acquisition_date || "";
     });
 });
-

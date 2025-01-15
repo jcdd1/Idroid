@@ -5,61 +5,51 @@ import datetime
 
 class ModelProduct():
 
+
     @staticmethod
-    def get_products_paginated(db, limit, offset):
+    def get_product_full_info(db, limit, offset):
         query = text("""
-            SELECT 
-                p.*,  
-                w.warehouse_name,
-                f.document_number
-            FROM 
-                products p
-            JOIN 
-                (
-                    SELECT 
-                        product_id,
-                        destination_warehouse_id,
-                        MAX(receive_date) AS last_receive_date
-                    FROM 
-                        inventory_movements
-                    WHERE 
-                        receive_date IS NOT NULL
-                    GROUP BY 
-                        product_id, destination_warehouse_id
-                ) im ON p.product_id = im.product_id
-            JOIN 
-                warehouses w ON im.destination_warehouse_id = w.warehouse_id
-            LEFT JOIN 
-                invoice_products ip ON p.product_id = ip.product_id
-            LEFT JOIN 
-                invoices f ON ip.invoice_id = f.invoice_id
-            LIMIT :limit OFFSET :offset;
+               SELECT 
+                    p.*,
+                    d.quantity,
+                    d.status AS detail_status,
+                    m.movement_id,
+                    m.origin_warehouse_id,
+                    m.destination_warehouse_id,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    w.warehouse_name AS current_warehouse,
+                    i.invoice_id,
+                    i.document_number
+
+                FROM 
+                    Products p
+                JOIN 
+                    MovementDetail d
+                ON 
+                    p.product_id = d.product_id
+                JOIN 
+                    Movement m
+                ON 
+                    d.movement_id = m.movement_id
+                JOIN 
+                    Warehouses w
+                ON 
+                    m.destination_warehouse_id = w.warehouse_id
+                LEFT JOIN 
+                    InvoiceDetail id
+                ON 
+                    p.product_id = id.product_id
+                LEFT JOIN 
+                    Invoices i
+                ON 
+                    id.invoice_id = i.invoice_id
+                WHERE p.current_status = 'In Warehouse'
+                LIMIT :limit OFFSET :offset;
         """)
-        result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
-        # Convierte las tuplas a objetos Product
-        return [
-            Products(
-                product_id=row[0],
-                imei=row[1],
-                storage=row[2],
-                battery=row[3],
-                color=row[4],
-                description=row[5],
-                cost=row[6],
-                current_status=row[7],
-                acquisition_date=row[8][0] if isinstance(row[8], tuple) else row[8],
-                productname=row[9],
-                price=row[10],
-                category=row[11],
-                units = row[12],
-                supplier=row[13],
-                warehouse_name=row[14] if not isinstance(row[11], tuple) else row[11][0],  # Extraer de tupla si es necesario
-                document_number=row[15] if not isinstance(row[12], tuple) else row[12][0]
-
-            )
-            for row in result
-        ]
-
+        result = db.session.execute(query, {"limit": limit, "offset": offset}).mappings().all()
+        
+        return [dict(row) for row in result]
 
     @staticmethod
     def count_products(db):

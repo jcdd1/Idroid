@@ -56,15 +56,13 @@
         <thead class="table-success">
             <tr>
                 <th>Movement ID</th>
-                <th>Product ID</th>
-                <th>Origin</th>
-                <th>Destination</th>
-                <th>Sent By</th>
-                <th>Received By</th>
-                <th>Send Date</th>
-                <th>Receive Date</th>
-                <th>Status</th>
-                <th>Description</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Bodega de envío</th>
+                <th>Usuario creador</th>
+                <th>Quien recibe</th>
+                <th>Fecha de creación</th>
+                <th>Estado</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -72,15 +70,13 @@
             {% for movement in movements %}
             <tr>
                 <td>{{ movement.movement_id }}</td>
-                <td>{{ movement.product_id }}</td>
                 <td>{{ movement.origin_warehouse_id }}</td>
                 <td>{{ movement.destination_warehouse_id }}</td>
-                <td>{{ movement.sender_user_id }}</td>
-                <td>{{ movement.receiver_user_id }}</td>
-                <td>{{ movement.send_date }}</td>
-                <td>{{ movement.receive_date }}</td>
-                <td>{{ movement.movement_status }}</td>
-                <td>{{ movement.movement_description }}</td>
+                <td>{{ movement.created_by_user_id }}</td>
+                <td>{{ movement.handled_by_user_id }}</td>
+                <td>{{ movement.creation_date }}</td>
+                <td>{{ movement.status }}</td>
+                <td>{{ movement.notes }}</td>
                 <td>
                     <button type="button" class="btn btn-info btn-sm"
                             data-bs-toggle="modal"

@@ -16,16 +16,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 data.movements.forEach(movement => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${movement.movement_id}</td>
-                        <td>${movement.origin_warehouse_id}</td>
-                        <td>${movement.destination_warehouse_id}</td>
-                        <td>${movement.sender_user_id}</td>
-                        <td>${movement.receiver_user_id}</td>
-                        <td>${movement.send_date}</td>
-                        <td>${movement.receive_date}</td>
-                        <td>${movement.movement_status}</td>
-                        <td>${movement.movement_description}</td>
-                    `;
+                    <td>${movement.movement_id}</td>
+                    <td>${movement.origin_warehouse_id}</td>
+                    <td>${movement.destination_warehouse_id}</td>
+                    <td>${movement.creation_date}</td>
+                    <td>${movement.movement_status}</td>
+                    <td>${movement.movement_notes}</td>
+                    <td>${movement.detail_id}</td>
+                    <td>${movement.product_id}</td>
+                    <td>${movement.quantity}</td>
+                    <td>${movement.detail_status}</td>
+                    <td>${movement.rejection_reason ? movement.rejection_reason : 'N/A'}</td>
+                    <td>${movement.return_id ? movement.return_id : 'N/A'}</td>
+                    <td>${movement.returned_quantity ? movement.returned_quantity : 'N/A'}</td>
+                    <td>${movement.return_date ? movement.return_date : 'N/A'}</td>
+                    <td>${movement.return_notes ? movement.return_notes : 'N/A'}</td>
+                `;
                     tableBody.appendChild(row);
                 });
             })

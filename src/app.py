@@ -198,7 +198,7 @@ def show_movements():
             db, movement_id=movement_id, product_id=product_id, movement_status=movement_status, limit=per_page, offset=offset
         )
     else:
-        movements = ModelMovement.get_movements_paginated(db, limit=per_page, offset=offset)
+        movements = ModelMovement.get_pending_movements(db, 1,limit=per_page, offset=offset)
         total = ModelMovement.count_movements(db)
 
     total_pages = (total + per_page - 1) // per_page
@@ -311,11 +311,12 @@ def show_products():
         
     else:
         # Muestra todos los productos si no hay filtros
-        products = ModelProduct.get_products_paginated(db, limit=per_page, offset=offset)
+        products = ModelProduct.get_product_full_info(db, limit=per_page, offset=offset)
         # Convierte a JSON serializable
 
         total = ModelProduct.count_products(db)
     
+    print(products)
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
@@ -396,7 +397,6 @@ def edit_product():
 @app.route('/movements/<string:imei>', methods=['GET'])
 def get_movements_by_imei(imei):
     try:
-        
         # Supongamos que este método devuelve una lista de movimientos
         movements = ModelMovement.get_movements_by_imei(db, imei)
         # Devuelve los movimientos como JSON
