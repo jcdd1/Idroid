@@ -98,12 +98,12 @@
                 <td>{{ product.category }}</td>
                 <td>{{ product.units }}</td>
                 <td>{{ product.current_status }}</td>
-                <td>{{ product.current_warehouse }}</td>
+                <td>{{ product.warehouse_name }}</td>
                 <td>
                     <button type="button" class="btn btn-info btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#editProductModal" 
-                            data-product='{{ product | tojson }}'>
+                            data-product='{{ product }}'>
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
                 </td>
@@ -111,7 +111,7 @@
                     <button type="button" class="btn btn-info btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#createMovementModal" 
-                            data-product='{{ product | tojson }}'>
+                            data-product='{{ product }}'>
                         <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
                 </td>

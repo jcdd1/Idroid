@@ -1,59 +1,20 @@
 
 from sqlalchemy import text
 from .entities.product import Products
+from .queries.sql_queries import SQLQueries
 import datetime
 
 class ModelProduct():
 
-
     @staticmethod
     def get_product_full_info(db, limit, offset):
-        query = text("""
-               SELECT 
-                    p.*,
-                    d.quantity,
-                    d.status AS detail_status,
-                    m.movement_id,
-                    m.origin_warehouse_id,
-                    m.destination_warehouse_id,
-                    m.creation_date,
-                    m.status AS movement_status,
-                    w.warehouse_name AS current_warehouse,
-                    i.invoice_id,
-                    i.document_number
-
-                FROM 
-                    Products p
-                JOIN 
-                    MovementDetail d
-                ON 
-                    p.product_id = d.product_id
-                JOIN 
-                    Movement m
-                ON 
-                    d.movement_id = m.movement_id
-                JOIN 
-                    Warehouses w
-                ON 
-                    m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id
-                ON 
-                    p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i
-                ON 
-                    id.invoice_id = i.invoice_id
-                WHERE p.current_status = 'In Warehouse'
-                LIMIT :limit OFFSET :offset;
-        """)
+        query = text(SQLQueries.get_all_products_query())
         result = db.session.execute(query, {"limit": limit, "offset": offset}).mappings().all()
-        
         return [dict(row) for row in result]
 
     @staticmethod
     def count_products(db):
-        query = text("SELECT COUNT(*) FROM products")
+        query = text(SQLQueries.count_products_query())
         total = db.session.execute(query).scalar()
         return total
     
@@ -101,50 +62,14 @@ class ModelProduct():
 
             match (imei, productname, current_status, warehouse, category):
                 case (imei, _, _, _, _) if imei:
-                    
-                    query = text("""
-                    WITH filtered_products AS (
-                    SELECT
-                        P.*,
-                        w.warehouse_name,
-                        f.document_number
-                    FROM 
-                        products p
-                    JOIN 
-                        (
-                            SELECT 
-                                product_id,
-                                destination_warehouse_id,
-                                MAX(receive_date) AS last_receive_date
-                            FROM 
-                                inventory_movements
-                            WHERE 
-                                receive_date IS NOT NULL
-                            GROUP BY 
-                                product_id, destination_warehouse_id
-                        ) im ON p.product_id = im.product_id
-                    JOIN 
-                        warehouses w ON im.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        invoice_products ip ON p.product_id = ip.product_id
-                    LEFT JOIN 
-                        invoices f ON ip.invoice_id = f.invoice_id
-                    WHERE 
-                        p.imei = :imei)
-                    SELECT 
-                        (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                        fp.*
-                    FROM filtered_products fp
-                    """)
-
+                    print(imei)
+                    query = text(SQLQueries.filter_products_imei())
                     params = {
                         'imei': imei
                     }
 
                     result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    # Verifica si hay resultados y si el campo 'total_count' existe
-                    # Verifica si result no está vacío
+
                     if result and 'total_count' in result[0]:
                         # Convierte el RowMapping a un diccionario
                         row_dict = dict(result[0])
@@ -153,74 +78,231 @@ class ModelProduct():
                         total_count = row_dict.pop('total_count')
                         
                         # Construye la lista de productos excluyendo 'total_count'
-                        products = [
-                            Products(
-                                product_id=row['product_id'],
-                                imei=row['imei'],
-                                storage=row['storage'],
-                                battery=row['battery'],
-                                color=row['color'],
-                                description=row['description'],
-                                cost=row['cost'],
-                                current_status=row['current_status'],
-                                acquisition_date=row['acquisition_date'][0] if isinstance(row['acquisition_date'], tuple) else row['acquisition_date'],
-                                productname=row['productname'],
-                                price=row['price'],
-                                category=row['category'],
-                                units = row['units'],
-                                supplier=row['supplier'],
-                                warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
-                                document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
-                            )
-                            for row in result
-                        ]
+                        products = [dict(row) for row in result]
+                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products, total_count
-            # match (imei, productname, current_status, warehouse, category):
+                
+                case (_, productname, current_status, warehouse, category) if productname and current_status and warehouse and category:
+                    query = text(SQLQueries.filter_products_all_fields())
+                    
+                    params = params = {'productname': f"%{productname}%", 
+                                       'current_status': current_status,
+                                       'warehouse': warehouse,
+                                       'category': f"%{category}%"
+                                       }
+
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+           
+                case (_, productname, current_status, warehouse, _) if productname and current_status and warehouse:
+                    query = text(SQLQueries.filter_products_no_category())
+                    
+                    params = params = {'productname': f"%{productname}%", 
+                                       'current_status': current_status,
+                                       'warehouse': warehouse
+                                       }
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+
+                case (_, productname, current_status, _, category) if productname and current_status and category:
+                    query = text(SQLQueries.filter_products_no_warehouse())
+                    
+                    params = params = {'productname': f"%{productname}%", 
+                                       'current_status': current_status,
+                                       'category': f"%{category}%"
+                                       }
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
+                case (_, productname, _, warehouse, category) if productname and warehouse and category:
+                    
+                    query = text(SQLQueries.filter_products_no_status())
+                    
+                    params = params = {'productname': f"%{productname}%", 
+                                       'warehouse': warehouse,
+                                       'category': f"%{category}%"
+                                       }
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
+                case (_, _, current_status, warehouse, category) if current_status and warehouse and category:
+                    query = text(SQLQueries.filter_products_no_product())
+                    
+                    params = params = {'current_status': current_status,
+                                       'warehouse': warehouse,
+                                       'category': f"%{category}%"
+                                       }
+
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
+                case (_, productname, current_status, _, _) if productname and current_status:
+                    
+                    query = text(SQLQueries.filter_products_name_status())
+                    
+                    params = params = {'productname': f"%{productname}%", 
+                                       'current_status': current_status
+                                       }
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
+                case (_, productname, _, warehouse, _) if productname  and warehouse:
+                    query = text(SQLQueries.filter_products_name_warehouse())
+                    
+                    params = params = {'productname': f"%{productname}%",
+                                       'warehouse': warehouse
+                                       }
+
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
+                case (_, _, current_status, _, category) if current_status and category:
+                    query = text(SQLQueries.filter_products_status_category())
+                    
+                    params = params = {'current_status': current_status,
+                                       'category': f"%{category}%"
+                                       }
+
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+
+                case (_, _, _, warehouse, category) if warehouse and category:
+                    query = text(SQLQueries.filter_products_warehouse_category())
+                    
+                    params = params = {'warehouse': warehouse,
+                                       'category': f"%{category}%"
+                                       }
+
+                    result = db.session.execute(query, params).mappings().fetchall()
+
+                    if result and 'total_count' in result[0]:
+                        # Convierte el RowMapping a un diccionario
+                        row_dict = dict(result[0])
+                        
+                        # Captura el valor de 'total_count'
+                        total_count = row_dict.pop('total_count')
+                        
+                        # Construye la lista de productos excluyendo 'total_count'
+                        products = [dict(row) for row in result]
+                        
+                    else:
+                        products = []  # Si no hay resultados, inicializa la lista vacía
+                    return products, total_count
+                
                 case (_, productname, _, _, _) if productname:
 
-                    query = text("""
-                        WITH filtered_products AS (
-                        SELECT
-                            P.*,
-                            w.warehouse_name,
-                            f.document_number
-                        FROM 
-                            products p
-                        JOIN 
-                            (
-                                SELECT 
-                                    product_id,
-                                    destination_warehouse_id,
-                                    MAX(receive_date) AS last_receive_date
-                                FROM 
-                                    inventory_movements
-                                WHERE 
-                                    receive_date IS NOT NULL
-                                GROUP BY 
-                                    product_id, destination_warehouse_id
-                            ) im ON p.product_id = im.product_id
-                        JOIN 
-                            warehouses w ON im.destination_warehouse_id = w.warehouse_id
-                        LEFT JOIN 
-                            invoice_products ip ON p.product_id = ip.product_id
-                        LEFT JOIN 
-                            invoices f ON ip.invoice_id = f.invoice_id
-                        WHERE 
-                            productname ILIKE :productname)
-                        SELECT 
-                            (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                            fp.*
-                        FROM filtered_products fp
-                        """)
+                    query = text(SQLQueries.filter_products_name())
                     
                     params = params = {'productname': f"%{productname}%"}
 
                     result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    # Verifica si hay resultados y si el campo 'total_count' existe
-                    # Verifica si result no está vacío
+
                     if result and 'total_count' in result[0]:
                         # Convierte el RowMapping a un diccionario
                         row_dict = dict(result[0])
@@ -229,67 +311,15 @@ class ModelProduct():
                         total_count = row_dict.pop('total_count')
                         
                         # Construye la lista de productos excluyendo 'total_count'
-                        products = [
-                            Products(
-                                product_id=row['product_id'],
-                                imei=row['imei'],
-                                storage=row['storage'],
-                                battery=row['battery'],
-                                color=row['color'],
-                                description=row['description'],
-                                cost=row['cost'],
-                                current_status=row['current_status'],
-                                acquisition_date=row['acquisition_date'][0] if isinstance(row['acquisition_date'], tuple) else row['acquisition_date'],
-                                productname=row['productname'],
-                                price=row['price'],
-                                category=row['category'],
-                                units = row['units'],
-                                supplier=row['supplier'],
-                                warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
-                                document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
-                            )
-                            for row in result
-                        ]
+                        products = [dict(row) for row in result]
+                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products, total_count
 
                 case (_, _, current_status, _, _) if current_status:
 
-                    query = text("""
-                    WITH filtered_products AS (
-                    SELECT
-                        P.*,
-                        w.warehouse_name,
-                        f.document_number
-                    FROM 
-                        products p
-                    JOIN 
-                        (
-                            SELECT 
-                                product_id,
-                                destination_warehouse_id,
-                                MAX(receive_date) AS last_receive_date
-                            FROM 
-                                inventory_movements
-                            WHERE 
-                                receive_date IS NOT NULL
-                            GROUP BY 
-                                product_id, destination_warehouse_id
-                        ) im ON p.product_id = im.product_id
-                    JOIN 
-                        warehouses w ON im.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        invoice_products ip ON p.product_id = ip.product_id
-                    LEFT JOIN 
-                        invoices f ON ip.invoice_id = f.invoice_id
-                    WHERE 
-                        p.current_status = :current_status)
-                    SELECT 
-                        (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                        fp.*
-                    FROM filtered_products fp
-                    """)
+                    query = text(SQLQueries.filter_products_status())
                     print(current_status)
                     params = {
                         'current_status': current_status
@@ -297,8 +327,6 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     
-                    # Verifica si hay resultados y si el campo 'total_count' existe
-                    # Verifica si result no está vacío
                     if result and 'total_count' in result[0]:
                         # Convierte el RowMapping a un diccionario
                         row_dict = dict(result[0])
@@ -307,66 +335,15 @@ class ModelProduct():
                         total_count = row_dict.pop('total_count')
                         
                         # Construye la lista de productos excluyendo 'total_count'
-                        products = [
-                            Products(
-                                product_id=row['product_id'],
-                                imei=row['imei'],
-                                storage=row['storage'],
-                                battery=row['battery'],
-                                color=row['color'],
-                                description=row['description'],
-                                cost=row['cost'],
-                                current_status=row['current_status'],
-                                acquisition_date=row['acquisition_date'][0] if isinstance(row['acquisition_date'], tuple) else row['acquisition_date'],
-                                productname=row['productname'],
-                                price=row['price'],
-                                category=row['category'],
-                                units = row['units'],
-                                supplier=row['supplier'],
-                                warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
-                                document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
-                            )
-                            for row in result
-                        ]
+                        products = [dict(row) for row in result]
+                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products, total_count
+                 
                 case (_, _, _, warehouse, _) if warehouse:
                     print(warehouse)
-                    query = text("""
-                    WITH filtered_products AS (
-                    SELECT
-                        P.*,
-                        w.warehouse_name,
-                        f.document_number
-                    FROM 
-                        products p
-                    JOIN 
-                        (
-                            SELECT 
-                                product_id,
-                                destination_warehouse_id,
-                                MAX(receive_date) AS last_receive_date
-                            FROM 
-                                inventory_movements
-                            WHERE 
-                                receive_date IS NOT NULL
-                            GROUP BY 
-                                product_id, destination_warehouse_id
-                        ) im ON p.product_id = im.product_id
-                    JOIN 
-                        warehouses w ON im.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        invoice_products ip ON p.product_id = ip.product_id
-                    LEFT JOIN 
-                        invoices f ON ip.invoice_id = f.invoice_id
-                    WHERE 
-                        w.warehouse_name = :warehouse)
-                    SELECT 
-                        (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                        fp.*
-                    FROM filtered_products fp
-                    """)
+                    query = text(SQLQueries.filter_products_warehouse())
                     
                     params = {
                         'warehouse': warehouse
@@ -374,8 +351,6 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     
-                    # Verifica si hay resultados y si el campo 'total_count' existe
-                    # Verifica si result no está vacío
                     if result and 'total_count' in result[0]:
                         # Convierte el RowMapping a un diccionario
                         row_dict = dict(result[0])
@@ -384,73 +359,20 @@ class ModelProduct():
                         total_count = row_dict.pop('total_count')
                         
                         # Construye la lista de productos excluyendo 'total_count'
-                        products = [
-                            Products(
-                                product_id=row['product_id'],
-                                imei=row['imei'],
-                                storage=row['storage'],
-                                battery=row['battery'],
-                                color=row['color'],
-                                description=row['description'],
-                                cost=row['cost'],
-                                current_status=row['current_status'],
-                                acquisition_date=row['acquisition_date'][0] if isinstance(row['acquisition_date'], tuple) else row['acquisition_date'],
-                                productname=row['productname'],
-                                price=row['price'],
-                                category=row['category'],
-                                units = row['units'],
-                                supplier=row['supplier'],
-                                warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
-                                document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
-                            )
-                            for row in result
-                        ]
+                        products = [dict(row) for row in result]
+                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count 
+                    return products, total_count
+                
                 case (_, _, _, _, category) if category:
                     print(warehouse)
-                    query = text("""
-                    WITH filtered_products AS (
-                    SELECT
-                        P.*,
-                        w.warehouse_name,
-                        f.document_number
-                    FROM 
-                        products p
-                    JOIN 
-                        (
-                            SELECT 
-                                product_id,
-                                destination_warehouse_id,
-                                MAX(receive_date) AS last_receive_date
-                            FROM 
-                                inventory_movements
-                            WHERE 
-                                receive_date IS NOT NULL
-                            GROUP BY 
-                                product_id, destination_warehouse_id
-                        ) im ON p.product_id = im.product_id
-                    JOIN 
-                        warehouses w ON im.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        invoice_products ip ON p.product_id = ip.product_id
-                    LEFT JOIN 
-                        invoices f ON ip.invoice_id = f.invoice_id
-                    WHERE 
-                        p.category = :category)
-                    SELECT 
-                        (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                        fp.*
-                    FROM filtered_products fp
-                    """)
+                    query = text(SQLQueries.filter_products_category())
                     
                     params = {'category': f"%{category}%"}
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     
-                    # Verifica si hay resultados y si el campo 'total_count' existe
-                    # Verifica si result no está vacío
                     if result and 'total_count' in result[0]:
                         # Convierte el RowMapping a un diccionario
                         row_dict = dict(result[0])
@@ -459,41 +381,19 @@ class ModelProduct():
                         total_count = row_dict.pop('total_count')
                         
                         # Construye la lista de productos excluyendo 'total_count'
-                        products = [
-                            Products(
-                                product_id=row['product_id'],
-                                imei=row['imei'],
-                                storage=row['storage'],
-                                battery=row['battery'],
-                                color=row['color'],
-                                description=row['description'],
-                                cost=row['cost'],
-                                current_status=row['current_status'],
-                                acquisition_date=row['acquisition_date'][0] if isinstance(row['acquisition_date'], tuple) else row['acquisition_date'],
-                                productname=row['productname'],
-                                price=row['price'],
-                                category=row['category'],
-                                units = row['units'],
-                                supplier=row['supplier'],
-                                warehouse_name=row['warehouse_name'] if not isinstance(row['warehouse_name'], tuple) else row['warehouse_name'][0],
-                                document_number=row['document_number'] if not isinstance(row['document_number'], tuple) else row['document_number'][0]
-                            )
-                            for row in result
-                        ]
+                        products = [dict(row) for row in result]
+                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count 
+                    return products, total_count
                 case _:
-                    return f"x is {imei}, y is {productname}."
-
-
+                    products = []
+                    return products, 0
             return products, total_count
 
         except Exception as e:
             print(f"Error filtering products: {e}")
             return [], 0
-
-        
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, current_status):

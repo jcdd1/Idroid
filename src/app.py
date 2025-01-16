@@ -301,7 +301,7 @@ def show_products():
     offset = (page - 1) * per_page
 
     warehouses_name = ModelWarehouse.get_all_warehouses(db)
-    print(warehouse)
+    
     # Verifica si hay filtros
     if imei or productname or current_status or warehouse or category:
         # Aplica filtro si hay parámetros
