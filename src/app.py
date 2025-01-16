@@ -301,6 +301,7 @@ def show_products():
     offset = (page - 1) * per_page
 
     warehouses_name = ModelWarehouse.get_all_warehouses(db)
+    active_invoices = ModelInvoice.get_invoices_active(db)
     
     # Verifica si hay filtros
     if imei or productname or current_status or warehouse or category:
@@ -316,7 +317,7 @@ def show_products():
 
         total = ModelProduct.count_products(db)
     
-    print(products)
+    
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
@@ -324,10 +325,9 @@ def show_products():
         products=products,
         page=page,
         total_pages=total_pages,
-        imei=imei,
-        productname=productname,
         current_status=current_status,
-        warehouses_name = warehouses_name
+        warehouses_name = warehouses_name,
+        active_invoices=active_invoices
     )
 
 
@@ -373,18 +373,23 @@ def add_product():
 @login_required
 def edit_product():
     product_id = request.form['product_id']
-    productname = request.form['productname']
-    imei = request.form['imei']
-    storage = request.form['storage']
-    battery = request.form['battery']
-    color = request.form['color']
-    description = request.form['description']
-    cost = request.form['cost']
-    current_status = request.form['current_status']
+    productname = request.form['edit_productname']
+    imei = request.form['edit_imei']
+    storage = request.form['edit_storage']
+    battery = request.form['edit_battery']
+    color = request.form['edit_color']
+    description = request.form['edit_description']
+    cost = request.form['edit_cost']
+    current_status = request.form['edit_current_status']
+    category = request.form['edit_category']
+    units = request.form['edit_units']
+    supplier = request.form['edit_supplier']
+    document_number = request.form['edit_invoice']
 
     # Actualiza el producto en la base de datos
     success = ModelProduct.update_product(
-        db, product_id, productname, imei, storage, battery, color, description, cost, current_status
+        db, product_id, productname, imei, storage, battery, color, description, cost, current_status,
+        category, units, supplier
     )
 
     if success:

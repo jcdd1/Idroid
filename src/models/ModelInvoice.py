@@ -1,7 +1,29 @@
 from sqlalchemy import text
 from .entities.invoice import Invoice
+from .queries.sql_queries import SQLQueries
 
 class ModelInvoice:
+
+    @staticmethod
+    def get_invoices_active(db):
+        print("hola")
+        query = text("""
+            SELECT 
+                invoice_id, type, document_number
+            FROM invoices
+            WHERE status = 'active'
+            ORDER BY invoice_id ASC
+        """)
+
+        result = db.session.execute(query).mappings().fetchall()
+        
+        if result:           
+            # Construye la lista de productos excluyendo 'total_count'
+            invoice = [dict(row) for row in result]
+            
+        else:
+            invoice = []  # Si no hay resultados, inicializa la lista vacía
+        return invoice
 
     @staticmethod
     def get_invoices_paginated(db, limit, offset):

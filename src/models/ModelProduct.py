@@ -62,7 +62,7 @@ class ModelProduct():
 
             match (imei, productname, current_status, warehouse, category):
                 case (imei, _, _, _, _) if imei:
-                    print(imei)
+                    
                     query = text(SQLQueries.filter_products_imei())
                     params = {
                         'imei': imei
@@ -320,7 +320,7 @@ class ModelProduct():
                 case (_, _, current_status, _, _) if current_status:
 
                     query = text(SQLQueries.filter_products_status())
-                    print(current_status)
+                    
                     params = {
                         'current_status': current_status
                     }
@@ -342,7 +342,7 @@ class ModelProduct():
                     return products, total_count
                  
                 case (_, _, _, warehouse, _) if warehouse:
-                    print(warehouse)
+                    
                     query = text(SQLQueries.filter_products_warehouse())
                     
                     params = {
@@ -366,7 +366,7 @@ class ModelProduct():
                     return products, total_count
                 
                 case (_, _, _, _, category) if category:
-                    print(warehouse)
+                    
                     query = text(SQLQueries.filter_products_category())
                     
                     params = {'category': f"%{category}%"}
@@ -396,7 +396,8 @@ class ModelProduct():
             return [], 0
 
     @staticmethod
-    def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, current_status):
+    def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
+                       current_status, category, units, supplier):
         try:
             query = text("""
                 UPDATE products
