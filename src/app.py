@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify, get_flashed_messages
 from config import Config
 from sqlalchemy import text
 from flask_sqlalchemy import SQLAlchemy
@@ -288,6 +288,7 @@ def create_movement():
 @app.route('/products', methods=['GET'])
 @login_required
 def show_products():
+    
     # Parámetros de búsqueda
     imei = request.args.get('imei')  # Valor del IMEI
     productname = request.args.get('productname')  # Nombre del producto
@@ -306,17 +307,17 @@ def show_products():
     # Verifica si hay filtros
     if imei or productname or current_status or warehouse or category:
         # Aplica filtro si hay parámetros
-        products, total = ModelProduct.filter_products(
+        products = ModelProduct.filter_products(
             db, imei=imei, productname=productname, current_status=current_status, warehouse = warehouse, category = category,limit=per_page, offset=offset
         )
         
     else:
         # Muestra todos los productos si no hay filtros
-        products = ModelProduct.get_product_full_info(db, limit=per_page, offset=offset)
+        # products = ModelProduct.get_product_full_info(db, limit=per_page, offset=offset)
+        products = ModelProduct.get_products_units(db)
         # Convierte a JSON serializable
 
-        total = ModelProduct.count_products(db)
-    
+    total = len(products)
     
     total_pages = (total + per_page - 1) // per_page
 
@@ -372,7 +373,7 @@ def add_product():
 @app.route('/edit_product', methods=['POST'])
 @login_required
 def edit_product():
-    product_id = request.form['product_id']
+    product_id = request.form['edit_product_id']
     productname = request.form['edit_productname']
     imei = request.form['edit_imei']
     storage = request.form['edit_storage']
@@ -380,18 +381,29 @@ def edit_product():
     color = request.form['edit_color']
     description = request.form['edit_description']
     cost = request.form['edit_cost']
-    current_status = request.form['edit_current_status']
     category = request.form['edit_category']
     units = request.form['edit_units']
     supplier = request.form['edit_supplier']
     document_number = request.form['edit_invoice']
-
+    invoice_quantity = request.form.get('edit_quantity')
+    price = request.form.get('edit_price')
     # Actualiza el producto en la base de datos
     success = ModelProduct.update_product(
-        db, product_id, productname, imei, storage, battery, color, description, cost, current_status,
+        db, product_id, productname, imei, storage, battery, color, description, cost,
         category, units, supplier
     )
 
+    if document_number and invoice_quantity:
+        success_invoice = ModelInvoice.update_invoicedetail(db, product_id, document_number, invoice_quantity, price)
+    else:
+        success_invoice = False
+
+    if success_invoice:
+        flash("Factura asociada exitosamente.", "success")
+    else:
+        flash("No se  asoció el producto.", "danger")
+
+    print(success)
     if success:
         flash("Producto actualizado exitosamente.", "success")
     else:

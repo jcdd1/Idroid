@@ -1,380 +1,378 @@
 class SQLQueries:
+
     @staticmethod
-    def get_all_products_query():
+    def get_products_units():
         query = """
-               SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+            SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
-                WHERE p.current_status = 'In Warehouse'
-                LIMIT :limit OFFSET :offset;
-        """
-        return query
-    
-    @staticmethod
-    def count_products_query():
-        query = "SELECT COUNT(*) FROM products"
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
+            """
         return query
     
     @staticmethod
     def filter_products_imei():
         query = """
-                    WITH filtered_products AS (
-                        SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                            m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                            i.invoice_id, i.document_number
-                        FROM 
-                            Products p
-                        JOIN 
-                            MovementDetail d ON p.product_id = d.product_id
-                        JOIN 
-                            Movement m ON d.movement_id = m.movement_id
-                        JOIN 
-                            Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                        LEFT JOIN 
-                            InvoiceDetail id ON p.product_id = id.product_id
-                        LEFT JOIN 
-                            Invoices i ON id.invoice_id = i.invoice_id
-                        WHERE imei = :imei)
-                        SELECT 
-                            (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                            fp.*
-                        FROM filtered_products fp
-                    """
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE imei = :imei
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
+                """
         return query
     
     @staticmethod
     def filter_products_all_fields():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
-                    productname ILIKE :productname
+                    p.productname ILIKE :productname
                     AND p.current_status = :current_status
                     AND w.warehouse_name = :warehouse
-                    AND p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    AND p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_no_category():
         query = """
-                WITH filtered_products AS (
-                    SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
-                    FROM 
-                        Products p
-                    JOIN 
-                        MovementDetail d ON p.product_id = d.product_id
-                    JOIN 
-                        Movement m ON d.movement_id = m.movement_id
-                    JOIN 
-                        Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        InvoiceDetail id ON p.product_id = id.product_id
-                    LEFT JOIN 
-                        Invoices i ON id.invoice_id = i.invoice_id
-                    WHERE
-                        productname ILIKE :productname
-                        AND p.current_status = :current_status
-                        AND w.warehouse_name = :warehouse
-                    )
-                    SELECT 
-                        (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                        fp.*
-                    FROM filtered_products fp
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE
+                    p.productname ILIKE :productname
+                    AND p.current_status = :current_status
+                    AND w.warehouse_name = :warehouse
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_no_warehouse():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
-                    FROM 
-                        Products p
-                    JOIN 
-                        MovementDetail d ON p.product_id = d.product_id
-                    JOIN 
-                        Movement m ON d.movement_id = m.movement_id
-                    JOIN 
-                        Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        InvoiceDetail id ON p.product_id = id.product_id
-                    LEFT JOIN 
-                        Invoices i ON id.invoice_id = i.invoice_id
-                WHERE
-                    productname ILIKE :productname
-                    AND p.current_status = :current_status
-                    AND p.category ILIKE :category)
                 SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE
+                    p.productname ILIKE :productname
+                    AND p.current_status = :current_status
+                    AND p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_no_status():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
-                    FROM 
-                        Products p
-                    JOIN 
-                        MovementDetail d ON p.product_id = d.product_id
-                    JOIN 
-                        Movement m ON d.movement_id = m.movement_id
-                    JOIN 
-                        Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        InvoiceDetail id ON p.product_id = id.product_id
-                    LEFT JOIN 
-                        Invoices i ON id.invoice_id = i.invoice_id
-                WHERE
-                    productname ILIKE :productname
-                    AND w.warehouse_name = :warehouse
-                    AND p.category ILIKE :category)
                 SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE
+                    p.productname ILIKE :productname
+                    AND w.warehouse_name = :warehouse
+                    AND p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_no_product():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
-                    FROM 
-                        Products p
-                    JOIN 
-                        MovementDetail d ON p.product_id = d.product_id
-                    JOIN 
-                        Movement m ON d.movement_id = m.movement_id
-                    JOIN 
-                        Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                    LEFT JOIN 
-                        InvoiceDetail id ON p.product_id = id.product_id
-                    LEFT JOIN 
-                        Invoices i ON id.invoice_id = i.invoice_id
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
                 WHERE
                     p.current_status = :current_status
                     AND w.warehouse_name = :warehouse
-                    AND p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    AND p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_name_status():
         query = """
-            WITH filtered_products AS (
-            SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                i.invoice_id, i.document_number
+            SELECT 
+                p.*,
+                w.warehouse_name,
+                COALESCE(SUM(CASE 
+                    WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                    WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                    ELSE 0 
+                END), 0) AS available_units_in_warehouse
             FROM 
                 Products p
-            JOIN 
-                MovementDetail d ON p.product_id = d.product_id
-            JOIN 
-                Movement m ON d.movement_id = m.movement_id
-            JOIN 
+            LEFT JOIN 
+                MovementDetail md ON p.product_id = md.product_id
+            LEFT JOIN 
+                Movement m ON md.movement_id = m.movement_id
+            LEFT JOIN 
                 Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-            LEFT JOIN 
-                InvoiceDetail id ON p.product_id = id.product_id
-            LEFT JOIN 
-                Invoices i ON id.invoice_id = i.invoice_id
             WHERE
-                productname ILIKE :productname
+                p.productname ILIKE :productname
                 AND p.current_status = :current_status
-            SELECT 
-                (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                fp.*
-            FROM filtered_products fp
+            GROUP BY 
+                p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+            ORDER BY 
+                w.warehouse_name;
             """
         return query
     
     
     def filter_products_name_warehouse():
         query = """
-            WITH filtered_products AS (
-            SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                i.invoice_id, i.document_number
-            FROM 
-                Products p
-            JOIN 
-                MovementDetail d ON p.product_id = d.product_id
-            JOIN 
-                Movement m ON d.movement_id = m.movement_id
-            JOIN 
-                Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-            LEFT JOIN 
-                InvoiceDetail id ON p.product_id = id.product_id
-            LEFT JOIN 
-                Invoices i ON id.invoice_id = i.invoice_id
-            WHERE
-                productname ILIKE :productname
-                AND w.warehouse_name = :warehouse)
-            SELECT 
-                (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                fp.*
-            FROM filtered_products fp
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
+                FROM 
+                    Products p
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
+                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE
+                    p.productname ILIKE :productname
+                    AND w.warehouse_name = :warehouse
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
             """
         return query
     
     @staticmethod
     def filter_products_status_category():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
-                FROM 
-                    Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
-                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
-                WHERE
-                    p.current_status = :current_status
-                    AND p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+            SELECT 
+                p.*,
+                w.warehouse_name,
+                COALESCE(SUM(CASE 
+                    WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                    WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                    ELSE 0 
+                END), 0) AS available_units_in_warehouse
+            FROM 
+                Products p
+            LEFT JOIN 
+                MovementDetail md ON p.product_id = md.product_id
+            LEFT JOIN 
+                Movement m ON md.movement_id = m.movement_id
+            LEFT JOIN 
+                Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+            WHERE
+                p.current_status = :current_status
+                AND p.category ILIKE :category
+            GROUP BY 
+                p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+            ORDER BY 
+                w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_warehouse_category():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
                     w.warehouse_name = :warehouse
-                    AND p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    AND p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_name():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
-                    p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    p.productname ILIKE :productname
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
     @staticmethod
     def filter_products_status():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
-                    p.current_status = :current_status)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    p.current_status = :current_status
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
@@ -382,28 +380,28 @@ class SQLQueries:
     @staticmethod
     def filter_products_warehouse():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
-                    w.warehouse_name = :warehouse)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    w.warehouse_name = :warehouse
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
         return query
     
@@ -411,27 +409,66 @@ class SQLQueries:
     @staticmethod
     def filter_products_category():
         query = """
-                WITH filtered_products AS (
-                SELECT p.*, d.quantity,d.status AS detail_status, m.movement_id, m.origin_warehouse_id,
-                    m.destination_warehouse_id, m.creation_date,m.status AS movement_status, w.warehouse_name,
-                    i.invoice_id, i.document_number
+                SELECT 
+                    p.*,
+                    w.warehouse_name,
+                    COALESCE(SUM(CASE 
+                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        ELSE 0 
+                    END), 0) AS available_units_in_warehouse
                 FROM 
                     Products p
-                JOIN 
-                    MovementDetail d ON p.product_id = d.product_id
-                JOIN 
-                    Movement m ON d.movement_id = m.movement_id
-                JOIN 
+                LEFT JOIN 
+                    MovementDetail md ON p.product_id = md.product_id
+                LEFT JOIN 
+                    Movement m ON md.movement_id = m.movement_id
+                LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                LEFT JOIN 
-                    InvoiceDetail id ON p.product_id = id.product_id
-                LEFT JOIN 
-                    Invoices i ON id.invoice_id = i.invoice_id
                 WHERE
-                    p.category ILIKE :category)
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_products) AS total_count,
-                    fp.*
-                FROM filtered_products fp
+                    p.category ILIKE :category
+                GROUP BY 
+                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+                ORDER BY 
+                    w.warehouse_name;
                 """
+        return query
+    
+    @staticmethod
+    def get_invoices_active_query():
+        query = """
+                SELECT 
+                    invoice_id, type, document_number
+                FROM invoices
+                WHERE status = 'active'
+                ORDER BY invoice_id ASC
+            """
+        return query
+    
+    @staticmethod
+    def update_invoicedetail_query():
+        query = """
+            INSERT INTO invoicedetail(invoice_id,
+	            product_id, quantity, price)
+	        VALUES (?, ?, ?, ?);
+        """
+
+    @staticmethod
+    def update_product_query():
+        query = """
+                UPDATE products
+                SET 
+                    productname = :productname,
+                    imei = :imei,
+                    storage = :storage,
+                    battery = :battery,
+                    color = :color,
+                    description = :description,
+                    cost = :cost,
+                    category = :category,
+                    units = :units,
+                    supplier = :supplier
+
+                WHERE product_id = :product_id
+            """
         return query

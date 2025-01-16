@@ -6,14 +6,7 @@ class ModelInvoice:
 
     @staticmethod
     def get_invoices_active(db):
-        print("hola")
-        query = text("""
-            SELECT 
-                invoice_id, type, document_number
-            FROM invoices
-            WHERE status = 'active'
-            ORDER BY invoice_id ASC
-        """)
+        query = text(SQLQueries.get_invoices_active_query())
 
         result = db.session.execute(query).mappings().fetchall()
         
@@ -177,3 +170,16 @@ class ModelInvoice:
             print(f"Error al insertar factura: {e}")
             db.session.rollback()
             return False
+        
+    @staticmethod
+    def update_invoicedetail(db,product_id, document_number, invoice_quantity, price):
+        query = text(SQLQueries.update_invoicedetail_query())
+
+        params = {
+            "product_id": product_id,
+            "document_number": document_number,
+            "quantity": invoice_quantity,
+            "price": price
+        }
+
+        db.session.execute(query, params)

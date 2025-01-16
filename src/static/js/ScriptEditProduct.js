@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         //Obtener el elemento select para las facturas
         const invoiceSelect = document.getElementById('edit_invoice');
-
-
+        const quantityInput = document.getElementById('edit_quantity');
+        const priceInput = document.getElementById('edit_price');
 
         const product = JSON.parse(productData);
         const invoices = JSON.parse(invoicesData);
@@ -28,6 +28,36 @@ document.addEventListener('DOMContentLoaded', function () {
             option.textContent = invoice.document_number;
             invoiceSelect.appendChild(option);
             //console.log(invoice.document_number)
+        });
+
+        // Configurar el valor máximo para la cantidad según el producto
+        const maxUnits = product.units;
+        quantityInput.setAttribute('max', maxUnits);
+
+        // Deshabilitar cantidad inicialmente
+        quantityInput.disabled = true;
+        priceInput.disabled = true;
+        
+
+        // Habilitar cantidad al seleccionar una factura
+        invoiceSelect.addEventListener('change', function () {
+            if (invoiceSelect.value) {
+                quantityInput.disabled = false; // Habilitar el campo
+                priceInput.disabled = false;
+            } else {
+                quantityInput.disabled = true; // Deshabilitar si no hay factura seleccionada
+                priceInput.disabled = true;
+            }
+        });
+
+        // Validar cantidad ingresada
+        quantityInput.addEventListener('input', function () {
+            const value = parseInt(quantityInput.value, 10);
+            if (value > maxUnits) {
+                quantityInput.value = maxUnits; // No permitir más del inventario
+            } else if (value < 1) {
+                quantityInput.value = 1; // No permitir menos de 1
+            }
         });
 
         //document_number
@@ -49,5 +79,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const formattedDate = date.toISOString().split('T')[0]; // Convertir a YYYY-MM-DD
             document.getElementById('edit_creation_date').value = formattedDate;
         }
+        document.getElementById('edit_description').value = product.description || "";
     });
 });

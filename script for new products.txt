@@ -1,0 +1,58 @@
+-- Insertar usuarios con contraseñas encriptadas usando crypt
+INSERT INTO Users (name, role, warehouse_id, username, userpassword)
+VALUES 
+('Simon Perez', 'admin', 1, 'smperez', crypt('123', gen_salt('bf'))),
+('Juan Camilo David', 'operador', 2, 'jcdd', crypt('123', gen_salt('bf'))),
+('Karly', 'operador', 3, 'kar', crypt('123', gen_salt('bf')));
+
+
+
+-- Insertar bodegas
+INSERT INTO Warehouses (warehouse_id, warehouse_name, address)
+VALUES 
+    (1, 'Laureles', 'Medellín, Cra 65'),
+    (2, 'Monterrey', 'Medellín, Cra 43'),
+    (3, 'Envigado', 'Envigado, Calle 1');
+
+-- Insertar productos
+INSERT INTO Products (imei, storage, battery, color, description, cost, current_status, acquisition_date, productname, price, category, units, supplier)
+VALUES
+('123', 128, 4000, 'Negro', 'Smartphone de gama media con cámara dual', 1200000.00, 'In Warehouse', '2025-01-16', 'Galaxy A51', 1500000.00, 'Smartphone', 1, 'Samsung'),
+('456', 64, 3000, 'Azul', 'Smartphone compacto con alta resolución de pantalla', 800000.00, 'In Warehouse', '2025-01-16', 'iPhone SE', 1200000.00, 'Smartphone', 1, 'Apple'),
+('789', 256, 4500, 'Blanco', 'Smartphone de alta gama con procesador rápido', 2500000.00, 'In Warehouse', '2025-01-16', 'Galaxy S21 Ultra', 3200000.00, 'Smartphone', 1, 'Samsung'),
+('987', 512, 5000, 'Plata', 'Laptop ultraligera con batería de larga duración', 4000000.00, 'In Warehouse', '2025-01-16', 'MacBook Air', 4800000.00, 'Laptop', 3, 'Apple'),
+('654', 1024, 8000, 'Gris', 'Laptop potente para gaming y edición de video', 6000000.00, 'In Warehouse', '2025-01-16', 'Alienware M15', 7500000.00, 'Laptop', 2, 'Dell');
+
+-- Insertar inventario inicial
+INSERT INTO WarehouseStock (warehouse_id, product_id, units)
+VALUES 
+    (1, 1, 1),
+    (2, 2, 1),
+    (3, 3, 1),
+    (2, 4, 2),
+    (1, 4, 1),
+    (1, 5, 1),
+    (3, 5, 1);
+
+
+-- Crear movimientos iniciales
+INSERT INTO Movement (movement_id, movement_type, origin_warehouse_id, destination_warehouse_id, 
+                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
+VALUES 
+    (1, 'Entry', 1, 1, NOW(), 'created', 'Inventario inicial en Laureles',1,1),
+    (2, 'Entry', 2, 2, NOW(), 'created', 'Inventario inicial en Monterrey',2,2),
+    (3, 'Entry', 3, 3, NOW(), 'created', 'Inventario inicial en Envigado',3,3),
+    (4, 'Entry', 2, 2, NOW(), 'created', 'Inventario inicial en Monterrey',2,2),
+    (5, 'Entry', 1, 1, NOW(), 'created', 'Inventario inicial en Laureles',1,1),
+    (6, 'Entry', 1, 1, NOW(), 'created', 'Inventario inicial en Monterrey',1,1),
+    (7, 'Entry', 3, 3, NOW(), 'created', 'Inventario inicial en Envigado', 3, 3);
+
+INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
+VALUES 
+    (1, 1, 1, 'completed'),
+    (2, 2, 1, 'completed'),
+    (3, 3, 1, 'completed'),
+    (4, 4, 2, 'completed'),
+    (5, 4, 1, 'completed'),
+    (6, 5, 1, 'completed'),
+    (7, 5, 1, 'completed');

@@ -3,20 +3,19 @@ from sqlalchemy import text
 from .entities.product import Products
 from .queries.sql_queries import SQLQueries
 import datetime
+import pandas as pd
 
 class ModelProduct():
 
     @staticmethod
-    def get_product_full_info(db, limit, offset):
-        query = text(SQLQueries.get_all_products_query())
-        result = db.session.execute(query, {"limit": limit, "offset": offset}).mappings().all()
-        return [dict(row) for row in result]
-
-    @staticmethod
-    def count_products(db):
-        query = text(SQLQueries.count_products_query())
-        total = db.session.execute(query).scalar()
-        return total
+    def get_products_units(db):
+        query = text(SQLQueries.get_products_units())
+        result = db.session.execute(query).mappings().all()
+        df = pd.DataFrame(result)
+        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+            # Convertir a lista de diccionarios
+        filtered_data = filtered_df.to_dict(orient="records")
+        return filtered_data
     
     @staticmethod
     def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, cost, warehouse_id):
@@ -70,19 +69,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
+                    if result:                       
                         # Construye la lista de productos excluyendo 'total_count'
                         products = [dict(row) for row in result]
-                        
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, productname, current_status, warehouse, category) if productname and current_status and warehouse and category:
                     query = text(SQLQueries.filter_products_all_fields())
@@ -94,20 +91,18 @@ class ModelProduct():
                                        }
 
                     result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
            
                 case (_, productname, current_status, warehouse, _) if productname and current_status and warehouse:
                     query = text(SQLQueries.filter_products_no_category())
@@ -117,20 +112,17 @@ class ModelProduct():
                                        'warehouse': warehouse
                                        }
                     result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
 
                 case (_, productname, current_status, _, category) if productname and current_status and category:
                     query = text(SQLQueries.filter_products_no_warehouse())
@@ -141,19 +133,17 @@ class ModelProduct():
                                        }
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, productname, _, warehouse, category) if productname and warehouse and category:
                     
@@ -165,19 +155,17 @@ class ModelProduct():
                                        }
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, _, current_status, warehouse, category) if current_status and warehouse and category:
                     query = text(SQLQueries.filter_products_no_product())
@@ -188,20 +176,17 @@ class ModelProduct():
                                        }
 
                     result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, productname, current_status, _, _) if productname and current_status:
                     
@@ -211,20 +196,17 @@ class ModelProduct():
                                        'current_status': current_status
                                        }
                     result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, productname, _, warehouse, _) if productname  and warehouse:
                     query = text(SQLQueries.filter_products_name_warehouse())
@@ -235,19 +217,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, _, current_status, _, category) if current_status and category:
                     query = text(SQLQueries.filter_products_status_category())
@@ -258,19 +238,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
 
                 case (_, _, _, warehouse, category) if warehouse and category:
                     query = text(SQLQueries.filter_products_warehouse_category())
@@ -281,19 +259,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, productname, _, _, _) if productname:
 
@@ -303,19 +279,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
 
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
 
                 case (_, _, current_status, _, _) if current_status:
 
@@ -327,19 +301,17 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                  
                 case (_, _, _, warehouse, _) if warehouse:
                     
@@ -350,20 +322,17 @@ class ModelProduct():
                     }
 
                     result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 
                 case (_, _, _, _, category) if category:
                     
@@ -373,23 +342,21 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     
-                    if result and 'total_count' in result[0]:
-                        # Convierte el RowMapping a un diccionario
-                        row_dict = dict(result[0])
-                        
-                        # Captura el valor de 'total_count'
-                        total_count = row_dict.pop('total_count')
-                        
-                        # Construye la lista de productos excluyendo 'total_count'
+                    if result:
                         products = [dict(row) for row in result]
+                        df = pd.DataFrame(result)
+                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+                            # Convertir a lista de diccionarios
+                        filtered_data = filtered_df.to_dict(orient="records")
+                        products = filtered_data 
                         
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products, total_count
+                    return products
                 case _:
                     products = []
                     return products, 0
-            return products, total_count
+            return products, 0
 
         except Exception as e:
             print(f"Error filtering products: {e}")
@@ -397,32 +364,24 @@ class ModelProduct():
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
-                       current_status, category, units, supplier):
+                       category, units, supplier):
+    
         try:
-            query = text("""
-                UPDATE products
-                SET 
-                    productname = :productname,
-                    imei = :imei,
-                    storage = :storage,
-                    battery = :battery,
-                    color = :color,
-                    description = :description,
-                    cost = :cost,
-                    current_status = :current_status
-                WHERE product_id = :product_id
-            """)
-            db.session.execute(query, {
-                "productname": productname,
-                "imei": imei,
-                "storage": storage,
-                "battery": battery,
-                "color": color,
-                "description": description,
-                "cost": cost,
-                "current_status": current_status,
-                "product_id": product_id
-            })
+            query = text(SQLQueries.update_product_query())
+            params = {
+                    "productname": productname,
+                    "imei": imei,
+                    "storage": storage,
+                    "battery": battery,
+                    "color": color,
+                    "description": description,
+                    "cost": cost,
+                    "category": category,
+                    "units": units,
+                    "supplier": supplier,
+                    "product_id": product_id
+                    }
+            db.session.execute(query, params)
             db.session.commit()
             return True
         except Exception as e:
