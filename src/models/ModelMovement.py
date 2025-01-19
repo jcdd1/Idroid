@@ -130,58 +130,50 @@ class ModelMovement:
     @staticmethod
     def get_movements_by_imei(db, imei):
         query = text("""
-                SELECT 
+                SELECT
                     m.movement_id,
-                    m.origin_warehouse_id,
-                    m.destination_warehouse_id,
+                    m.movement_type,
                     m.creation_date,
                     m.status AS movement_status,
-                    m.notes AS movement_notes,
-                    d.detail_id,
-                    d.product_id,
-                    d.quantity,
-                    d.status AS detail_status,
-                    d.rejection_reason,
+                    m.origin_warehouse_id,
+                    origin.warehouse_name AS origin_warehouse_name,
+                    m.destination_warehouse_id,
+                    destination.warehouse_name AS destination_warehouse_name,
+                    md.quantity AS movement_quantity,
+                    md.status AS detail_status,
+                    md.rejection_reason,
                     r.return_id,
-                    r.quantity AS returned_quantity,
+                    r.quantity AS return_quantity,
                     r.return_date,
-                    r.notes AS return_notes
-                FROM 
-                    Movement m
-                LEFT JOIN 
-                    MovementDetail d
-                ON 
-                    m.movement_id = d.movement_id
-                LEFT JOIN 
-                    Return r
-                ON 
-                    d.detail_id = r.movement_detail_id
-                WHERE 
-                    d.product_id = :imei;
+                    r.notes
+                FROM
+                    movement m
+                JOIN
+                    movementdetail md ON m.movement_id = md.movement_id
+                JOIN
+                    products p ON md.product_id = p.product_id
+                LEFT JOIN
+                    warehouses origin ON m.origin_warehouse_id = origin.warehouse_id
+                LEFT JOIN
+                    warehouses destination ON m.destination_warehouse_id = destination.warehouse_id
+                LEFT JOIN
+                    return r ON md.detail_id = r.movement_detail_id
+                WHERE
+                    p.imei = :imei
+                ORDER BY
+                    m.creation_date ASC;
         """)
-        result = db.execute(query, {"imei": imei})
-        
-        # Convertir los resultados a una lista de diccionarios
-        movements = [
-            {
-                "movement_id": row["movement_id"],
-                "origin_warehouse_id": row["origin_warehouse_id"],
-                "destination_warehouse_id": row["destination_warehouse_id"],
-                "creation_date": row["creation_date"],
-                "movement_status": row["movement_status"],
-                "movement_notes": row["movement_notes"],
-                "detail_id": row["detail_id"],
-                "product_id": row["product_id"],
-                "quantity": row["quantity"],
-                "detail_status": row["detail_status"],
-                "rejection_reason": row["rejection_reason"],
-                "return_id": row["return_id"],
-                "returned_quantity": row["returned_quantity"],
-                "return_date": row["return_date"],
-                "return_notes": row["return_notes"],
+        params = {
+                'imei': imei
             }
-            for row in result
-        ]
+
+        result = db.session.execute(query, params).mappings().fetchall()
+                            
+        if result:
+            print(imei)
+            movements = [dict(row) for row in result]
+        else:
+            movements = []
         
         return movements
     

@@ -312,10 +312,7 @@ def show_products():
         )
         
     else:
-        # Muestra todos los productos si no hay filtros
-        # products = ModelProduct.get_product_full_info(db, limit=per_page, offset=offset)
         products = ModelProduct.get_products_units(db)
-        # Convierte a JSON serializable
 
     total = len(products)
     
@@ -330,7 +327,6 @@ def show_products():
         warehouses_name = warehouses_name,
         active_invoices=active_invoices
     )
-
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -414,9 +410,11 @@ def edit_product():
 @app.route('/movements/<string:imei>', methods=['GET'])
 def get_movements_by_imei(imei):
     try:
+        print(imei)
         # Supongamos que este método devuelve una lista de movimientos
         movements = ModelMovement.get_movements_by_imei(db, imei)
         # Devuelve los movimientos como JSON
+        print(movements)
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

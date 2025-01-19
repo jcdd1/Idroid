@@ -17,14 +17,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                     <td>${movement.movement_id}</td>
-                    <td>${movement.origin_warehouse_id}</td>
-                    <td>${movement.destination_warehouse_id}</td>
+                    <td>${movement.movement_type}</td>
                     <td>${movement.creation_date}</td>
                     <td>${movement.movement_status}</td>
-                    <td>${movement.movement_notes}</td>
-                    <td>${movement.detail_id}</td>
-                    <td>${movement.product_id}</td>
-                    <td>${movement.quantity}</td>
+                    <td>${movement.origin_warehouse_id}</td>
+                    <td>${movement.origin_warehouse_name}</td>
+                    <td>${movement.destination_warehouse_id}</td>
+                    <td>${movement.destination_warehouse_name}</td>
+                    <td>${movement.movement_quantity}</td>
                     <td>${movement.detail_status}</td>
                     <td>${movement.rejection_reason ? movement.rejection_reason : 'N/A'}</td>
                     <td>${movement.return_id ? movement.return_id : 'N/A'}</td>
