@@ -89,7 +89,7 @@ def show_invoices():
 def edit_invoice():
     # Obtener el ID de la factura
     invoice_id = request.form.get('invoice_id')
-    print(invoice_id)
+    
     invoice = ModelInvoice.get_invoice_by_id(db, invoice_id)
 
     if not invoice:
@@ -173,7 +173,7 @@ def login():
             return redirect(url_for('menu'))
         else:
             flash("Usuario o contraseña invalida")
-        #print(request.form['username'])
+        
         return render_template("auth/login.html")
     else:
         return render_template("auth/login.html")
@@ -318,10 +318,9 @@ def show_products():
         # Aplica filtro si hay parámetros
         products = ModelProduct.filter_products(
             db, imei=imei, productname=productname, current_status=current_status, warehouse = warehouse, category = category,limit=per_page, offset=offset
-        )
-        
+        )    
     else:
-        products = ModelProduct.get_products_units(db)
+        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
 
     total = len(products)
     
@@ -351,7 +350,7 @@ def add_product():
     units = request.form.get('add_units')
     supplier = request.form.get('add_supplier')
     current_user = request.form.get('add_user_id')
-    print(current_user)
+    
     # Validar datos
     if not productname or not imei:
         flash('El nombre del producto e IMEI son obligatorios.', 'error')
@@ -416,7 +415,7 @@ def edit_product():
     else:
         flash("No se  asoció el producto.", "danger")
 
-    print(success)
+    
     if success:
         flash("Producto actualizado exitosamente.", "success")
     else:
@@ -427,7 +426,7 @@ def edit_product():
 @app.route('/movements/<string:imei>', methods=['GET'])
 def get_movements_by_imei(imei):
     try:
-        print(imei)
+        
         # Supongamos que este método devuelve una lista de movimientos
         movements = ModelMovement.get_movements_by_imei(db, imei)
         # Devuelve los movimientos como JSON

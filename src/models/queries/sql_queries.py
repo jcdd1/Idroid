@@ -6,6 +6,7 @@ class SQLQueries:
             SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -19,6 +20,8 @@ class SQLQueries:
                     Movement m ON md.movement_id = m.movement_id
                 LEFT JOIN 
                     Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+                WHERE
+                    w.warehouse_id = :warehouse_id
                 GROUP BY 
                     p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
                 ORDER BY 
@@ -32,6 +35,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -59,6 +63,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -90,6 +95,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -120,6 +126,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -150,6 +157,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -180,6 +188,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -210,6 +219,7 @@ class SQLQueries:
             SELECT 
                 p.*,
                 w.warehouse_name,
+                w.warehouse_id,
                 COALESCE(SUM(CASE 
                     WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                     WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -239,6 +249,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -268,6 +279,7 @@ class SQLQueries:
             SELECT 
                 p.*,
                 w.warehouse_name,
+                w.warehouse_id,
                 COALESCE(SUM(CASE 
                     WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                     WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -297,6 +309,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -326,6 +339,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -354,6 +368,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -383,6 +398,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -412,6 +428,7 @@ class SQLQueries:
                 SELECT 
                     p.*,
                     w.warehouse_name,
+                    w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
                         WHEN m.movement_type IN ('Sold') THEN -md.quantity
@@ -511,3 +528,28 @@ class SQLQueries:
                     m.creation_date ASC;
         """
         return query
+    
+    @staticmethod
+    def add_product_with_initial_movement_query():
+        query_product = """
+            INSERT INTO Products (imei, storage, battery, color, description, cost, current_status, acquisition_date, productname, category, units, supplier)
+            VALUES (:imei, :storage, :battery, :color, :description, :cost, 'In Warehouse', CURRENT_DATE, :productname, :category, :units, :supplier)
+            RETURNING product_id;
+            """
+        query_stock = """
+                INSERT INTO WarehouseStock (warehouse_id, product_id, units)
+                VALUES(:warehouse_id, :product_id, :units) 
+            """
+        
+        query_movement ="""
+            INSERT INTO Movement (movement_type, origin_warehouse_id, destination_warehouse_id, 
+                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
+            VALUES('Entry', :warehouse_id, :warehouse_id, CURRENT_TIMESTAMP, 'created', 'Inventario inicial', :current_user, :current_user)
+            RETURNING movement_id;
+            """
+        
+        query_movement_detail ="""
+            INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
+            VALUES(:movement_id, :product_id, :units, 'completed')       
+            """
+        return query_product, query_stock, query_movement, query_movement_detail

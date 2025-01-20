@@ -112,8 +112,9 @@
                     <button type="button" class="btn btn-success btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#editProductModal"
-                            data-invoices='{{ active_invoices | tojson }}'
-                            data-product='{{ product | tojson }}'>
+                            data-invoices='{{ active_invoices | tojson | safe }}'
+                            data-product='{{ product | tojson | safe }}'
+                            {% if product.warehouse_id != current_user.warehouse_id %} disabled {% endif %}>
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
                 </td>
@@ -122,7 +123,8 @@
                     <button type="button" class="btn btn-success btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#createMovementModal" 
-                            data-product='{{ product | tojson }}'>
+                            data-product='{{ product }}'
+                            {% if product.warehouse_id != current_user.warehouse_id %} disabled {% endif %}>
                         <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
                 </td>
@@ -227,7 +229,7 @@
             <form method="POST" action="{{ url_for('edit_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="edit_product_id" name="edit_product_id"> 
-
+                <input type="hidden" id="edit_warehouse_id" name="edit_warehouse_id"> 
                 <!-- Encabezado del modal -->
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="editProductModalLabel">Editar Producto</h5>

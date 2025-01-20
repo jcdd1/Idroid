@@ -5,8 +5,6 @@ VALUES
 ('Juan Camilo David', 'operador', 2, 'jcdd', crypt('123', gen_salt('bf'))),
 ('Karly', 'operador', 3, 'kar', crypt('123', gen_salt('bf')));
 
-
-
 -- Insertar bodegas
 INSERT INTO Warehouses (warehouse_id, warehouse_name, address)
 VALUES 

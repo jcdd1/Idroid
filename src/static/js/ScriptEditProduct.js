@@ -60,9 +60,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        console.log("Product Data:", productData);
+        console.log("Parsed Product:", product);
+
         //document_number
         // Asigna valores a los campos del modal
         document.getElementById('edit_product_id').value = product.product_id || "";
+        document.getElementById('edit_warehouse_id').value = product.warehouse_id || "";
         document.getElementById('edit_productname').value = product.productname || "";
         document.getElementById('edit_imei').value = product.imei || "";
         document.getElementById('edit_storage').value = product.storage || "";

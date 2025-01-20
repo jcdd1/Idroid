@@ -8,25 +8,29 @@ import pandas as pd
 class ModelProduct():
 
     @staticmethod
-    def get_products_units(db):
-        query = text(SQLQueries.get_products_units())
-        result = db.session.execute(query).mappings().all()
-        df = pd.DataFrame(result)
-        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-            # Convertir a lista de diccionarios
-        filtered_data = filtered_df.to_dict(orient="records")
-        return filtered_data
-    
+    def get_products_units(db, warehouse_id):
+        try:
+            query = text(SQLQueries.get_products_units())
+            result = db.session.execute(query, {'warehouse_id': warehouse_id}).mappings().all()
+
+            result = [dict(row) for row in result]
+            # df = pd.DataFrame(result)
+            # filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+            #     # Convertir a lista de diccionarios
+            # filtered_data = filtered_df.to_dict(orient="records")
+            return result
+        except Exception as e:
+            print(f"Error adding product: {e}")
+            db.session.rollback()  # Rollback on error
+            return False
     @staticmethod
     def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, 
                                           cost, category, units, supplier, warehouse_id, current_user):
         try:
             # Insert product into products table
-            query_product = text("""
-            INSERT INTO Products (imei, storage, battery, color, description, cost, current_status, acquisition_date, productname, category, units, supplier)
-            VALUES (:imei, :storage, :battery, :color, :description, :cost, 'In Warehouse', CURRENT_DATE, :productname, :category, :units, :supplier)
-            RETURNING product_id;
-            """)
+            query_1, query_2, query_3, query_4 = SQLQueries.add_product_with_initial_movement_query()
+
+            query_product = text(query_1)
             result = db.session.execute(query_product, {
                 'productname': productname,
                 'imei': imei,
@@ -41,11 +45,8 @@ class ModelProduct():
             })
             product_id = result.fetchone()[0]
 
-            print("exito crear producto")
-            query_stock = text("""
-                INSERT INTO WarehouseStock (warehouse_id, product_id, units)
-                VALUES(:warehouse_id, :product_id, :units) 
-            """)
+            
+            query_stock = text(query_2)
 
             db.session.execute(query_stock, {
                 'warehouse_id': warehouse_id,
@@ -54,12 +55,7 @@ class ModelProduct():
             })
             print("exito crear el stock")
             # Crear movimientos iniciales
-            query_movement = text("""
-            INSERT INTO Movement (movement_type, origin_warehouse_id, destination_warehouse_id, 
-                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
-            VALUES('Entry', :warehouse_id, :warehouse_id, CURRENT_TIMESTAMP, 'created', 'Inventario inicial', :current_user, :current_user)
-            RETURNING movement_id;
-            """)
+            query_movement = text(query_3)
 
             result = db.session.execute(query_movement, {
                 'warehouse_id': warehouse_id,
@@ -69,10 +65,7 @@ class ModelProduct():
             movement_id = result.fetchone()[0]
 
             # Register initial movement in inventory_movements table
-            query_movement_detail = text("""
-            INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
-            VALUES(:movement_id, :product_id, :units, 'completed')       
-            """)
+            query_movement_detail = text(query_4)
             db.session.execute(query_movement_detail, {
                 'product_id': product_id,
                 'movement_id': movement_id,
@@ -105,11 +98,7 @@ class ModelProduct():
                     if result:                       
                         # Construye la lista de productos excluyendo 'total_count'
                         products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data                        
+                                              
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -126,13 +115,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
                     
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -146,13 +129,7 @@ class ModelProduct():
                                        }
                     result = db.session.execute(query, params).mappings().fetchall()
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -167,13 +144,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
 
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                       
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -190,12 +161,6 @@ class ModelProduct():
 
                     if result:
                         products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -210,13 +175,7 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -231,12 +190,6 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
                     if result:
                         products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -251,13 +204,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
 
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -272,13 +219,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
 
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -293,13 +234,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
 
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -314,12 +249,6 @@ class ModelProduct():
 
                     if result:
                         products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -335,13 +264,7 @@ class ModelProduct():
                     result = db.session.execute(query, params).mappings().fetchall()
                     
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
@@ -356,13 +279,7 @@ class ModelProduct():
 
                     result = db.session.execute(query, params).mappings().fetchall()
                     if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
+                        products = [dict(row) for row in result]                        
                     else:
                         products = []  # Si no hay resultados, inicializa la lista vacía
                     return products
