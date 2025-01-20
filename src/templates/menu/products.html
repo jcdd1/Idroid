@@ -27,10 +27,13 @@
 
 <!-- Botón para crear producto -->
 <div class="d-flex justify-content-end mb-3">
-    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
-        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Añadir" style="width: 25px; height: 25px;"> Crear producto
+    <button type="button" class="btn btn-success btn-lg rounded-pill d-flex align-items-center shadow-sm" 
+            data-bs-toggle="modal" data-bs-target="#addProductModal" style="gap: 10px;">
+        <i class="fas fa-plus-circle" style="font-size: 20px;"></i>
+        <span>Crear producto</span>
     </button>
 </div>
+
 
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_products') }}" class="row g-3 mt-4">
@@ -66,8 +69,8 @@
 
 <!-- Tabla de productos -->
 <div class="table-responsive mt-4">
-    <table class="table table-striped">
-        <thead class="table-success">
+    <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
+        <thead class="bg-success text-white text-center">
             <tr>
                 <th>Producto</th>
                 <th>IMEI</th>
@@ -79,12 +82,13 @@
                 <th>Unidades</th>
                 <th>Estado</th>
                 <th>Bodega</th>
+                <th colspan="2">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for product in products %}
-            <tr>
-                <td style="cursor: pointer; color: blue;" 
+            <tr class="{% if product.current_status == 'Sold' %}table-success{% elif product.current_status == 'Under Repair' %}table-warning{% else %}table-light{% endif %}">
+                <td style="cursor: pointer; color: #2d6a4f;" 
                     data-bs-toggle="modal" 
                     data-bs-target="#viewMovementsModal" 
                     data-imei="{{ product.imei }}">
@@ -97,19 +101,25 @@
                 <td>{{ product.description }}</td>
                 <td>{{ product.category }}</td>
                 <td>{{ product.units }}</td>
-                <td>{{ product.current_status }}</td>
+                <td class="text-center">
+                    <span class="badge {% if product.current_status == 'Sold' %}bg-success{% elif product.current_status == 'Under Repair' %}bg-warning{% else %}bg-secondary{% endif %}">
+                        {{ product.current_status }}
+                    </span>
+                </td>
                 <td>{{ product.warehouse_name }}</td>
-                <td>
-                    <button type="button" class="btn btn-info btn-sm" 
+                <!-- Botón de editar -->
+                <td class="text-center">
+                    <button type="button" class="btn btn-success btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#editProductModal"
-                            data-invoices='{{ active_invoices | tojson }}''
+                            data-invoices='{{ active_invoices | tojson }}'
                             data-product='{{ product | tojson }}'>
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
                 </td>
-                <td>
-                    <button type="button" class="btn btn-info btn-sm" 
+                <!-- Botón de agregar movimiento -->
+                <td class="text-center">
+                    <button type="button" class="btn btn-success btn-sm" 
                             data-bs-toggle="modal" 
                             data-bs-target="#createMovementModal" 
                             data-product='{{ product | tojson }}'>
@@ -122,165 +132,211 @@
     </table>
 </div>
 
+
+
+
 <!-- Modal para añadir producto -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
             <form method="POST" action="{{ url_for('add_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="add_user_id" name="add_user_id" value="{{ current_user.user_id }}">
+                <input type="hidden" id="add_warehouse_id" name="add_warehouse_id" value="{{ current_user.warehouse_id }}">
 
-                <input type="hidden" id = "add_user_id" name="add_user_id" value="{{ current_user.user_id }}">
-                <input type="hidden" id= "add_warehouse_id"name="add_warehouse_id" value="{{ current_user.warehouse_id }}">
-                <div class="modal-header">
+                <!-- Encabezado del modal -->
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="addProductModalLabel">Añadir Producto</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
+                <!-- Cuerpo del modal -->
                 <div class="modal-body">
                     <div class="row g-3">
+                        <!-- Nombre del Producto -->
                         <div class="col-md-6">
                             <label for="add_productname" class="form-label">Nombre del Producto</label>
-                            <input type="text" class="form-control" id="add_productname" name="add_productname">
+                            <input type="text" class="form-control" id="add_productname" name="add_productname" required>
                         </div>
+
+                        <!-- IMEI -->
                         <div class="col-md-6">
-                            <label for="imei" class="form-label">IMEI</label>
-                            <input type="text" class="form-control" id="add_imei" name="add_imei">
+                            <label for="add_imei" class="form-label">IMEI</label>
+                            <input type="text" class="form-control" id="add_imei" name="add_imei" required>
                         </div>
+
+                        <!-- Memoria -->
                         <div class="col-md-6">
                             <label for="add_storage" class="form-label">Memoria</label>
-                            <input type="number" class="form-control" id="add_storage" name="add_storage">
+                            <input type="number" class="form-control" id="add_storage" name="add_storage" min="1" required>
                         </div>
+
+                        <!-- Batería -->
                         <div class="col-md-6">
                             <label for="add_battery" class="form-label">Batería</label>
-                            <input type="number" class="form-control" id="add_battery" name="add_battery">
+                            <input type="number" class="form-control" id="add_battery" name="add_battery" min="1" required>
                         </div>
+
+                        <!-- Color -->
                         <div class="col-md-6">
                             <label for="add_color" class="form-label">Color</label>
-                            <input type="text" class="form-control" id="add_color" name="add_color">
+                            <input type="text" class="form-control" id="add_color" name="add_color" required>
                         </div>
+
+                        <!-- Costo -->
                         <div class="col-md-6">
                             <label for="add_cost" class="form-label">Costo</label>
-                            <input type="number" step="0.01" class="form-control" id="add_cost" name="add_cost">
+                            <input type="number" step="0.01" class="form-control" id="add_cost" name="add_cost" required>
                         </div>
-                        <div class="col-md-6">
-                            <label for="add_price" class="form-label">Precio</label>
-                            <input type="number" step="0.01" class="form-control" id="add_price" name="add_price">
-                        </div>
+
+                        <!-- Categoría -->
                         <div class="col-md-6">
                             <label for="add_category" class="form-label">Categoría</label>
-                            <input type="text" class="form-control" id="add_category" name="add_category">
+                            <input type="text" class="form-control" id="add_category" name="add_category" required>
                         </div>
+
+                        <!-- Unidades -->
                         <div class="col-md-6">
                             <label for="add_units" class="form-label">Unidades</label>
-                            <input type="number" class="form-control" id="add_units" name="add_units">
+                            <input type="number" class="form-control" id="add_units" name="add_units" min="1" required>
                         </div>
+
+                        <!-- Proveedor -->
                         <div class="col-md-6">
                             <label for="add_supplier" class="form-label">Proveedor</label>
-                            <input type="text" class="form-control" id="add_supplier" name="add_supplier">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="add_current_status" class="form-label">Estado</label>
-                            <input type="text" class="form-control" id="add_current_status" name="add_current_status">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="acquisition_date" class="form-label">Fecha de Adquisición</label>
-                            <input type="date" class="form-control" id="acquisition_date" name="acquisition_date">
+                            <input type="text" class="form-control" id="add_supplier" name="add_supplier" required>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+
+                <!-- Pie del modal -->
+                <div class="modal-footer" style="background-color: #d4edda;"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary">Añadir Producto</button>
+                    <button type="submit" class="btn btn-success">Añadir Producto</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+
 <!-- Modal para editar producto -->
 <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
             <form method="POST" action="{{ url_for('edit_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="col-md-6">
-                    <label for="edit_invoice" class="form-label">Asociar Factura</label>
-                    <select class="form-control" id="edit_invoice" name="edit_invoice">
-                        <option value="">Seleccione una factura</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="edit_quantity" class="form-label">Cantidad</label>
-                    <input type="number" class="form-control" id="edit_quantity" name="edit_quantity" min="1" readonly>
-                    <div class="form-text">La cantidad no puede superar el inventario disponible.</div>
-                </div>
-                <div class="col-md-6">
-                    <label for="edit_price" class="form-label">Cantidad</label>
-                    <input type="number" class="form-control" id="edit_price" name="edit_price" min="1" readonly>
-                    <div class="form-text">La cantidad no puede superar el inventario disponible.</div>
-                </div>
-                <div class="modal-header">
+                <input type="hidden" id="edit_product_id" name="edit_product_id"> 
+
+                <!-- Encabezado del modal -->
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="editProductModalLabel">Editar Producto</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
+                <!-- Cuerpo del modal -->
                 <div class="modal-body">
-                    <input type="hidden" name="edit_product_id" id="edit_product_id">
                     <div class="row g-3">
+                        <!-- Nombre del Producto -->
                         <div class="col-md-6">
                             <label for="edit_productname" class="form-label">Nombre del Producto</label>
-                            <input type="text" class="form-control" id="edit_productname" name="edit_productname">
+                            <input type="text" class="form-control" id="edit_productname" name="edit_productname" required>
                         </div>
+
+                        <!-- IMEI -->
                         <div class="col-md-6">
                             <label for="edit_imei" class="form-label">IMEI</label>
-                            <input type="text" class="form-control" id="edit_imei" name="edit_imei">
+                            <input type="text" class="form-control" id="edit_imei" name="edit_imei" required>
                         </div>
+
+                        <!-- Memoria -->
                         <div class="col-md-6">
-                            <label for="storage" class="form-label">Memoria</label>
-                            <input type="number" class="form-control" id="edit_storage" name="edit_storage">
+                            <label for="edit_storage" class="form-label">Memoria</label>
+                            <input type="number" class="form-control" id="edit_storage" name="edit_storage" min="1" required>
                         </div>
+
+                        <!-- Batería -->
                         <div class="col-md-6">
-                            <label for="battery" class="form-label">Batería</label>
-                            <input type="number" class="form-control" id="edit_battery" name="edit_battery">
+                            <label for="edit_battery" class="form-label">Batería</label>
+                            <input type="number" class="form-control" id="edit_battery" name="edit_battery" min="1" required>
                         </div>
+
+                        <!-- Color -->
                         <div class="col-md-6">
-                            <label for="color" class="form-label">Color</label>
+                            <label for="edit_color" class="form-label">Color</label>
                             <input type="text" class="form-control" id="edit_color" name="edit_color">
                         </div>
+
+                        <!-- Costo -->
                         <div class="col-md-6">
-                            <label for="cost" class="form-label">Costo</label>
-                            <input type="number" step="0.01" class="form-control" id="edit_cost" name="edit_cost">
+                            <label for="edit_cost" class="form-label">Costo</label>
+                            <input type="number" step="0.01" class="form-control" id="edit_cost" name="edit_cost" required>
                         </div>
+
+                        <!-- Precio -->
                         <div class="col-md-6">
-                            <label for="price" class="form-label">Precio</label>
-                            <input type="number" step="0.01" class="form-control" id="edit_price" name="edit_price">
+                            <label for="edit_price" class="form-label">Precio</label>
+                            <input type="number" step="0.01" class="form-control" id="edit_price" name="edit_price" required>
                         </div>
+
+                        <!-- Categoría -->
                         <div class="col-md-6">
-                            <label for="category" class="form-label">Categoría</label>
+                            <label for="edit_category" class="form-label">Categoría</label>
                             <input type="text" class="form-control" id="edit_category" name="edit_category">
                         </div>
+
+                        <!-- Unidades -->
                         <div class="col-md-6">
-                            <label for="units" class="form-label">Unidades</label>
-                            <input type="number" class="form-control" id="edit_units" name="edit_units">
+                            <label for="edit_units" class="form-label">Unidades</label>
+                            <input type="number" class="form-control" id="edit_units" name="edit_units" min="0" required>
                         </div>
+
+                        <!-- Proveedor -->
                         <div class="col-md-6">
-                            <label for="supplier" class="form-label">Proveedor</label>
+                            <label for="edit_supplier" class="form-label">Proveedor</label>
                             <input type="text" class="form-control" id="edit_supplier" name="edit_supplier">
                         </div>
+
+                        <!-- Estado -->
                         <div class="col-md-6">
-                            <label for="current_status" class="form-label">Estado</label>
+                            <label for="edit_current_status" class="form-label">Estado</label>
                             <input type="text" class="form-control" id="edit_current_status" name="edit_current_status">
                         </div>
+
+                        <!-- Fecha de Creación -->
                         <div class="col-md-6">
                             <label for="edit_creation_date" class="form-label">Fecha de Creación</label>
                             <input type="date" class="form-control" id="edit_creation_date" name="edit_creation_date">
                         </div>
-                        <label for="description">Descripción:</label>
-                        <textarea id="edit_description" name="edit_description"></textarea><br>
+
+                        <!-- Descripción -->
+                        <div class="col-12">
+                            <label for="edit_description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="edit_description" name="edit_description" rows="3"></textarea>
+                        </div>
+
+                        <!-- Asociar Factura -->
+                        <div class="col-md-6">
+                            <label for="edit_invoice" class="form-label">Asociar Factura</label>
+                            <select class="form-control" id="edit_invoice" name="edit_invoice">
+                                <option value="">Seleccione una factura</option>
+                                <!-- Opciones dinámicas generadas desde el JS -->
+                            </select>
+                        </div>
+
+                        <!-- Cantidad -->
+                        <div class="col-md-6">
+                            <label for="edit_quantity" class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" id="edit_quantity" name="edit_quantity" min="1" disabled>
+                            <div class="form-text">La cantidad no puede superar el inventario disponible.</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+
+                <!-- Pie del modal -->
+                <div class="modal-footer" style="background-color: #d4edda;"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="submit" class="btn btn-success">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -290,78 +346,107 @@
 
 <!-- Modal para crear movimiento -->
 <div class="modal fade" id="createMovementModal" tabindex="-1" aria-labelledby="createMovementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
             <form method="POST" action="{{ url_for('create_movement') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header">
+
+                <!-- Encabezado del modal -->
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="createMovementModalLabel">Crear Movimiento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
+                <!-- Cuerpo del modal -->
                 <div class="modal-body">
-                    <input type="hidden" name="movement_id" id="movement_id">
+                    <input type="hidden" name="movement_id" id="movement_id"> 
+                    
                     <div class="row g-3">
+                        <!-- ID Producto -->
                         <div class="col-md-6">
                             <label for="product_id" class="form-label">ID Producto</label>
                             <input type="text" class="form-control" id="product_id" name="product_id" readonly>
                         </div>
+
+                        <!-- Origen -->
                         <div class="col-md-6">
                             <label for="origin_warehouse_id" class="form-label">Origen</label>
                             <input type="text" class="form-control" id="origin_warehouse_id" name="origin_warehouse_id" readonly>
                         </div>
+
+                        <!-- Destino -->
                         <div class="col-md-6">
                             <label for="destination_warehouse_id" class="form-label">Destino</label>
-                            <input type="text" class="form-control" id="destination_warehouse_id" name="destination_warehouse_id">
+                            <input type="text" class="form-control" id="destination_warehouse_id" name="destination_warehouse_id" required>
                         </div>
+
+                        <!-- Enviado por -->
                         <div class="col-md-6">
                             <label for="sender_user_id" class="form-label">Enviado Por</label>
                             <input type="text" class="form-control" id="sender_user_id" name="sender_user_id" readonly>
                         </div>
+
+                        <!-- Recibido por -->
                         <div class="col-md-6">
                             <label for="receiver_user_id" class="form-label">Recibido Por</label>
-                            <input type="text" class="form-control" id="receiver_user_id" name="receiver_user_id">
+                            <input type="text" class="form-control" id="receiver_user_id" name="receiver_user_id" required>
                         </div>
+
+                        <!-- Fecha de Envío -->
                         <div class="col-md-6">
                             <label for="send_date" class="form-label">Fecha de Envío</label>
                             <input type="datetime-local" class="form-control" id="send_date" name="send_date" readonly>
                         </div>
+
+                        <!-- Fecha de Recepción -->
                         <div class="col-md-6">
                             <label for="receive_date" class="form-label">Fecha de Recepción</label>
                             <input type="datetime-local" class="form-control" id="receive_date" name="receive_date">
                         </div>
+
+                        <!-- Estado del Movimiento -->
                         <div class="col-md-6">
                             <label for="movement_status" class="form-label">Estado</label>
-                            <select class="form-select" id="movement_status" name="movement_status">
-                                <option value="New">New</option>
-                                <option value="Completed">Comfirmed</option>
+                            <select class="form-select" id="movement_status" name="movement_status" required>
+                                <option value="New">Nuevo</option>
+                                <option value="Completed">Confirmado</option>
                             </select>
                         </div>
+
+                        <!-- Descripción -->
                         <div class="col-12">
                             <label for="movement_description" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="movement_description" name="movement_description" rows="2"></textarea>
+                            <textarea class="form-control" id="movement_description" name="movement_description" rows="2" placeholder="Ingrese una breve descripción del movimiento"></textarea>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+
+                <!-- Pie del modal -->
+                <div class="modal-footer" style="background-color: #d4edda;"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="submit" class="btn btn-success">Guardar Cambios</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+
 <!-- Modal para mostrar movimientos -->
 <div class="modal fade" id="viewMovementsModal" tabindex="-1" aria-labelledby="viewMovementsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
+            
+            <!-- Encabezado del modal -->
+            <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="viewMovementsModalLabel">Movimientos del Producto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            
+            <!-- Cuerpo del modal -->
             <div class="modal-body">
-                <table class="table table-bordered">
-                    <thead>
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="bg-success text-white text-center"> 
                         <tr>
                             <th>ID Movimiento</th>
                             <th>Tipo</th>
@@ -382,7 +467,9 @@
                     </tbody>
                 </table>
             </div>
-            <div class="modal-footer">
+
+           
+            <div class="modal-footer" style="background-color: #d4edda;"> 
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
