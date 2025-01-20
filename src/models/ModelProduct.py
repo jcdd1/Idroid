@@ -18,12 +18,13 @@ class ModelProduct():
         return filtered_data
     
     @staticmethod
-    def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, cost, warehouse_id):
+    def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, 
+                                          cost, category, units, supplier, warehouse_id, current_user):
         try:
             # Insert product into products table
             query_product = text("""
-            INSERT INTO products (productname, imei, storage, battery, color, description, cost, current_status, acquisition_date)
-            VALUES (:productname, :imei, :storage, :battery, :color, :description, :cost, 'In Warehouse', CURRENT_DATE)
+            INSERT INTO Products (imei, storage, battery, color, description, cost, current_status, acquisition_date, productname, category, units, supplier)
+            VALUES (:imei, :storage, :battery, :color, :description, :cost, 'In Warehouse', CURRENT_DATE, :productname, :category, :units, :supplier)
             RETURNING product_id;
             """)
             result = db.session.execute(query_product, {
@@ -33,18 +34,50 @@ class ModelProduct():
                 'battery': battery,
                 'color': color,
                 'description': description,
-                'cost': cost
+                'cost': cost,
+                'category': category,
+                'units': units,
+                'supplier': supplier
             })
             product_id = result.fetchone()[0]
 
-            # Register initial movement in inventory_movements table
-            query_movement = text("""
-            INSERT INTO inventory_movements (product_id, origin_warehouse_id, destination_warehouse_id, sender_user_id, send_date, receive_date, movement_status, movement_description)
-            VALUES (:product_id, :warehouse_id, :warehouse_id, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'New', 'Initial registration in warehouse');
+            print("exito crear producto")
+            query_stock = text("""
+                INSERT INTO WarehouseStock (warehouse_id, product_id, units)
+                VALUES(:warehouse_id, :product_id, :units) 
             """)
-            db.session.execute(query_movement, {
+
+            db.session.execute(query_stock, {
+                'warehouse_id': warehouse_id,
                 'product_id': product_id,
-                'warehouse_id': warehouse_id
+                'units': units
+            })
+            print("exito crear el stock")
+            # Crear movimientos iniciales
+            query_movement = text("""
+            INSERT INTO Movement (movement_type, origin_warehouse_id, destination_warehouse_id, 
+                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
+            VALUES('Entry', :warehouse_id, :warehouse_id, CURRENT_TIMESTAMP, 'created', 'Inventario inicial', :current_user, :current_user)
+            RETURNING movement_id;
+            """)
+
+            result = db.session.execute(query_movement, {
+                'warehouse_id': warehouse_id,
+                'current_user': current_user
+            })
+
+            movement_id = result.fetchone()[0]
+
+            # Register initial movement in inventory_movements table
+            query_movement_detail = text("""
+            INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
+            VALUES(:movement_id, :product_id, :units, 'completed')       
+            """)
+            db.session.execute(query_movement_detail, {
+                'product_id': product_id,
+                'movement_id': movement_id,
+                'units': units
+
             })
             db.session.commit()
             return True

@@ -472,3 +472,42 @@ class SQLQueries:
                 WHERE product_id = :product_id
             """
         return query
+    
+
+    @staticmethod
+    def get_movements_by_imei_query():
+        query = """
+                SELECT
+                    m.movement_id,
+                    m.movement_type,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    m.origin_warehouse_id,
+                    origin.warehouse_name AS origin_warehouse_name,
+                    m.destination_warehouse_id,
+                    destination.warehouse_name AS destination_warehouse_name,
+                    md.quantity AS movement_quantity,
+                    md.status AS detail_status,
+                    md.rejection_reason,
+                    r.return_id,
+                    r.quantity AS return_quantity,
+                    r.return_date,
+                    r.notes
+                FROM
+                    movement m
+                JOIN
+                    movementdetail md ON m.movement_id = md.movement_id
+                JOIN
+                    products p ON md.product_id = p.product_id
+                LEFT JOIN
+                    warehouses origin ON m.origin_warehouse_id = origin.warehouse_id
+                LEFT JOIN
+                    warehouses destination ON m.destination_warehouse_id = destination.warehouse_id
+                LEFT JOIN
+                    return r ON md.detail_id = r.movement_detail_id
+                WHERE
+                    p.imei = :imei
+                ORDER BY
+                    m.creation_date ASC;
+        """
+        return query

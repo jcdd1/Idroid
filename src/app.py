@@ -38,6 +38,15 @@ def load_user(user_id):
 def index():
     return redirect(url_for('login'))
 
+@app.context_processor
+def inject_user_info():
+    if current_user.is_authenticated:
+        return {
+            "current_user_id": current_user.user_id,
+            "current_warehouse_id": current_user.warehouse_id
+        }
+    return {}
+
 @app.route('/invoices', methods=['GET'])
 @login_required
 def show_invoices():
@@ -330,15 +339,19 @@ def show_products():
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
-    productname = request.form.get('productname')
-    imei = request.form.get('imei')
-    storage = request.form.get('storage')
-    battery = request.form.get('battery')
-    color = request.form.get('color')
-    description = request.form.get('description')
-    cost = request.form.get('cost')
-    warehouse_id = request.form.get('warehouse_id')
-
+    productname = request.form.get('add_productname')
+    imei = request.form.get('add_imei')
+    storage = request.form.get('add_storage')
+    battery = request.form.get('add_battery')
+    color = request.form.get('add_color')
+    description = request.form.get('add_description')
+    cost = request.form.get('add_cost')
+    warehouse_id = request.form.get('add_warehouse_id')
+    category = request.form.get('add_category')
+    units = request.form.get('add_units')
+    supplier = request.form.get('add_supplier')
+    current_user = request.form.get('add_user_id')
+    print(current_user)
     # Validar datos
     if not productname or not imei:
         flash('El nombre del producto e IMEI son obligatorios.', 'error')
@@ -354,7 +367,11 @@ def add_product():
         color=color,
         description=description,
         cost=cost,
-        warehouse_id=warehouse_id
+        category=category,
+        units = units,
+        supplier = supplier,
+        warehouse_id= warehouse_id,
+        current_user = current_user
     )
 
     # Mostrar mensaje según el resultado
@@ -414,7 +431,7 @@ def get_movements_by_imei(imei):
         # Supongamos que este método devuelve una lista de movimientos
         movements = ModelMovement.get_movements_by_imei(db, imei)
         # Devuelve los movimientos como JSON
-        print(movements)
+        
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
