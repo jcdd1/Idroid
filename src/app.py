@@ -83,7 +83,6 @@ def show_invoices():
     )
 
 
-
 @app.route('/edit_invoice', methods=['POST'])
 @login_required
 def edit_invoice():
@@ -399,10 +398,12 @@ def edit_product():
     document_number = request.form['edit_invoice']
     invoice_quantity = request.form.get('edit_quantity')
     price = request.form.get('edit_price')
+    current_user = request.form.get('edit_user_id')
+    warehouse_id = request.form.get('edit_warehouse_id')
     # Actualiza el producto en la base de datos
     success = ModelProduct.update_product(
         db, product_id, productname, imei, storage, battery, color, description, cost,
-        category, units, supplier
+        category, units, supplier, current_user, warehouse_id
     )
 
     if document_number and invoice_quantity:
@@ -434,8 +435,6 @@ def get_movements_by_imei(imei):
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 
 
 #Manejo de errores en el servidor

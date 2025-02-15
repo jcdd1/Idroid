@@ -488,7 +488,19 @@ class SQLQueries:
 
                 WHERE product_id = :product_id
             """
-        return query
+        query_movement = """
+            INSERT INTO Movement (movement_type, origin_warehouse_id, destination_warehouse_id, 
+                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
+            VALUES('Update-Data', :warehouse_id, :warehouse_id, CURRENT_TIMESTAMP, 'Update-Data', 'Actualización', :current_user, :current_user)
+            RETURNING movement_id;
+        """
+
+        query_movement_detail ="""
+            INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
+            VALUES(:movement_id, :product_id, 0, 'completed')       
+            """
+
+        return query, query_movement, query_movement_detail
     
 
     @staticmethod

@@ -53,7 +53,7 @@ class ModelProduct():
                 'product_id': product_id,
                 'units': units
             })
-            print("exito crear el stock")
+            
             # Crear movimientos iniciales
             query_movement = text(query_3)
 
@@ -70,7 +70,6 @@ class ModelProduct():
                 'product_id': product_id,
                 'movement_id': movement_id,
                 'units': units
-
             })
             db.session.commit()
             return True
@@ -314,10 +313,10 @@ class ModelProduct():
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
-                       category, units, supplier):
+                       category, units, supplier, current_user, warehouse_id):
     
         try:
-            query = text(SQLQueries.update_product_query())
+            query, query_2, query_3 = text(SQLQueries.update_product_query())
             params = {
                     "productname": productname,
                     "imei": imei,
@@ -332,7 +331,24 @@ class ModelProduct():
                     "product_id": product_id
                     }
             db.session.execute(query, params)
+
+            query_movement = text(query_2)
+
+            result = db.session.execute(query_movement, {
+                'warehouse_id': warehouse_id,
+                'current_user': current_user
+            })
+
+            movement_id = result.fetchone()[0]
+
+            # Register initial movement in inventory_movements table
+            query_movement_detail = text(query_3)
+            db.session.execute(query_movement_detail, {
+                'product_id': product_id,
+                'movement_id': movement_id
+            })
             db.session.commit()
+
             return True
         except Exception as e:
             db.session.rollback()

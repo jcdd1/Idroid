@@ -229,7 +229,9 @@
             <form method="POST" action="{{ url_for('edit_product') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="edit_product_id" name="edit_product_id"> 
-                <input type="hidden" id="edit_warehouse_id" name="edit_warehouse_id"> 
+                <input type="hidden" id="edit_user_id" name="edit_user_id" value="{{ current_user.user_id }}">
+                <input type="hidden" id="edit_warehouse_id" name="edit_warehouse_id" value="{{ current_user.warehouse_id }}">
+ 
                 <!-- Encabezado del modal -->
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="editProductModalLabel">Editar Producto</h5>
@@ -366,8 +368,8 @@
                     <div class="row g-3">
                         <!-- ID Producto -->
                         <div class="col-md-6">
-                            <label for="product_id" class="form-label">ID Producto</label>
-                            <input type="text" class="form-control" id="product_id" name="product_id" readonly>
+                            <label for="product_name_movement" class="form-label">Nombre Producto</label>
+                            <input type="text" class="form-control" id="product_name_movement" name="product_name_movement" readonly>
                         </div>
 
                         <!-- Origen -->
@@ -380,30 +382,6 @@
                         <div class="col-md-6">
                             <label for="destination_warehouse_id" class="form-label">Destino</label>
                             <input type="text" class="form-control" id="destination_warehouse_id" name="destination_warehouse_id" required>
-                        </div>
-
-                        <!-- Enviado por -->
-                        <div class="col-md-6">
-                            <label for="sender_user_id" class="form-label">Enviado Por</label>
-                            <input type="text" class="form-control" id="sender_user_id" name="sender_user_id" readonly>
-                        </div>
-
-                        <!-- Recibido por -->
-                        <div class="col-md-6">
-                            <label for="receiver_user_id" class="form-label">Recibido Por</label>
-                            <input type="text" class="form-control" id="receiver_user_id" name="receiver_user_id" required>
-                        </div>
-
-                        <!-- Fecha de Envío -->
-                        <div class="col-md-6">
-                            <label for="send_date" class="form-label">Fecha de Envío</label>
-                            <input type="datetime-local" class="form-control" id="send_date" name="send_date" readonly>
-                        </div>
-
-                        <!-- Fecha de Recepción -->
-                        <div class="col-md-6">
-                            <label for="receive_date" class="form-label">Fecha de Recepción</label>
-                            <input type="datetime-local" class="form-control" id="receive_date" name="receive_date">
                         </div>
 
                         <!-- Estado del Movimiento -->
