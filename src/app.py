@@ -11,17 +11,21 @@ from flask_wtf.csrf import CSRFProtect
 
 
 
+
+
 #Modelos
 from models.ModelLog import ModelLog
 from models.ModelWarehouse import ModelWarehouse
 from models.ModelProduct import ModelProduct
 from models.ModelInvoice import ModelInvoice
 from models.ModelMovement import ModelMovement
+from models.ModelReturn import ModelReturn
 
 
 # Entities
 from models.entities.users import User
 from models.entities.product import Products
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -29,6 +33,10 @@ db = SQLAlchemy(app)
 login_manager_app = LoginManager(app)
 csrf = CSRFProtect()
 csrf.init_app(app)
+
+from flask import Blueprint
+
+
 
 @login_manager_app.user_loader
 def load_user(user_id):
@@ -83,6 +91,42 @@ def show_invoices():
     )
 
 
+@app.route('/invoicesUser', methods=['GET'])
+@login_required
+def show_invoicesUser():
+    # Parámetros de búsqueda
+    document_number = request.args.get('document_number', '')  
+    client_name = request.args.get('client_name', '')  
+    invoice_type = request.args.get('type', '')  
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+
+    # Consultar facturas
+    if document_number or client_name or invoice_type:
+        invoices, total = ModelInvoice.filter_invoices(
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, limit=per_page, offset=offset
+        )
+    else:
+        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        total = ModelInvoice.count_invoices(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/invoicesUser.html',
+        invoices=invoices,
+        page=page,
+        total_pages=total_pages,
+        document_number=document_number,
+        client_name=client_name,
+        invoice_type=invoice_type
+    )
+
+
 @app.route('/edit_invoice', methods=['POST'])
 @login_required
 def edit_invoice():
@@ -118,6 +162,45 @@ def edit_invoice():
 
     return redirect(url_for('show_invoices'))
 
+
+
+
+@app.route('/add_invoiceUser', methods=['POST'])
+def add_invoiceUser():
+    try:
+        # Obtener datos del formulario
+        invoice_type = request.form.get('type')
+        document_number = request.form.get('document_number')
+        date = request.form.get('date')
+        client = request.form.get('client')
+        status = request.form.get('status')
+
+        # Validar datos
+        if not invoice_type or not document_number or not date or not client or not status:
+            flash('Todos los campos son obligatorios.', 'error')
+            return redirect(url_for('invoices.show_invoices'))
+
+        # Crear la factura utilizando el modelo
+        success = ModelInvoice.create_invoice(
+            db=db,
+            invoice_type=invoice_type,
+            document_number=document_number,
+            date=date,
+            client=client,
+            status=status
+        )
+
+        if success:
+            flash('Factura creada exitosamente.', 'success')
+        else:
+            flash('Error al crear la factura.', 'error')
+
+    except Exception as e:
+        print(f"Error al crear la factura: {e}")
+        flash('Ocurrió un error al procesar la solicitud.', 'error')
+
+    # Redirigir al listado de facturas
+    return redirect(url_for('show_invoicesUser'))
 
 @app.route('/add_invoice', methods=['POST'])
 def add_invoice():
@@ -157,26 +240,38 @@ def add_invoice():
     return redirect(url_for('invoices.show_invoices'))
 
 
-@app.route('/login', methods=['GET','POST'])
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_login import login_user, current_user
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-
     if current_user.is_authenticated:
-        return redirect(url_for('menu'))
+        return redirect_by_role(current_user.role)  # Redirige según el rol
 
-    if request.method =='POST':
-        user = User(0, "","","",request.form['username'], request.form['password'])
-        logged_user =  ModelLog.login(db,user)
-        
-        if logged_user != None:
+    if request.method == 'POST':
+        user = User(0, "", "", "", request.form['username'], request.form['password'])
+        logged_user = ModelLog.login(db, user)
+
+        if logged_user:
             login_user(logged_user)
-            return redirect(url_for('menu'))
+            return redirect_by_role(logged_user.role)  # Redirige según el rol
         else:
-            flash("Usuario o contraseña invalida")
-        
-        return render_template("auth/login.html")
+            flash("Usuario o contraseña inválida")
+
+    return render_template("auth/login.html")
+
+def redirect_by_role(role):
+    """Redirige a la plantilla correspondiente según el rol del usuario."""
+    if role == 'usuario':
+        return redirect(url_for('menuUser'))
+    elif role == 'admin':
+        return redirect(url_for('menuAdmin'))
+    elif role == 'superAdmin':
+        return redirect(url_for('menu'))
     else:
-        return render_template("auth/login.html")
-    
+        flash("Rol desconocido, contacte con soporte.")
+        return redirect(url_for('login'))  # Redirige al login en caso de error
+
 @app.route('/logout')
 def logout():
     logout_user()
@@ -186,6 +281,32 @@ def logout():
 @login_required
 def menu():
     return render_template("menu.html")
+
+@app.route('/return', methods=['GET'])
+@login_required
+def show_returns():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    returns = ModelReturn.get_returns_paginated(db, limit=per_page, offset=offset)
+    total = ModelReturn.count_returns(db)
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/return.html',
+        returns=returns,
+        page=page,
+        total_pages=total_pages
+    )
+
+
+
+
+@app.route('/menuUser', methods=['GET', 'POST'])
+@login_required
+def menuUser():
+    return render_template("menuUser.html")
 
 @app.route('/movements', methods=['GET'])
 @login_required
@@ -251,47 +372,42 @@ def edit_movement():
 
 
 @app.route('/create_movement', methods=['POST'])
+@login_required
 def create_movement():
     try:
-        # Obtener datos del formulario
-        product_ids = request.form.getlist('product_ids')  # Lista de IDs de productos
-        origin_warehouse_id = request.form.get('origin_warehouse_id')
-        destination_warehouse_id = request.form.get('destination_warehouse_id')
-        movement_description = request.form.get('movement_description')
+        data = request.get_json()  # Obtener los datos del JSON
+        product_id = data.get('product_id')
+        origin_warehouse_id = data.get('origin_warehouse_id')
+        destination_warehouse_id = data.get('destination_warehouse_id')
+        movement_description = data.get('movement_description')
 
-        # Validar datos
-        if not product_ids:
-            flash('Debes seleccionar al menos un producto.', 'error')
-            return redirect(url_for('movements.show_movements'))
+        print(f"📦 Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}")
 
-        if not origin_warehouse_id or not destination_warehouse_id:
-            flash('Debes especificar tanto el almacén de origen como el de destino.', 'error')
-            return redirect(url_for('movements.show_movements'))
+        if not product_id or not origin_warehouse_id or not destination_warehouse_id:
+            return jsonify({"success": False, "message": "Faltan datos obligatorios."})
 
         if origin_warehouse_id == destination_warehouse_id:
-            flash('El almacén de origen y destino no pueden ser iguales.', 'error')
-            return redirect(url_for('movements.show_movements'))
+            return jsonify({"success": False, "message": "El almacén de origen y destino no pueden ser iguales."})
 
-        # Crear movimiento para cada producto seleccionado
-        for product_id in product_ids:
-            success = ModelMovement.create_movement(
-                db=db,
-                product_id=product_id,
-                origin_warehouse_id=origin_warehouse_id,
-                destination_warehouse_id=destination_warehouse_id,
-                movement_description=movement_description
-            )
-            if not success:
-                flash(f'Error al crear movimiento para el producto ID {product_id}.', 'error')
+        success = ModelMovement.create_movement(
+            db=db,
+            product_id=product_id,
+            origin_warehouse_id=origin_warehouse_id,
+            destination_warehouse_id=destination_warehouse_id,
+            movement_description=movement_description
+        )
 
-        # Si todo fue exitoso
-        flash('Movimiento(s) creado(s) exitosamente.', 'success')
-        return redirect(url_for('movements.show_movements'))
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "message": "Error al guardar el movimiento."})
 
     except Exception as e:
-        print(f"Error al crear el movimiento: {e}")
-        flash('Error al procesar la solicitud. Inténtalo de nuevo.', 'error')
-        return redirect(url_for('movements.show_movements'))
+        print(f"❌ Error al procesar la solicitud: {e}")
+        return jsonify({"success": False, "message": "Error interno en el servidor."})
+
+
+
 
 @app.route('/products', methods=['GET'])
 @login_required
@@ -334,6 +450,59 @@ def show_products():
         warehouses_name = warehouses_name,
         active_invoices=active_invoices
     )
+
+@app.route('/productsUser', methods=['GET'])
+@login_required
+def show_productsUser():
+    # Parámetros de búsqueda
+    imei = request.args.get('imei')
+    productname = request.args.get('productname')
+    current_status = request.args.get('current_status')
+    category = request.args.get('category')
+    warehouse = request.args.get('warehouse_name')
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Obtener los almacenes y facturas activas (solo una vez)
+    warehouses = ModelWarehouse.get_all_warehouses(db)
+    active_invoices = ModelInvoice.get_invoices_active(db)
+
+    # Verificar si hay almacenes disponibles
+    if not warehouses:
+        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
+
+    # Obtener productos con o sin filtros
+    if imei or productname or current_status or warehouse or category:
+        products = ModelProduct.filter_products(
+            db, imei=imei, productname=productname, current_status=current_status, 
+            warehouse=warehouse, category=category, limit=per_page, offset=offset
+        )
+    else:
+        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
+
+    # Verificar si hay productos y si contienen la bodega
+    if products:
+        print("🔍 Ejemplo de producto obtenido:", products[0])
+    else:
+        print("⚠️ No se encontraron productos.")
+
+    total = len(products)
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/productsUser.html',
+        products=products,
+        page=page,
+        total_pages=total_pages,
+        current_status=current_status,
+        warehouses=warehouses,
+        active_invoices=active_invoices
+    )
+
+
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -381,6 +550,7 @@ def add_product():
     # Redirigir al listado de productos
     return redirect(url_for('show_products'))
 
+
 @app.route('/edit_product', methods=['POST'])
 @login_required
 def edit_product():
@@ -424,6 +594,7 @@ def edit_product():
 
     return redirect(url_for('show_products'))
 
+
 @app.route('/movements/<string:imei>', methods=['GET'])
 def get_movements_by_imei(imei):
     try:
@@ -435,8 +606,7 @@ def get_movements_by_imei(imei):
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 #Manejo de errores en el servidor
 def status_401(error):
     return redirect(url_for('login'))

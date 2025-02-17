@@ -93,39 +93,42 @@ class ModelMovement:
     def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description):
         try:
             query = text("""
-                INSERT INTO inventory_movements (
-                    product_id, 
-                    origin_warehouse_id, 
-                    destination_warehouse_id, 
-                    sender_user_id, 
-                    send_date, 
-                    receive_date, 
-                    movement_status, 
-                    movement_description
-                )
-                VALUES (
-                    :product_id, 
-                    :origin_warehouse_id, 
-                    :destination_warehouse_id, 
-                    1,  -- Asume un ID de usuario para enviar
-                    CURRENT_TIMESTAMP, 
-                    NULL, 
-                    'New', 
-                    :movement_description
-                )
-            """)
+            INSERT INTO movement (
+                created_by_user_id, 
+                origin_warehouse_id, 
+                destination_warehouse_id, 
+                creation_date, 
+                movement_type, 
+                status, 
+                notes
+            )
+            VALUES (
+                1,  -- Usuario que crea el movimiento (ajustar según sistema de usuarios)
+                :origin_warehouse_id, 
+                :destination_warehouse_id, 
+                CURRENT_TIMESTAMP, 
+                'Transfer',  -- Tipo de movimiento (ajustar si es necesario)
+                'New',  -- Estado del movimiento
+                :movement_description
+            )
+        """)
+
             db.session.execute(query, {
-                'product_id': product_id,
-                'origin_warehouse_id': origin_warehouse_id,
-                'destination_warehouse_id': destination_warehouse_id,
-                'movement_description': movement_description
+            'origin_warehouse_id': origin_warehouse_id,
+            'destination_warehouse_id': destination_warehouse_id,
+            'movement_description': movement_description
             })
             db.session.commit()
+
+            print(f" Movimiento creado correctamente: Origen {origin_warehouse_id} → Destino {destination_warehouse_id}")
             return True
+
         except Exception as e:
-            print(f"Error al crear el movimiento: {e}")
+            print(f" Error al crear el movimiento: {e}")
             db.session.rollback()
             return False
+
+
             
 
     @staticmethod
