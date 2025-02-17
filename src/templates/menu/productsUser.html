@@ -5,6 +5,7 @@
     <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptCreateBarCode.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -68,21 +69,31 @@
                 <td>{{ product.warehouse_name }}</td>
 
                 <!-- Botón de agregar movimiento -->
+                
+
                 <td class="text-center">
                         <td class="text-center">
                             <button type="button" class="btn btn-success btn-sm" 
-        data-bs-toggle="modal" 
-        data-bs-target="#createMovementModal"
-        data-product-id="{{ product.imei }}"
-        data-product-name="{{ product.productname }}"
-        data-origin-warehouse-id="{{ product.warehouse_id }}">
-    <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
-</button>
+                            data-bs-toggle="modal" 
+                            data-bs-target="#createMovementModal"
+                            data-product-id="{{ product.imei }}"
+                            data-product-name="{{ product.productname }}"
+                            data-origin-warehouse-id="{{ product.warehouse_id }}">
 
+                            
+                            <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
+                            </button>
                         </td>
-                        
                     </td>
                 </td>
+                <td class="text-center">
+                    <!-- Botón para generar código de barras -->
+                    <button class="btn btn-primary btn-sm generate-barcode" data-product-id="{{ product.imei }}">
+                        Generar Código de Barras
+                    </button>
+                </td>
+                
+
             </tr>
             {% endfor %}
         </tbody>

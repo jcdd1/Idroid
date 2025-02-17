@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify, get_flashed_messages
+from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify, get_flashed_messages, send_file
 from config import Config
 from sqlalchemy import text
 from flask_sqlalchemy import SQLAlchemy
@@ -8,10 +8,14 @@ engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
 
-
-
-
-
+#Código de barras
+import barcode
+from barcode.writer import ImageWriter
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from PIL import Image
+from reportlab.lib.utils import ImageReader
 
 #Modelos
 from models.ModelLog import ModelLog
@@ -502,8 +506,6 @@ def show_productsUser():
         active_invoices=active_invoices
     )
 
-
-
 @app.route('/add_product', methods=['POST'])
 def add_product():
     productname = request.form.get('add_productname')
@@ -606,6 +608,47 @@ def get_movements_by_imei(imei):
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/generate_barcode/<code>')
+def generate_barcode(code):
+    try:
+        # Generar código de barras con Code128
+        barcode_class = barcode.get_barcode_class('code128')
+        ean_barcode = barcode_class(code, writer=ImageWriter())
+
+        # Guardar el código de barras en BytesIO
+        barcode_bytes = BytesIO()
+        ean_barcode.write(barcode_bytes)
+        barcode_bytes.seek(0)
+
+        # Convertir la imagen a RGB para evitar errores
+        img = Image.open(barcode_bytes).convert("RGB")
+
+        # Guardar en memoria en formato PNG
+        img_bytes = BytesIO()
+        img.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+
+        # Crear el PDF en memoria
+        pdf_bytes = BytesIO()
+        c = canvas.Canvas(pdf_bytes, pagesize=letter)
+        c.drawString(200, 750, f"Código de producto: {code}")
+
+        # ✅ Usar ImageReader para insertar la imagen sin archivos temporales
+        img_reader = ImageReader(img_bytes)
+        c.drawImage(img_reader, 150, 600, width=300, height=100)
+
+        c.save()
+        pdf_bytes.seek(0)
+
+        return send_file(pdf_bytes, as_attachment=True, download_name=f"{code}.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")  # ✅ Verifica errores en la consola
+        return jsonify({"error": str(e)}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
     
 #Manejo de errores en el servidor
 def status_401(error):
