@@ -1,7 +1,6 @@
 {% extends 'menuUser.html' %}
 
 {% block customScripts %}
-    <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
@@ -27,6 +26,38 @@
 {% endif %}
 {% endwith %}
 
+<!-- Formulario de búsqueda -->
+<form method="GET" action="{{ url_for('show_productsUser') }}" class="row g-3 mt-4">
+    <div class="col-md-4">
+        <input type="text" name="imei" class="form-control border-success" placeholder="Buscar por IMEI">
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="productname" class="form-control border-success" placeholder="Buscar por nombre">
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="category" class="form-control border-success" placeholder="Buscar por categoría">
+    </div>
+    <div class="col-md-3">
+        <select name="current_status" class="form-select border-success">
+            <option value="" {% if not current_status %}selected{% endif %}>Todos los estados</option>
+            <option value="In Warehouse" {% if current_status == 'In Warehouse' %}selected{% endif %}>En Almacén</option>
+            <option value="Under Repair" {% if current_status == 'Under Repair' %}selected{% endif %}>En Reparación</option>
+            <option value="Sold" {% if current_status == 'Sold' %}selected{% endif %}>Vendido</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="warehouse_name" class="form-select border-success">
+            <option value="" {% if not warehouse_name %}selected{% endif %}>Bodegas</option>
+            {% for warehouse in warehouses %}
+            <option value="{{ warehouse['warehouse_name'] }}" {% if warehouse_name == warehouse['warehouse_name'] %}selected{% endif %}>{{ warehouse['warehouse_name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-1">
+        <button type="submit" class="btn btn-success w-100">Buscar</button>
+    </div>
+</form>
+
 <!-- Tabla de productos -->
 <div class="table-responsive mt-4">
     <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
@@ -42,7 +73,7 @@
                 <th>Unidades</th>
                 <th>Estado</th>
                 <th>Bodega</th>
-                <th colspan="2">Acciones</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -68,37 +99,30 @@
                 </td>
                 <td>{{ product.warehouse_name }}</td>
 
-                <!-- Botón de agregar movimiento -->
+                <!-- Columna de acciones -->
+                <td class="text-center">
+                    <!-- Botón de agregar movimiento -->
+                    <button type="button" class="btn btn-success btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#createMovementModal"
+                        data-product-id="{{ product.imei }}"
+                        data-product-name="{{ product.productname }}"
+                        data-origin-warehouse-id="{{ product.warehouse_id }}">
+                        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
+                    </button>
                 
-
-                <td class="text-center">
-                        <td class="text-center">
-                            <button type="button" class="btn btn-success btn-sm" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#createMovementModal"
-                            data-product-id="{{ product.imei }}"
-                            data-product-name="{{ product.productname }}"
-                            data-origin-warehouse-id="{{ product.warehouse_id }}">
-
-                            
-                            <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
-                            </button>
-                        </td>
-                    </td>
-                </td>
-                <td class="text-center">
                     <!-- Botón para generar código de barras -->
-                    <button class="btn btn-primary btn-sm generate-barcode" data-product-id="{{ product.imei }}">
+                    <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}">
                         Generar Código de Barras
                     </button>
-                </td>
-                
-
+                </td>   
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+
 
 
 

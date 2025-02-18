@@ -102,17 +102,19 @@ def show_invoicesUser():
     document_number = request.args.get('document_number', '')  
     client_name = request.args.get('client_name', '')  
     invoice_type = request.args.get('type', '')  
+    status = request.args.get('status', '')  # Capturar el estado
+
+    print(f"🔍 Parámetros de búsqueda -> Documento: {document_number}, Cliente: {client_name}, Tipo: {invoice_type}, Estado: {status}")
 
     # Paginación
     page = request.args.get('page', 1, type=int)
     per_page = 10
     offset = (page - 1) * per_page
 
-
-    # Consultar facturas
-    if document_number or client_name or invoice_type:
+    # Consultar facturas con filtro de estado
+    if document_number or client_name or invoice_type or status:
         invoices, total = ModelInvoice.filter_invoices(
-            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, limit=per_page, offset=offset
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
         )
     else:
         invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
@@ -127,8 +129,11 @@ def show_invoicesUser():
         total_pages=total_pages,
         document_number=document_number,
         client_name=client_name,
-        invoice_type=invoice_type
+        invoice_type=invoice_type,
+        status=status
     )
+
+
 
 
 @app.route('/edit_invoice', methods=['POST'])
@@ -293,16 +298,30 @@ def show_returns():
     per_page = 20
     offset = (page - 1) * per_page
 
-    returns = ModelReturn.get_returns_paginated(db, limit=per_page, offset=offset)
-    total = ModelReturn.count_returns(db)
+    # Capturar parámetros de búsqueda
+    return_id = request.args.get('return_id', '').strip()
+    movement_detail_id = request.args.get('movement_detail_id', '').strip()
+
+    print(f"🔍 Parámetros de búsqueda -> ID Devolución: {return_id}, ID Movimiento: {movement_detail_id}")
+
+    # Consultar devoluciones con filtros
+    if return_id or movement_detail_id:
+        returns, total = ModelReturn.filter_returns(db, return_id=return_id, movement_detail_id=movement_detail_id, limit=per_page, offset=offset)
+    else:
+        returns = ModelReturn.get_returns_paginated(db, limit=per_page, offset=offset)
+        total = ModelReturn.count_returns(db)
+
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
         'menu/return.html',
         returns=returns,
         page=page,
-        total_pages=total_pages
+        total_pages=total_pages,
+        return_id=return_id,
+        movement_detail_id=movement_detail_id
     )
+
 
 
 

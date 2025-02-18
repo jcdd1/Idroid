@@ -48,36 +48,48 @@ class ModelInvoice:
         return total
 
     @staticmethod
-    def filter_invoices(db, document_number=None, client_name=None, invoice_type=None, limit=10, offset=0):
+    def filter_invoices(db, document_number=None, client_name=None, invoice_type=None, status=None, limit=10, offset=0):
         try:
-            query = text("""
-                WITH filtered_invoices AS (
-                    SELECT *
-                    FROM invoices
-                    WHERE 
-                        (:document_number IS NULL OR document_number ILIKE :document_number)
-                        AND (:client_name IS NULL OR client ILIKE :client_name)
-                        AND (:invoice_type IS NULL OR type = :invoice_type)
-                )
-                SELECT 
-                    (SELECT COUNT(*) FROM filtered_invoices) AS total_count,
-                    fi.*
-                FROM filtered_invoices fi
-                ORDER BY invoice_id ASC
-                LIMIT :limit OFFSET :offset;
-            """)
-            
-            params = {
-                "document_number": f"%{document_number}%" if document_number else None,
-                "client_name": f"%{client_name}%" if client_name else None,
-                "invoice_type": invoice_type,
-                "limit": limit,
-                "offset": offset
-            }
-            
-            result = db.session.execute(query, params).mappings().fetchall()
-            
-            # Extrae el conteo total y los datos de facturas
+            query = """
+            WITH filtered_invoices AS (
+                SELECT * FROM invoices WHERE 1=1
+        """
+            params = {}
+
+            if document_number:
+                query += " AND document_number ILIKE :document_number"
+                params["document_number"] = f"%{document_number}%"
+
+            if client_name:
+                query += " AND client ILIKE :client_name"
+                params["client_name"] = f"%{client_name}%"
+
+            if invoice_type:
+                query += " AND type = :invoice_type"
+                params["invoice_type"] = invoice_type
+
+            if status:
+                query += " AND status = :status"
+                params["status"] = status
+
+            query += """
+            )
+            SELECT 
+                (SELECT COUNT(*) FROM filtered_invoices) AS total_count,
+                fi.*
+            FROM filtered_invoices fi
+            ORDER BY invoice_id ASC
+            LIMIT :limit OFFSET :offset;
+        """
+        
+            params["limit"] = limit
+            params["offset"] = offset
+
+            print(f"🛠 SQL Generado: {query}")
+            print(f"📊 Parámetros: {params}")
+
+            result = db.session.execute(text(query), params).mappings().fetchall()
+        
             total_count = result[0]['total_count'] if result else 0
             invoices = [
                 Invoice(
@@ -85,15 +97,19 @@ class ModelInvoice:
                     type=row['type'],
                     document_number=row['document_number'],
                     date=row['date'],
-                    client=row['client']
+                    client=row['client'],
+                    status=row['status']  # Agregamos el estado
                 )
                 for row in result
             ]
+
             return invoices, total_count
 
         except Exception as e:
-            print(f"Error filtering invoices: {e}")
+            print(f"❌ Error filtering invoices: {e}")
             return [], 0
+
+
 
     @staticmethod
     def get_invoice_by_id(db, invoice_id):
