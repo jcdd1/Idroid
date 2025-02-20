@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
+import pandas as pd
 
 #Código de barras
 import barcode
@@ -673,7 +674,43 @@ def generate_barcode(code):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    
+
+@app.route('/carga_masiva', methods=['GET', 'POST'])
+def carga_masiva():
+    if request.method == 'POST':
+        if 'archivo' not in request.files:
+            flash('⚠️ No se seleccionó ningún archivo', 'danger')
+            return redirect(url_for('show_productsUser'))
+
+        archivo = request.files['archivo']
+
+        if archivo.filename == '':
+            flash('⚠️ Nombre de archivo vacío', 'danger')
+            return redirect(url_for('show_productsUser'))
+
+        if archivo and archivo.filename.endswith('.xlsx'):
+            try:
+                # Leer el archivo directamente sin guardarlo
+                df = pd.read_excel(archivo)
+                print(df)
+                # # Insertar cada fila en la base de datos
+                # for _, row in df.iterrows():
+                #     producto = Producto(
+                #         nombre=row['nombre'],
+                #         precio=row['precio'],
+                #         stock=row['stock']
+                #     )
+                #     db.session.add(producto)
+                # db.session.commit()
+                flash('✅ Productos cargados exitosamente', 'success')
+                return redirect(url_for('productsUser'))
+
+            except Exception as e:
+                db.session.rollback()
+                return redirect(url_for('show_productsUser'))
+
+    return redirect(url_for('productsUser'))
+
 #Manejo de errores en el servidor
 def status_401(error):
     return redirect(url_for('login'))
@@ -685,3 +722,4 @@ if __name__=='__main__':
     app.register_error_handler(401, status_401)
     app.register_error_handler(404, status_404)
     app.run(host='0.0.0.0', port = '8080')
+
