@@ -431,7 +431,6 @@ def create_movement():
 
 
 
-
 @app.route('/products', methods=['GET'])
 @login_required
 def show_products():
@@ -635,9 +634,13 @@ def generate_barcode(code):
         barcode_class = barcode.get_barcode_class('code128')
         ean_barcode = barcode_class(code, writer=ImageWriter())
 
+        product = ModelProduct.get_product_imei(
+            db, imei=code
+        )
+
         # Guardar el código de barras en BytesIO
         barcode_bytes = BytesIO()
-        ean_barcode.write(barcode_bytes)
+        ean_barcode.write(barcode_bytes, options={'write_text': False})
         barcode_bytes.seek(0)
 
         # Convertir la imagen a RGB para evitar errores
@@ -651,12 +654,14 @@ def generate_barcode(code):
         # Crear el PDF en memoria
         pdf_bytes = BytesIO()
         c = canvas.Canvas(pdf_bytes, pagesize=letter)
-        c.drawString(200, 750, f"Código de producto: {code}")
+        c.drawString(200, 750, f"{product[0]['productname']} {product[0]['storage']}GB {product[0]['color']} {product[0]['battery']}%")
+        c.drawString(250, 770, f"@idroid.com.co")
+        #c.drawString(200, 750, f"Código de producto: {product[0]['imei']}")
 
         # ✅ Usar ImageReader para insertar la imagen sin archivos temporales
         img_reader = ImageReader(img_bytes)
-        c.drawImage(img_reader, 150, 600, width=300, height=100)
-
+        c.drawImage(img_reader, 150, 650, width=300, height=80)
+        c.drawString(250, 730, f"IMEI: {product[0]['imei']}")
         c.save()
         pdf_bytes.seek(0)
 

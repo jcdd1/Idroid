@@ -310,6 +310,27 @@ class ModelProduct():
         except Exception as e:
             print(f"Error filtering products: {e}")
             return [], 0
+        
+    @staticmethod
+    def get_product_imei(db, imei):
+        try:
+            query = text(SQLQueries.get_product_imei())
+            params = {
+                'imei': imei
+            }
+
+            result = db.session.execute(query, params).mappings().fetchall()
+
+            if result:                       
+                # Construye la lista de productos excluyendo 'total_count'
+                products = [dict(row) for row in result]
+                                        
+            else:
+                products = []  # Si no hay resultados, inicializa la lista vacía
+            return products
+        except Exception as e:
+            print(f"Error searching products: {e}")
+
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 

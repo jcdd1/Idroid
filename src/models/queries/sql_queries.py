@@ -56,6 +56,21 @@ class SQLQueries:
                     w.warehouse_name;
                 """
         return query
+
+    @staticmethod
+    def get_product_imei():
+        query = """
+            SELECT 
+                productname,
+                imei,
+                storage,
+                battery,
+                color
+            FROM 
+                Products
+            WHERE imei = :imei;
+            """
+        return query
     
     @staticmethod
     def filter_products_all_fields():
