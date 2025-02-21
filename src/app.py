@@ -42,6 +42,8 @@ csrf.init_app(app)
 from flask import Blueprint
 
 
+product_blueprint = Blueprint('product_blueprint', __name__)
+
 
 @login_manager_app.user_loader
 def load_user(user_id):
@@ -96,6 +98,27 @@ def show_invoices():
     )
 
 
+@app.route('/update_status/<imei>', methods=['POST'])
+def update_status(imei):
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+
+        # Validar el estado antes de actualizar
+        if new_status not in ['Under Repair', 'In Warehouse']:
+            return jsonify({'success': False, 'message': 'Estado no válido.'}), 400
+
+        # Llamada al método del modelo
+        response = ModelProduct.update_status(db, imei, new_status)
+
+        if response.get("success"):
+            return jsonify({'success': True, 'message': 'Estado actualizado correctamente.'})
+        else:
+            return jsonify({'success': False, 'message': response.get('error', 'Error desconocido.')}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/invoicesUser', methods=['GET'])
 @login_required
 def show_invoicesUser():
@@ -133,7 +156,6 @@ def show_invoicesUser():
         invoice_type=invoice_type,
         status=status
     )
-
 
 
 
@@ -329,6 +351,12 @@ def show_returns():
 def menuUser():
     return render_template("menuUser.html")
 
+
+@app.route('/menuAdmin', methods=['GET', 'POST'])
+@login_required
+def menuAdmin():
+    return render_template("menuAdmin.html")
+
 @app.route('/movements', methods=['GET'])
 @login_required
 def show_movements():
@@ -514,6 +542,60 @@ def show_productsUser():
 
     return render_template(
         'menu/productsUser.html',
+        products=products,
+        page=page,
+        total_pages=total_pages,
+        current_status=current_status,
+        warehouses=warehouses,
+        active_invoices=active_invoices
+    )
+
+
+
+
+@app.route('/productsAdmin', methods=['GET'])
+@login_required
+def show_productsAdmin():
+    # Parámetros de búsqueda
+    imei = request.args.get('imei')
+    productname = request.args.get('productname')
+    current_status = request.args.get('current_status')
+    category = request.args.get('category')
+    warehouse = request.args.get('warehouse_name')
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Obtener los almacenes y facturas activas (solo una vez)
+    warehouses = ModelWarehouse.get_all_warehouses(db)
+    active_invoices = ModelInvoice.get_invoices_active(db)
+
+    # Verificar si hay almacenes disponibles
+    if not warehouses:
+        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
+
+    # Obtener productos con o sin filtros
+    if imei or productname or current_status or warehouse or category:
+        products = ModelProduct.filter_products(
+            db, imei=imei, productname=productname, current_status=current_status, 
+            warehouse=warehouse, category=category, limit=per_page, offset=offset
+        )
+    else:
+        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
+
+    # Verificar si hay productos y si contienen la bodega
+    if products:
+        print("🔍 Ejemplo de producto obtenido:", products[0])
+    else:
+        print("⚠️ No se encontraron productos.")
+
+    total = len(products)
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/productsAdmin.html',
         products=products,
         page=page,
         total_pages=total_pages,

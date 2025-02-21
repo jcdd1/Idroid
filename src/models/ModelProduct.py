@@ -1,4 +1,3 @@
-
 from sqlalchemy import text
 from .entities.product import Products
 from .queries.sql_queries import SQLQueries
@@ -6,6 +5,28 @@ import datetime
 import pandas as pd
 
 class ModelProduct():
+
+
+    @staticmethod
+    def update_status(db, imei, new_status):
+        try:
+            # Actualización del estado con sintaxis corregida
+            query = text("""
+                UPDATE products 
+                SET current_status = :new_status 
+                WHERE imei = :imei
+            """)
+            result = db.session.execute(query, {'imei': imei, 'new_status': new_status})
+            db.session.commit()
+
+            # Verificar si algún registro fue actualizado
+            if result.rowcount > 0:
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Producto no encontrado"}
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def get_products_units(db, warehouse_id):
