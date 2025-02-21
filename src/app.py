@@ -303,7 +303,7 @@ def show_returns():
     return_id = request.args.get('return_id', '').strip()
     movement_detail_id = request.args.get('movement_detail_id', '').strip()
 
-    print(f"🔍 Parámetros de búsqueda -> ID Devolución: {return_id}, ID Movimiento: {movement_detail_id}")
+    print(f" Parámetros de búsqueda -> ID Devolución: {return_id}, ID Movimiento: {movement_detail_id}")
 
     # Consultar devoluciones con filtros
     if return_id or movement_detail_id:
@@ -322,9 +322,6 @@ def show_returns():
         return_id=return_id,
         movement_detail_id=movement_detail_id
     )
-
-
-
 
 
 @app.route('/menuUser', methods=['GET', 'POST'])
@@ -427,7 +424,7 @@ def create_movement():
             return jsonify({"success": False, "message": "Error al guardar el movimiento."})
 
     except Exception as e:
-        print(f"❌ Error al procesar la solicitud: {e}")
+        print(f" Error al procesar la solicitud: {e}")
         return jsonify({"success": False, "message": "Error interno en el servidor."})
 
 
@@ -669,7 +666,7 @@ def generate_barcode(code):
         return send_file(pdf_bytes, as_attachment=True, download_name=f"{code}.pdf", mimetype="application/pdf")
 
     except Exception as e:
-        print(f"❌ Error: {str(e)}")  # ✅ Verifica errores en la consola
+        print(f" Error: {str(e)}")  
         return jsonify({"error": str(e)}), 400
 
     except Exception as e:

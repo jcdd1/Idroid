@@ -89,11 +89,11 @@
 <!-- Modal para crear factura -->
 <div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;"> <!-- Fondo igual al de "Crear Movimiento" -->
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
             <form method="POST" action="{{ url_for('add_invoiceUser') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
-                <div class="modal-header bg-success text-white"> <!-- Mismo encabezado verde -->
+                <div class="modal-header bg-success text-white"> 
                     <h5 class="modal-title" id="addInvoiceModalLabel">Crear Factura</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -127,9 +127,9 @@
                     </div>
                 </div>
 
-                <div class="modal-footer" style="background-color: #d4edda;"> <!-- Mismo footer verde claro -->
+                <div class="modal-footer" style="background-color: #d4edda;"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-success">Crear Factura</button> <!-- Botón verde en lugar de azul -->
+                    <button type="submit" class="btn btn-success">Crear Factura</button> 
                 </div>
             </form>
         </div>
