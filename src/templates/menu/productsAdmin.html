@@ -5,6 +5,8 @@
 <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptEditUnits.js') }}"></script>
+
 {% endblock %}
 
 {% block dynamicContent %}
@@ -91,7 +93,18 @@
                 <td>{{ product.color }}</td>
                 <td>{{ product.description }}</td>
                 <td>{{ product.category }}</td>
-                <td>{{ product.units }}</td>
+                <td class="unit-field" data-imei="{{ product.imei }}">
+                    <span class="unit-display">{{ product.units }}</span>
+                    <button class="btn btn-sm btn-primary btn-edit-units">Editar</button>
+                    <div class="unit-editor d-none mt-2">
+                        <div class="input-group">
+                            <button class="btn btn-danger btn-sm btn-subtract">-</button>
+                            <input type="text" class="form-control text-center unit-input" value="{{ product.units }}" readonly>
+                            <button class="btn btn-success btn-sm btn-add">+</button>
+                        </div>
+                        <button class="btn btn-secondary btn-sm btn-cancel-edit mt-1">Cancelar</button>
+                    </div>
+                </td>
                 <td class="text-center">
                     <span class="badge {% if product.current_status == 'Sold' %}bg-success{% elif product.current_status == 'Under Repair' %}bg-warning{% else %}bg-secondary{% endif %}">
                         {{ product.current_status }}

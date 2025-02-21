@@ -8,6 +8,29 @@ class ModelProduct():
 
 
     @staticmethod
+    def update_units(db, imei, amount):
+            try:
+                # Actualizar las unidades del producto
+                query = text("""
+                    UPDATE products
+                    SET units = units + :amount
+                    WHERE imei = :imei
+                    RETURNING units
+                """)
+                result = db.session.execute(query, {'amount': amount, 'imei': imei})
+                updated_units = result.fetchone()
+
+                if updated_units:
+                    db.session.commit()
+                    return {"success": True, "new_units": updated_units[0]}
+                else:
+                    return {"success": False, "error": "Producto no encontrado"}
+
+            except Exception as e:
+                db.session.rollback()
+                return {"success": False, "error": str(e)}
+
+    @staticmethod
     def update_status(db, imei, new_status):
         try:
             # Actualización del estado con sintaxis corregida

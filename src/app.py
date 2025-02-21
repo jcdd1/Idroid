@@ -97,6 +97,27 @@ def show_invoices():
         invoice_type=invoice_type
     )
 
+@app.route('/update_units/<imei>', methods=['POST'])
+def update_units(imei):
+    try:
+        data = request.get_json()
+        amount = int(data.get('amount', 0))
+
+        if amount == 0:
+            return jsonify({'success': False, 'message': 'Cantidad inválida.'}), 400
+
+        # Llamar al método del modelo para actualizar unidades
+        response = ModelProduct.update_units(db, imei, amount)
+
+        if response.get('success'):
+            return jsonify({'success': True, 'new_units': response['new_units']})
+        else:
+            return jsonify({'success': False, 'message': response.get('error', 'Error desconocido.')}), 404
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/update_status/<imei>', methods=['POST'])
 def update_status(imei):
@@ -345,6 +366,37 @@ def show_returns():
         movement_detail_id=movement_detail_id
     )
 
+
+@app.route('/returnAdmin', methods=['GET'])
+@login_required
+def show_returnsAdmin():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Capturar parámetros de búsqueda
+    return_id = request.args.get('return_id', '').strip()
+    movement_detail_id = request.args.get('movement_detail_id', '').strip()
+
+    print(f" Parámetros de búsqueda -> ID Devolución: {return_id}, ID Movimiento: {movement_detail_id}")
+
+    # Consultar devoluciones con filtros
+    if return_id or movement_detail_id:
+        returns, total = ModelReturn.filter_returns(db, return_id=return_id, movement_detail_id=movement_detail_id, limit=per_page, offset=offset)
+    else:
+        returns = ModelReturn.get_returns_paginated(db, limit=per_page, offset=offset)
+        total = ModelReturn.count_returns(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/returnAdmin.html',
+        returns=returns,
+        page=page,
+        total_pages=total_pages,
+        return_id=return_id,
+        movement_detail_id=movement_detail_id
+    )
 
 @app.route('/menuUser', methods=['GET', 'POST'])
 @login_required
