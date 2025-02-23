@@ -693,6 +693,8 @@ def add_product():
         current_user = current_user
     )
 
+    
+
     # Mostrar mensaje según el resultado
     if success:
         flash('Producto añadido exitosamente.', 'success')
@@ -823,20 +825,47 @@ def carga_masiva():
             try:
                 # Leer el archivo directamente sin guardarlo
                 df = pd.read_excel(archivo)
-                print(df)
+                
                 # # Insertar cada fila en la base de datos
-                # for _, row in df.iterrows():
-                #     producto = Producto(
-                #         nombre=row['nombre'],
-                #         precio=row['precio'],
-                #         stock=row['stock']
-                #     )
-                #     db.session.add(producto)
-                # db.session.commit()
+                for _, row in df.iterrows():
+                    # valores = {
+                    #     "db": db,
+                    #     "productname": row.get('PRODUCTO'),
+                    #     "imei": row.get('IMEI'),
+                    #     "storage": row.get('ALMACENAMIENTO'),
+                    #     "battery": row.get('BATERÍA'),
+                    #     "color": row.get('COLOR'),
+                    #     "description": row.get('DESCRIPCIÓN'),
+                    #     "cost": row.get('COSTO'),
+                    #     "category": row.get('CATEGORIA'),
+                    #     "units": row.get('UNIDADES'),
+                    #     "supplier": row.get('PROVEEDOR'),
+                    #     "warehouse_id": current_user.warehouse_id,
+                    #     "current_user": current_user.user_id
+                    # }
+
+                    # print("Valores que se pasan a add_product_with_initial_movement:", valores)
+                    success = ModelProduct.add_product_with_initial_movement(
+                        db=db,
+                        productname=row['PRODUCTO'],
+                        imei=row['IMEI'],
+                        storage=row['ALMACENAMIENTO'],
+                        battery=row['BATERÍA'],
+                        color=row['COLOR'],
+                        description =row['DESCRIPCIÓN'],
+                        cost=row['COSTO'],
+                        category=row['CATEGORIA'],
+                        units = row['UNIDADES'],
+                        supplier = row['PROVEEDOR'],
+                        warehouse_id= current_user.warehouse_id,
+                        current_user = current_user.user_id
+                    )                
+
                 flash('✅ Productos cargados exitosamente', 'success')
                 return redirect(url_for('productsUser'))
 
             except Exception as e:
+                flash('Error al cargue productos', 'danger')
                 db.session.rollback()
                 return redirect(url_for('show_productsUser'))
 

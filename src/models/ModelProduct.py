@@ -70,10 +70,12 @@ class ModelProduct():
     @staticmethod
     def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, 
                                           cost, category, units, supplier, warehouse_id, current_user):
+        
         try:
+            
             # Insert product into products table
             query_1, query_2, query_3, query_4 = SQLQueries.add_product_with_initial_movement_query()
-
+            print(productname)
             query_product = text(query_1)
             result = db.session.execute(query_product, {
                 'productname': productname,
