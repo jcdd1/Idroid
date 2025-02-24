@@ -72,7 +72,6 @@ class ModelProduct():
                                           cost, category, units, supplier, warehouse_id, current_user):
         
         try:
-            
             # Insert product into products table
             query_1, query_2, query_3, query_4 = SQLQueries.add_product_with_initial_movement_query()
             print(productname)
