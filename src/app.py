@@ -8,6 +8,7 @@ engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
 import pandas as pd
+import math
 
 #Código de barras
 import barcode
@@ -848,9 +849,9 @@ def carga_masiva():
                     success = ModelProduct.add_product_with_initial_movement(
                         db=db,
                         productname=row['PRODUCTO'],
-                        imei=row['IMEI'],
-                        storage=row['ALMACENAMIENTO'],
-                        battery=row['BATERÍA'],
+                        imei=str(row['IMEI']),
+                        storage=int(row['ALMACENAMIENTO']),
+                        battery= int(0) if math.isnan(float(row['BATERÍA'])) else int(float(row['BATERÍA'])),
                         color=row['COLOR'],
                         description =row['DESCRIPCIÓN'],
                         cost=row['COSTO'],
