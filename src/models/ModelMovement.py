@@ -90,7 +90,7 @@ class ModelMovement:
         
 
     @staticmethod
-    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description):
+    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description, user_id):
         try:
             query = text("""
             INSERT INTO movement (
@@ -103,7 +103,7 @@ class ModelMovement:
                 notes
             )
             VALUES (
-                1,  -- Usuario que crea el movimiento (ajustar según sistema de usuarios)
+                :user_id,  -- Usuario que crea el movimiento (ajustar según sistema de usuarios)
                 :origin_warehouse_id, 
                 :destination_warehouse_id, 
                 CURRENT_TIMESTAMP, 
@@ -116,7 +116,8 @@ class ModelMovement:
             db.session.execute(query, {
             'origin_warehouse_id': origin_warehouse_id,
             'destination_warehouse_id': destination_warehouse_id,
-            'movement_description': movement_description
+            'movement_description': movement_description,
+            'user_id': user_id
             })
             db.session.commit()
 

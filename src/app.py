@@ -496,7 +496,8 @@ def create_movement():
             product_id=product_id,
             origin_warehouse_id=origin_warehouse_id,
             destination_warehouse_id=destination_warehouse_id,
-            movement_description=movement_description
+            movement_description=movement_description,
+            user_id = current_user.user_id
         )
 
         if success:
