@@ -852,7 +852,7 @@ def carga_masiva():
                         productname=row['PRODUCTO'],
                         imei=str(row['IMEI']),
                         storage=int(row['ALMACENAMIENTO']),
-                        battery= int(0) if math.isnan(float(row['BATERIA'])) else int(float(row['BATERIA'])),
+                        battery = int(row['BATERIA']),
                         color=row['COLOR'],
                         description =row['DESCRIPCION'],
                         cost=row['COSTO'],
@@ -864,12 +864,12 @@ def carga_masiva():
                     )                
 
                 flash('✅ Productos cargados exitosamente', 'success')
-                return redirect(url_for('productsUser'))
+                return redirect(url_for('show_productsAdmin'))
 
             except Exception as e:
                 flash('Error al cargue productos', 'danger')
                 db.session.rollback()
-                return redirect(url_for('show_productsUser'))
+                return redirect(url_for('show_productsAdmin'))
 
     return redirect(url_for('productsUser'))
 
