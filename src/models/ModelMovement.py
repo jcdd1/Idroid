@@ -90,7 +90,7 @@ class ModelMovement:
         
 
     @staticmethod
-    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description, user_id):
+    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description,destination_user_id, user_id):
         try:
             query = text("""
             INSERT INTO movement (
@@ -100,7 +100,8 @@ class ModelMovement:
                 creation_date, 
                 movement_type, 
                 status, 
-                notes
+                notes,
+                handled_by_user_id
             )
             VALUES (
                 :user_id,  -- Usuario que crea el movimiento (ajustar según sistema de usuarios)
@@ -108,16 +109,33 @@ class ModelMovement:
                 :destination_warehouse_id, 
                 CURRENT_TIMESTAMP, 
                 'Transfer',  -- Tipo de movimiento (ajustar si es necesario)
-                'New',  -- Estado del movimiento
-                :movement_description
+                'Pending',  -- Estado del movimiento
+                :movement_description,
+                :destination_user_id
             )
-        """)
-
-            db.session.execute(query, {
+            RETURNING movement_id;
+            """)
+            
+            
+            result=db.session.execute(query, {
             'origin_warehouse_id': origin_warehouse_id,
             'destination_warehouse_id': destination_warehouse_id,
             'movement_description': movement_description,
-            'user_id': user_id
+            'user_id': user_id,
+            'destination_user_id': destination_user_id
+            })
+
+            movement_id = result.fetchone()[0]
+            
+            query_movement_detail ="""
+                INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
+                VALUES(:movement_id, :product_id, :units, 'pending')       
+                """
+            units = 1
+            db.session.execute(query_movement_detail, {
+            'movement_id': movement_id,
+            'product_id': product_id,
+            'units': units
             })
             db.session.commit()
 

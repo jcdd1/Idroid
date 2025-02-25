@@ -501,6 +501,7 @@ def create_movement():
         origin_warehouse_id = data.get('origin_warehouse_id')
         destination_warehouse_id = data.get('destination_warehouse_id')
         movement_description = data.get('movement_description')
+        destination_user_id = data.get('destination_user_id')
 
         print(f"📦 Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}")
 
@@ -516,6 +517,7 @@ def create_movement():
             origin_warehouse_id=origin_warehouse_id,
             destination_warehouse_id=destination_warehouse_id,
             movement_description=movement_description,
+            destination_user_id=destination_user_id,
             user_id = current_user.user_id
         )
 

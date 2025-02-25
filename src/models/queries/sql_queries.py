@@ -9,7 +9,7 @@ class SQLQueries:
                     w.warehouse_id,
                     COALESCE(SUM(CASE 
                         WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
-                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
+                        WHEN m.movement_type IN ('Sold', 'Transfer') THEN -md.quantity
                         ELSE 0 
                     END), 0) AS available_units_in_warehouse
                 FROM 
