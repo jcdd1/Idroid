@@ -492,25 +492,78 @@ def edit_movement():
     return redirect(url_for('show_movements'))
 
 
+
+@app.route('/get_product_units/<string:product_id>', methods=['GET'])
+@login_required
+def get_product_units(product_id):
+    try:
+        query = """
+            SELECT 
+                COALESCE(SUM(CASE 
+                    WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
+                    WHEN m.movement_type IN ('Sold', 'Transfer') THEN -md.quantity
+                    ELSE 0 
+                END), 0) AS available_units
+            FROM 
+                Products p
+            LEFT JOIN 
+                MovementDetail md ON p.product_id = md.product_id
+            LEFT JOIN 
+                Movement m ON md.movement_id = m.movement_id
+            WHERE
+                p.imei = :product_id
+            GROUP BY 
+                p.product_id;
+        """
+        result = db.session.execute(text(query), {"product_id": product_id}).fetchone()
+        available_units = result[0] if result else 0
+        return jsonify({"available_units": available_units})
+    except Exception as e:
+        print(f"❌ Error al obtener unidades: {e}")
+        return jsonify({"available_units": 0})
+
+
+
 @app.route('/create_movement', methods=['POST'])
 @login_required
 def create_movement():
     try:
-        data = request.get_json()  # Obtener los datos del JSON
+        data = request.get_json()  
         product_id = data.get('product_id')
         origin_warehouse_id = data.get('origin_warehouse_id')
         destination_warehouse_id = data.get('destination_warehouse_id')
         movement_description = data.get('movement_description')
         destination_user_id = data.get('destination_user_id')
+        units_to_send = data.get('units_to_send')  
 
-        print(f"📦 Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}")
+        print(f" Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}, Unidades: {units_to_send}")
 
-        if not product_id or not origin_warehouse_id or not destination_warehouse_id:
+        # Validaciones
+        if not product_id or not origin_warehouse_id or not destination_warehouse_id or units_to_send is None:
             return jsonify({"success": False, "message": "Faltan datos obligatorios."})
 
         if origin_warehouse_id == destination_warehouse_id:
             return jsonify({"success": False, "message": "El almacén de origen y destino no pueden ser iguales."})
 
+        if units_to_send <= 0:
+            return jsonify({"success": False, "message": "La cantidad de unidades debe ser mayor a 0."})
+
+        #  Obtener el stock actual del producto
+        product = db.session.execute(
+            text("SELECT units FROM products WHERE imei = :product_id"),
+            {"product_id": product_id}
+        ).fetchone()
+
+        if not product:
+            return jsonify({"success": False, "message": "Producto no encontrado."})
+
+        available_units = product.units
+        print(f"🔍 Unidades disponibles: {available_units}")
+
+        if units_to_send > available_units:
+            return jsonify({"success": False, "message": f"La cantidad solicitada ({units_to_send}) supera el stock disponible ({available_units})."})
+
+        #  Llamada al modelo para crear el movimiento
         success = ModelMovement.create_movement(
             db=db,
             product_id=product_id,
@@ -518,10 +571,17 @@ def create_movement():
             destination_warehouse_id=destination_warehouse_id,
             movement_description=movement_description,
             destination_user_id=destination_user_id,
-            user_id = current_user.user_id
+            user_id=current_user.user_id,
+            units_to_send=units_to_send 
         )
 
         if success:
+            #  Actualización del stock tras el movimiento
+            db.session.execute(
+                text("UPDATE products SET units = units - :units WHERE imei = :product_id"),
+                {"units": units_to_send, "product_id": product_id}
+            )
+            db.session.commit()
             return jsonify({"success": True})
         else:
             return jsonify({"success": False, "message": "Error al guardar el movimiento."})
@@ -529,6 +589,7 @@ def create_movement():
     except Exception as e:
         print(f" Error al procesar la solicitud: {e}")
         return jsonify({"success": False, "message": "Error interno en el servidor."})
+
 
 
 

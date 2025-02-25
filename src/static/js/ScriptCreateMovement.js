@@ -1,12 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log(" ScriptCreateMovement.js cargado correctamente");
+    console.log("✅ ScriptCreateMovement.js cargado correctamente");
 
     const movementModal = document.getElementById("createMovementModal");
     const saveMovementButton = document.getElementById("saveMovementButton");
     const destinationWarehouseSelect = document.getElementById("destination_warehouse_id");
     const destinationUserSelect = document.getElementById("destination_user_id");
+    const unitsToSendInput = document.getElementById("units_to_send");
+    const maxUnitsDisplay = document.getElementById("max_units_display");
+    const availableUnitsField = document.getElementById("available_units");  
 
-    // Cargar usuarios vinculados al cambiar el almacén destino
+    // 🟢 Cargar usuarios vinculados al cambiar el almacén destino
     destinationWarehouseSelect.addEventListener("change", function () {
         const warehouseId = this.value;
         destinationUserSelect.innerHTML = '<option value="">Cargando usuarios...</option>';
@@ -54,15 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const productId = button.getAttribute("data-product-id") || "";
         const originWarehouseId = button.getAttribute("data-origin-warehouse-id") || "";
 
-        console.log("📦 Producto Seleccionado:");
-        console.log("   🔹 Nombre:", productName);
-        console.log("   🔹 ID (IMEI):", productId);
-        console.log("   🔹 Origen ID:", originWarehouseId);
-
-        if (!productId || !originWarehouseId) {
-            alert("Error: Datos incompletos del producto o bodega.");
-            return;
-        }
+        console.log("📦 Producto Seleccionado:", productName);
 
         document.getElementById("product_id").value = productId;
         document.getElementById("product_name_movement").value = productName;
@@ -75,6 +70,25 @@ document.addEventListener("DOMContentLoaded", function () {
         Array.from(destinationWarehouseSelect.options).forEach(option => {
             option.style.display = option.value === originWarehouseId ? "none" : "block";
         });
+
+        //  Obtener unidades disponibles desde el backend
+        fetch(`/get_product_units/${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                const availableUnits = data.available_units || 0;
+                console.log("🔢 Unidades disponibles:", availableUnits);
+
+                // 📝 Mostrar unidades disponibles y configurar campo de entrada
+                availableUnitsField.textContent = availableUnits;
+                unitsToSendInput.max = availableUnits;
+                unitsToSendInput.value = 0;
+                maxUnitsDisplay.textContent = availableUnits;
+            })
+            .catch(error => {
+                console.error("❌ Error al obtener unidades disponibles:", error);
+                availableUnitsField.textContent = "0";
+                unitsToSendInput.max = 0;
+            });
     });
 
     // 🟣 Restaurar opciones del select al cerrar el modal
@@ -83,62 +97,5 @@ document.addEventListener("DOMContentLoaded", function () {
             option.style.display = "block";
         });
         destinationUserSelect.innerHTML = '<option value="">Seleccione una bodega</option>';
-    });
-
-    // 🔵 Guardar el movimiento
-    saveMovementButton.addEventListener("click", function () {
-        console.log("📌 Intentando guardar el movimiento...");
-
-        const productId = document.getElementById("product_id").value;
-        const originWarehouseId = document.getElementById("origin_warehouse_id").value;
-        const destinationWarehouseId = destinationWarehouseSelect.value;
-        const destinationUserId = destinationUserSelect.value;
-        const movementDescription = document.getElementById("movement_description").value;
-
-        if (!destinationWarehouseId) {
-            alert("⚠️ Debes seleccionar un almacén de destino.");
-            return;
-        }
-        if (!destinationUserId) {
-            alert("⚠️ Debes seleccionar un usuario vinculado a la bodega de destino.");
-            return;
-        }
-        if (!movementDescription.trim()) {
-            alert("⚠️ Debes agregar una descripción del movimiento.");
-            return;
-        }
-
-        console.log("📦 Enviando datos:", {
-            productId, originWarehouseId, destinationWarehouseId, destinationUserId, movementDescription
-        });
-
-        fetch("/create_movement", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
-            },
-            body: JSON.stringify({
-                product_id: productId,
-                origin_warehouse_id: originWarehouseId,
-                destination_warehouse_id: destinationWarehouseId,
-                destination_user_id: destinationUserId,
-                movement_description: movementDescription
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("✅ Movimiento creado exitosamente.");
-                location.reload();
-            } else {
-                console.error("❌ Error al crear el movimiento:", data.message);
-                alert("❌ Error: " + data.message);
-            }
-        })
-        .catch(error => {
-            console.error("❌ Error en la solicitud:", error);
-            alert("❌ Ocurrió un error al procesar la solicitud.");
-        });
     });
 });

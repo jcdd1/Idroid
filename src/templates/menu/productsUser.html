@@ -168,7 +168,17 @@
                             <option value="">Seleccione un usuario</option>
                             <!-- Opciones generadas dinámicamente -->
                         </select>
-                    </div>                    
+                    </div> 
+                    <div class="col-md-6">
+                        <label for="units_to_send" class="form-label">Unidades a enviar</label>
+                        <input type="number" class="form-control" id="units_to_send" min="0" value="0" required>
+                        <div class="form-text text-muted">
+                            Cantidad mínima: 1. Máximo: <span id="max_units_display">0</span> unidades disponibles.
+                        </div>
+                        <p class="mt-2"><strong> Unidades disponibles:</strong> <span id="available_units">0</span></p> 
+                    </div>
+                    
+                                       
                     
                     <div class="col-12">
                         <label for="movement_description" class="form-label">Descripción</label>
