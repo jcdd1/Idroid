@@ -5,12 +5,18 @@ document.getElementById('uploadForm').addEventListener('submit', function (e) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        const modalMessage = document.getElementById('modalMessage');
-        modalMessage.textContent = data.message;
-        const modalElement = new bootstrap.Modal(document.getElementById('resultModal'));
-        modalElement.show();
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Error en la carga: ${response.statusText}`);
+        }
+        return response.json();
     })
-    .catch(error => console.error('Error:', error));
+    .then(data => {
+        document.getElementById('modalMessage').textContent = data.message;
+        new bootstrap.Modal(document.getElementById('resultModal')).show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Hubo un error en la carga. Revisa la consola para más detalles.');
+    });
 });
