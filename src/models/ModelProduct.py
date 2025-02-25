@@ -124,254 +124,153 @@ class ModelProduct():
             return False
 
     @staticmethod
-    def filter_products(db, imei=None, productname=None, current_status=None, warehouse = None,category = None,limit=20, offset=0):
-        # Inicializa la variable total_count
-        total_count = 0
+    def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None, limit=20, offset=0):
         try:
+            # Caso de filtrado por IMEI
+            if imei:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE p.imei = :imei
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {'imei': imei, 'limit': limit, 'offset': offset}
 
-            match (imei, productname, current_status, warehouse, category):
-                case (imei, _, _, _, _) if imei:
-                    
-                    query = text(SQLQueries.filter_products_imei())
-                    params = {
-                        'imei': imei
-                    }
+            # Caso: filtrado por nombre del producto, estado, bodega y categoría
+            elif productname and current_status and warehouse and category:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE p.productname ILIKE :productname
+                    AND p.current_status = :current_status
+                    AND w.warehouse_name ILIKE :warehouse
+                    AND p.category ILIKE :category
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'productname': f"%{productname}%",
+                    'current_status': current_status,
+                    'warehouse': f"%{warehouse}%",
+                    'category': f"%{category}%",
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                    result = db.session.execute(query, params).mappings().fetchall()
+            # Caso: filtrado solo por bodega
+            elif warehouse:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE w.warehouse_name ILIKE :warehouse
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'warehouse': f"%{warehouse}%",
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                    if result:                       
-                        # Construye la lista de productos excluyendo 'total_count'
-                        products = [dict(row) for row in result]
-                                              
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, productname, current_status, warehouse, category) if productname and current_status and warehouse and category:
-                    query = text(SQLQueries.filter_products_all_fields())
-                    
-                    params = params = {'productname': f"%{productname}%", 
-                                       'current_status': current_status,
-                                       'warehouse': warehouse,
-                                       'category': f"%{category}%"
-                                       }
+            # Caso: filtrado solo por nombre de producto
+            elif productname:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE p.productname ILIKE :productname
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'productname': f"%{productname}%",
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-           
-                case (_, productname, current_status, warehouse, _) if productname and current_status and warehouse:
-                    query = text(SQLQueries.filter_products_no_category())
-                    
-                    params = params = {'productname': f"%{productname}%", 
-                                       'current_status': current_status,
-                                       'warehouse': warehouse
-                                       }
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
+            # Caso: filtrado solo por categoría
+            elif category:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE p.category ILIKE :category
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'category': f"%{category}%",
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                case (_, productname, current_status, _, category) if productname and current_status and category:
-                    query = text(SQLQueries.filter_products_no_warehouse())
-                    
-                    params = params = {'productname': f"%{productname}%", 
-                                       'current_status': current_status,
-                                       'category': f"%{category}%"
-                                       }
-                    result = db.session.execute(query, params).mappings().fetchall()
+            # Caso: filtrado solo por estado
+            elif current_status:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE p.current_status = :current_status
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'current_status': current_status,
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                    if result:
-                        products = [dict(row) for row in result]                       
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, productname, _, warehouse, category) if productname and warehouse and category:
-                    
-                    query = text(SQLQueries.filter_products_no_status())
-                    
-                    params = params = {'productname': f"%{productname}%", 
-                                       'warehouse': warehouse,
-                                       'category': f"%{category}%"
-                                       }
-                    result = db.session.execute(query, params).mappings().fetchall()
+            # Si no se aplican filtros, devuelve todos los productos con paginación
+            else:
+                query = text("""
+                    SELECT p.*, w.warehouse_name
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LIMIT :limit OFFSET :offset
+                """)
+                params = {
+                    'limit': limit,
+                    'offset': offset
+                }
 
-                    if result:
-                        products = [dict(row) for row in result]
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, _, current_status, warehouse, category) if current_status and warehouse and category:
-                    query = text(SQLQueries.filter_products_no_product())
-                    
-                    params = params = {'current_status': current_status,
-                                       'warehouse': warehouse,
-                                       'category': f"%{category}%"
-                                       }
+            # Ejecutar la consulta
+            result = db.session.execute(query, params).mappings().fetchall()
 
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, productname, current_status, _, _) if productname and current_status:
-                    
-                    query = text(SQLQueries.filter_products_name_status())
-                    
-                    params = params = {'productname': f"%{productname}%", 
-                                       'current_status': current_status
-                                       }
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    if result:
-                        products = [dict(row) for row in result]
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, productname, _, warehouse, _) if productname  and warehouse:
-                    query = text(SQLQueries.filter_products_name_warehouse())
-                    
-                    params = params = {'productname': f"%{productname}%",
-                                       'warehouse': warehouse
-                                       }
+            # Procesar resultados
+            if result:
+                products = [dict(row) for row in result]
+            else:
+                products = []
 
-                    result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, _, current_status, _, category) if current_status and category:
-                    query = text(SQLQueries.filter_products_status_category())
-                    
-                    params = params = {'current_status': current_status,
-                                       'category': f"%{category}%"
-                                       }
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-
-                case (_, _, _, warehouse, category) if warehouse and category:
-                    query = text(SQLQueries.filter_products_warehouse_category())
-                    
-                    params = params = {'warehouse': warehouse,
-                                       'category': f"%{category}%"
-                                       }
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, productname, _, _, _) if productname:
-
-                    query = text(SQLQueries.filter_products_name())
-                    
-                    params = params = {'productname': f"%{productname}%"}
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-
-                    if result:
-                        products = [dict(row) for row in result]
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-
-                case (_, _, current_status, _, _) if current_status:
-
-                    query = text(SQLQueries.filter_products_status())
-                    
-                    params = {
-                        'current_status': current_status
-                    }
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                 
-                case (_, _, _, warehouse, _) if warehouse:
-                    
-                    query = text(SQLQueries.filter_products_warehouse())
-                    
-                    params = {
-                        'warehouse': warehouse
-                    }
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    if result:
-                        products = [dict(row) for row in result]                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                
-                case (_, _, _, _, category) if category:
-                    
-                    query = text(SQLQueries.filter_products_category())
-                    
-                    params = {'category': f"%{category}%"}
-
-                    result = db.session.execute(query, params).mappings().fetchall()
-                    
-                    if result:
-                        products = [dict(row) for row in result]
-                        df = pd.DataFrame(result)
-                        filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-                            # Convertir a lista de diccionarios
-                        filtered_data = filtered_df.to_dict(orient="records")
-                        products = filtered_data 
-                        
-                    else:
-                        products = []  # Si no hay resultados, inicializa la lista vacía
-                    return products
-                case _:
-                    products = []
-                    return products, 0
-            return products, 0
+            return products
 
         except Exception as e:
-            print(f"Error filtering products: {e}")
-            return [], 0
+            print(f"⚠️ Error filtering products: {e}")
+            return []
+
         
     @staticmethod
     def get_product_imei(db, imei):
         try:
-            query = text(SQLQueries.get_product_imei())
-            params = {
-                'imei': imei
-            }
+            query = text("""
+                SELECT p.productname, p.storage, p.battery, p.color, p.units, ws.warehouse_id
+                FROM products p
+                JOIN warehousestock ws ON p.product_id = ws.product_id
+                WHERE p.imei = :imei
+            """)
+            params = {'imei': imei}
 
             result = db.session.execute(query, params).mappings().fetchall()
 
-            if result:                       
-                # Construye la lista de productos excluyendo 'total_count'
+            if result:
                 products = [dict(row) for row in result]
-                                        
             else:
-                products = []  # Si no hay resultados, inicializa la lista vacía
+                products = []
             return products
         except Exception as e:
             print(f"Error searching products: {e}")

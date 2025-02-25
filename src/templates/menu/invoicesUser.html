@@ -30,7 +30,9 @@
     </button>
 </div>
 
-<!-- Formulario de búsqueda -->
+
+
+<!-- 🔍 Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_invoicesUser') }}" class="row g-3 mt-4">
     <div class="col-md-3">
         <input type="text" name="document_number" class="form-control border-success" placeholder="Buscar por Número de Documento" value="{{ document_number }}">
@@ -39,6 +41,9 @@
         <input type="text" name="client_name" class="form-control border-success" placeholder="Buscar por Cliente" value="{{ client_name }}">
     </div>
     <div class="col-md-3">
+        <input type="text" name="type" class="form-control border-success" placeholder="Buscar por Tipo" value="{{ invoice_type }}">
+    </div>
+    <div class="col-md-2">
         <select name="status" class="form-select border-success">
             <option value="" {% if not status %}selected{% endif %}>Todos los estados</option>
             <option value="Pendiente" {% if status == 'Pendiente' %}selected{% endif %}>Pendiente</option>
@@ -50,7 +55,6 @@
         <button type="submit" class="btn btn-success w-100">Buscar</button>
     </div>
 </form>
-
 
 <!-- Tabla de facturas -->
 <div class="table-responsive mt-4">
@@ -84,15 +88,13 @@
     </table>
 </div>
 
-
-
 <!-- Modal para crear factura -->
 <div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="background-color: #f0fdf4;"> 
             <form method="POST" action="{{ url_for('add_invoiceUser') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+
                 <div class="modal-header bg-success text-white"> 
                     <h5 class="modal-title" id="addInvoiceModalLabel">Crear Factura</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -100,23 +102,51 @@
 
                 <div class="modal-body">
                     <div class="row g-3">
+                        <!-- IMEI con búsqueda dinámica -->
                         <div class="col-md-6">
-                            <label for="type" class="form-label">Tipo</label>
-                            <input type="text" class="form-control" id="type" name="type" placeholder="Ejemplo: Venta">
+                            <label for="imei" class="form-label">IMEI del Producto</label>
+                            <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
+                        </div>
+                        <div id="imeiAlert" class="alert alert-danger d-none" role="alert">
+                            ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
                         </div>
                         <div class="col-md-6">
-                            <label for="document_number" class="form-label">Número de Documento</label>
-                            <input type="text" class="form-control" id="document_number" name="document_number">
+                            <label for="product_name" class="form-label">Nombre Producto</label>
+                            <input type="text" class="form-control" id="product_name" readonly>
                         </div>
-                        <div class="col-md-6">
-                            <label for="date" class="form-label">Fecha</label>
-                            <input type="datetime-local" class="form-control" id="date" name="date">
+                        <div class="col-md-4">
+                            <label for="storage" class="form-label">Memoria</label>
+                            <input type="text" class="form-control" id="storage" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="battery" class="form-label">Batería</label>
+                            <input type="text" class="form-control" id="battery" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="color" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="units" class="form-label">Unidades Disponibles</label>
+                            <input type="text" class="form-control" id="units" readonly>
                         </div>
                         <div class="col-md-6">
                             <label for="client" class="form-label">Cliente</label>
-                            <input type="text" class="form-control" id="client" name="client" placeholder="Nombre del cliente">
+                            <input type="text" class="form-control" id="client" name="client" placeholder="Nombre del cliente" autocomplete="off" required>
                         </div>
-                        <div class="col-md-12">
+                        <div class="col-md-6">
+                            <label for="document_number" class="form-label">Número de Documento</label>
+                            <input type="text" class="form-control" id="document_number" name="document_number" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="type" class="form-label">Tipo</label>
+                            <input type="text" class="form-control" id="type" name="type" placeholder="Ejemplo: Venta" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="date" class="form-label">Fecha</label>
+                            <input type="datetime-local" class="form-control" id="date" name="date" required>
+                        </div>
+                        <div class="col-md-6">
                             <label for="status" class="form-label">Estado</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="Pendiente">Pendiente</option>
@@ -129,14 +159,12 @@
 
                 <div class="modal-footer" style="background-color: #d4edda;"> 
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-success">Crear Factura</button> 
+                    <button type="submit" class="btn btn-success" id="createInvoiceButton" disabled>Crear Factura</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-
 
 <!-- Paginación -->
 <div class="d-flex justify-content-between align-items-center mt-4">

@@ -47,6 +47,34 @@ document.addEventListener("DOMContentLoaded", function () {
         // Bloquear los campos que no deben editarse
         document.getElementById("product_name_movement").setAttribute("readonly", true);
         document.getElementById("origin_warehouse_id").setAttribute("readonly", true);
+
+        // Ocultar la opción de destino que corresponde al almacén de origen
+        const destinationSelect = document.getElementById("destination_warehouse_id");
+        Array.from(destinationSelect.options).forEach(function(option) {
+            if (option.value === originWarehouseId) {
+                option.style.display = "none";
+            }
+        });
+
+        // Si la opción actualmente seleccionada es la oculta, seleccionar la primera opción visible
+        if (destinationSelect.value === originWarehouseId) {
+            let newVal = "";
+            for (let option of destinationSelect.options) {
+                if (option.style.display !== "none") {
+                    newVal = option.value;
+                    break;
+                }
+            }
+            destinationSelect.value = newVal;
+        }
+    });
+
+    // Evento para restaurar las opciones del select al cerrar el modal
+    movementModal.addEventListener("hidden.bs.modal", function () {
+        const destinationSelect = document.getElementById("destination_warehouse_id");
+        Array.from(destinationSelect.options).forEach(function(option) {
+            option.style.display = "block";
+        });
     });
 
     // Guardar el movimiento al hacer clic en "Guardar Cambios"

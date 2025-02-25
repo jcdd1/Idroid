@@ -1,36 +1,78 @@
-document.addEventListener("DOMContentLoaded", () => {
-    
-    const editInvoiceModal = document.getElementById("editInvoiceModal");
-    const editButtons = document.querySelectorAll("button[data-bs-target='#editInvoiceModal']");
+document.addEventListener('DOMContentLoaded', function () {
+    const imeiInput = document.getElementById('imei');
+    const createInvoiceButton = document.getElementById('createInvoiceButton');
+    const alertBox = document.getElementById('imeiAlert');
+    const closeButton = document.querySelector('#addInvoiceModal .btn-close');
+    const modalElement = document.getElementById('addInvoiceModal');
+    let typingTimer;
+    const typingInterval = 500;
 
-    
-    editButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            // Obtener los datos de la factura desde el atributo data-invoice
-            const invoiceData = JSON.parse(button.getAttribute("data-invoice"));
+    // 🔄 Limpia los campos al cerrar el modal (X o botón "Cerrar")
+    closeButton.addEventListener('click', clearFormFields);
+    modalElement.addEventListener('hidden.bs.modal', clearFormFields);
 
-            // Llenar los campos del modal con los datos de la factura
-            document.getElementById("invoice_id").value = invoiceData.invoice_id || "";
-            document.getElementById("type").value = invoiceData.type || "";
-            document.getElementById("document_number").value = invoiceData.document_number || "";
-            document.getElementById("date").value = invoiceData.date ? formatDateTime(invoiceData.date) : "";
-            document.getElementById("client").value = invoiceData.client || "";
-            document.getElementById("status").value = invoiceData.status || "Pending";
-        });
+    imeiInput.addEventListener('input', function () {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(fetchProductData, typingInterval);
     });
 
-    /**
-     * Función para formatear una fecha y hora en formato "YYYY-MM-DDTHH:mm".
-     * @param {string} dateTimeString 
-     * @returns {string} 
-     */
-    function formatDateTime(dateTimeString) {
-        const date = new Date(dateTimeString);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        const hours = String(date.getHours()).padStart(2, "0");
-        const minutes = String(date.getMinutes()).padStart(2, "0");
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    function fetchProductData() {
+        const imei = imeiInput.value.trim();
+        if (imei.length >= 5) {
+            fetch(`/get_product_by_imei/${imei}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('product_name').value = data.product.productname;
+                        document.getElementById('storage').value = data.product.storage;
+                        document.getElementById('battery').value = data.product.battery;
+                        document.getElementById('color').value = data.product.color;
+                        document.getElementById('units').value = data.product.units;
+
+                        if (data.product.warehouse_id !== data.current_user_warehouse_id) {
+                            createInvoiceButton.disabled = true;
+                            alertBox.textContent = "⚠️ El producto no se encuentra en tu bodega.";
+                            alertBox.classList.remove('d-none');
+                        } else {
+                            createInvoiceButton.disabled = false;
+                            alertBox.classList.add('d-none');
+                        }
+                    } else {
+                        alertBox.textContent = data.message;
+                        alertBox.classList.remove('d-none');
+                        createInvoiceButton.disabled = true;
+                        clearProductFields();
+                    }
+                })
+                .catch(() => {
+                    alertBox.textContent = '⚠️ Error al obtener la información del producto.';
+                    alertBox.classList.remove('d-none');
+                    createInvoiceButton.disabled = true;
+                    clearProductFields();
+                });
+        } else {
+            clearProductFields();
+            createInvoiceButton.disabled = true;
+            alertBox.classList.add('d-none');
+        }
+    }
+
+    function clearProductFields() {
+        document.getElementById('product_name').value = '';
+        document.getElementById('storage').value = '';
+        document.getElementById('battery').value = '';
+        document.getElementById('color').value = '';
+        document.getElementById('units').value = '';
+    }
+
+    function clearFormFields() {
+        imeiInput.value = '';
+        clearProductFields();
+        alertBox.classList.add('d-none');
+        createInvoiceButton.disabled = true;
+        document.getElementById('client').value = '';
+        document.getElementById('document_number').value = '';
+        document.getElementById('date').value = '';
+        document.getElementById('status').selectedIndex = 0;
     }
 });

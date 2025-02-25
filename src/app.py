@@ -222,6 +222,8 @@ def edit_invoice():
 @app.route('/add_invoiceUser', methods=['POST'])
 def add_invoiceUser():
     try:
+        print(f"📝 Formulario recibido: {request.form}")  # 💡 Agregado para depuración
+
         # Obtener datos del formulario
         invoice_type = request.form.get('type')
         document_number = request.form.get('document_number')
@@ -229,10 +231,12 @@ def add_invoiceUser():
         client = request.form.get('client')
         status = request.form.get('status')
 
+        print(f"📦 type: {invoice_type}, doc: {document_number}, date: {date}, client: {client}, status: {status}")
+
         # Validar datos
         if not invoice_type or not document_number or not date or not client or not status:
             flash('Todos los campos son obligatorios.', 'error')
-            return redirect(url_for('invoices.show_invoices'))
+            return redirect(url_for('show_invoicesUser'))
 
         # Crear la factura utilizando el modelo
         success = ModelInvoice.create_invoice(
@@ -253,8 +257,9 @@ def add_invoiceUser():
         print(f"Error al crear la factura: {e}")
         flash('Ocurrió un error al procesar la solicitud.', 'error')
 
-    # Redirigir al listado de facturas
     return redirect(url_for('show_invoicesUser'))
+
+
 
 @app.route('/add_invoice', methods=['POST'])
 def add_invoice():
@@ -603,6 +608,26 @@ def show_productsUser():
         warehouses=warehouses,
         active_invoices=active_invoices
     )
+
+@app.route('/get_product_by_imei/<imei>', methods=['GET'])
+@login_required
+def get_product_by_imei(imei):
+    try:
+        product = ModelProduct.get_product_imei(db, imei)
+        if product:
+            product = product[0]
+            return jsonify(
+                success=True, 
+                product=product, 
+                current_user_warehouse_id=current_user.warehouse_id
+            )
+        else:
+            return jsonify(success=False, message="Producto no encontrado.")
+    except Exception as e:
+        return jsonify(success=False, message=str(e))
+
+
+
 
 
 
