@@ -810,68 +810,44 @@ def generate_barcode(code):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route('/carga_masiva', methods=['GET', 'POST'])
+@app.route('/carga_masiva', methods=['POST'])
 def carga_masiva():
-    if request.method == 'POST':
-        if 'archivo' not in request.files:
-            flash('⚠️ No se seleccionó ningún archivo', 'danger')
-            return redirect(url_for('show_productsUser'))
+    if 'archivo' not in request.files:
+        return jsonify({"error": "⚠️ No se seleccionó ningún archivo"}), 400
 
-        archivo = request.files['archivo']
+    archivo = request.files['archivo']
 
-        if archivo.filename == '':
-            flash('⚠️ Nombre de archivo vacío', 'danger')
-            return redirect(url_for('show_productsUser'))
+    if archivo.filename == '':
+        return jsonify({"error": "⚠️ Nombre de archivo vacío"}), 400
 
-        if archivo and archivo.filename.endswith('.xlsx'):
-            try:
-                # Leer el archivo directamente sin guardarlo
-                df = pd.read_excel(archivo)
-                
-                # # Insertar cada fila en la base de datos
-                for _, row in df.iterrows():
-                    # valores = {
-                    #     "db": db,
-                    #     "productname": row.get('PRODUCTO'),
-                    #     "imei": row.get('IMEI'),
-                    #     "storage": row.get('ALMACENAMIENTO'),
-                    #     "battery": row.get('BATERIA'),
-                    #     "color": row.get('COLOR'),
-                    #     "description": row.get('DESCRIPCIN'),
-                    #     "cost": row.get('COSTO'),
-                    #     "category": row.get('CATEGORIA'),
-                    #     "units": row.get('UNIDADES'),
-                    #     "supplier": row.get('PROVEEDOR'),
-                    #     "warehouse_id": current_user.warehouse_id,
-                    #     "current_user": current_user.user_id
-                    # }
+    if archivo and archivo.filename.endswith('.xlsx'):
+        try:
+            df = pd.read_excel(archivo)
+            
+            for _, row in df.iterrows():
+                success = ModelProduct.add_product_with_initial_movement(
+                    db=db,
+                    productname=row['PRODUCTO'],
+                    imei=str(row['IMEI']),
+                    storage=int(row['ALMACENAMIENTO']),
+                    battery=int(row['BATERIA']),
+                    color=row['COLOR'],
+                    description=row['DESCRIPCION'],
+                    cost=row['COSTO'],
+                    category=row['CATEGORIA'],
+                    units=row['UNIDADES'],
+                    supplier=row['PROVEEDOR'],
+                    warehouse_id=current_user.warehouse_id,
+                    current_user=current_user.user_id
+                )                
 
-                    # print("Valores que se pasan a add_product_with_initial_movement:", valores)
-                    success = ModelProduct.add_product_with_initial_movement(
-                        db=db,
-                        productname=row['PRODUCTO'],
-                        imei=str(row['IMEI']),
-                        storage=int(row['ALMACENAMIENTO']),
-                        battery = int(row['BATERIA']),
-                        color=row['COLOR'],
-                        description =row['DESCRIPCION'],
-                        cost=row['COSTO'],
-                        category=row['CATEGORIA'],
-                        units = row['UNIDADES'],
-                        supplier = row['PROVEEDOR'],
-                        warehouse_id= current_user.warehouse_id,
-                        current_user = current_user.user_id
-                    )                
+            return jsonify({"message": "✅ Productos cargados exitosamente"}), 200
 
-                flash('✅ Productos cargados exitosamente', 'success')
-                return redirect(url_for('show_productsAdmin'))
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"❌ Error al cargar productos: {str(e)}"}), 500
 
-            except Exception as e:
-                flash('Error al cargue productos', 'danger')
-                db.session.rollback()
-                return redirect(url_for('show_productsAdmin'))
-
-    return redirect(url_for('productsUser'))
+    return jsonify({"error": "❌ Formato de archivo no permitido"}), 400
 
 #Manejo de errores en el servidor
 def status_401(error):
