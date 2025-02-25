@@ -1,7 +1,6 @@
 {% extends 'menuAdmin.html' %}
 
 {% block customScripts %}
-<script src="{{ url_for('static', filename='js/ScriptMessageMasive.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
@@ -153,4 +152,6 @@
     </div>
   </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/ScriptMessageMasive.js') }}"></script>
 {% endblock %}
