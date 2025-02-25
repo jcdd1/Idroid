@@ -415,6 +415,20 @@ def menuUser():
 def menuAdmin():
     return render_template("menuAdmin.html")
 
+
+@app.route('/get_users_by_warehouse/<int:warehouse_id>', methods=['GET'])
+def get_users_by_warehouse(warehouse_id):
+    try:
+        result = db.session.execute(
+            text("SELECT user_id AS id, name FROM users WHERE warehouse_id = :warehouse_id"),
+            {"warehouse_id": warehouse_id}
+        )
+        users = [{'id': row.id, 'name': row.name} for row in result]
+        return jsonify({'users': users})
+    except Exception as e:
+        print(f" Error al obtener usuarios: {e}")
+        return jsonify({'users': [], 'error': str(e)}), 500
+
 @app.route('/movements', methods=['GET'])
 @login_required
 def show_movements():
