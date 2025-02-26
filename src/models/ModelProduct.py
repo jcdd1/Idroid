@@ -52,10 +52,28 @@ class ModelProduct():
             return {"success": False, "error": str(e)}
 
     @staticmethod
-    def get_products_units(db, warehouse_id):
+    def get_products_units_ws(db, warehouse_id):
         try:
-            query = text(SQLQueries.get_products_units())
+            query = text(SQLQueries.get_products_units_ws())
             result = db.session.execute(query, {'warehouse_id': warehouse_id}).mappings().all()
+
+            result = [dict(row) for row in result]
+            # df = pd.DataFrame(result)
+            # filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
+            #     # Convertir a lista de diccionarios
+            # filtered_data = filtered_df.to_dict(orient="records")
+            return result
+        except Exception as e:
+            print(f"Error adding product: {e}")
+            db.session.rollback()  # Rollback on error
+            return False
+        
+    
+    @staticmethod
+    def get_units_product(db, product_id, warehouse_id):
+        try:
+            query = text(SQLQueries.get_units_product_query())
+            result = db.session.execute(query, {'warehouse_id': warehouse_id, 'product_id': product_id}).mappings().all()
 
             result = [dict(row) for row in result]
             # df = pd.DataFrame(result)

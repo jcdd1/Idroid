@@ -493,35 +493,15 @@ def edit_movement():
 
 
 
-@app.route('/get_product_units/<string:product_id>', methods=['GET'])
+@app.route('/get_product_units/<string:product_id>/<int:warehouse_id>', methods=['GET'])
 @login_required
-def get_product_units(product_id):
+def get_product_units(product_id, warehouse_id):
     try:
-        query = """
-            SELECT 
-                COALESCE(SUM(CASE 
-                    WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
-                    WHEN m.movement_type IN ('Sold', 'Transfer') THEN -md.quantity
-                    ELSE 0 
-                END), 0) AS available_units
-            FROM 
-                Products p
-            LEFT JOIN 
-                MovementDetail md ON p.product_id = md.product_id
-            LEFT JOIN 
-                Movement m ON md.movement_id = m.movement_id
-            WHERE
-                p.imei = :product_id
-            GROUP BY 
-                p.product_id;
-        """
-        result = db.session.execute(text(query), {"product_id": product_id}).fetchone()
-        available_units = result[0] if result else 0
-        return jsonify({"available_units": available_units})
+        available_units = ModelProduct.get_units_product(db, product_id, warehouse_id)
+        return jsonify({"available_units": available_units[0]['stock_disponible']})
     except Exception as e:
         print(f"❌ Error al obtener unidades: {e}")
         return jsonify({"available_units": 0})
-
 
 
 @app.route('/create_movement', methods=['POST'])
@@ -534,7 +514,7 @@ def create_movement():
         destination_warehouse_id = data.get('destination_warehouse_id')
         movement_description = data.get('movement_description')
         destination_user_id = data.get('destination_user_id')
-        units_to_send = data.get('units_to_send')  
+        units_to_send = int(data.get('units_to_send'))  
 
         print(f" Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}, Unidades: {units_to_send}")
 
@@ -550,7 +530,7 @@ def create_movement():
 
         #  Obtener el stock actual del producto
         product = db.session.execute(
-            text("SELECT units FROM products WHERE imei = :product_id"),
+            text("SELECT units FROM products WHERE product_id = :product_id"),
             {"product_id": product_id}
         ).fetchone()
 
@@ -572,7 +552,7 @@ def create_movement():
             movement_description=movement_description,
             destination_user_id=destination_user_id,
             user_id=current_user.user_id,
-            units_to_send=units_to_send 
+            units_to_send=units_to_send
         )
 
         if success:
@@ -619,7 +599,7 @@ def show_products():
             db, imei=imei, productname=productname, current_status=current_status, warehouse = warehouse, category = category,limit=per_page, offset=offset
         )    
     else:
-        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
+        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
 
     total = len(products)
     
@@ -665,7 +645,7 @@ def show_productsUser():
             warehouse=warehouse, category=category, limit=per_page, offset=offset
         )
     else:
-        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
+        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
 
     # Verificar si hay productos y si contienen la bodega
     if products:
@@ -705,10 +685,6 @@ def get_product_by_imei(imei):
 
 
 
-
-
-
-
 @app.route('/productsAdmin', methods=['GET'])
 @login_required
 def show_productsAdmin():
@@ -739,7 +715,7 @@ def show_productsAdmin():
             warehouse=warehouse, category=category, limit=per_page, offset=offset
         )
     else:
-        products = ModelProduct.get_products_units(db, current_user.warehouse_id)
+        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
 
     # Verificar si hay productos y si contienen la bodega
     if products:

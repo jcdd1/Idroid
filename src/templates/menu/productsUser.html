@@ -3,10 +3,10 @@
 {% block customScripts %}
     <script src="{{ url_for('static', filename='js/ScriptProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateBarCode.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptMessageMasive.js') }}"></script>
     <script src="{{ url_for('static', filename='js/activartooltips.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -84,7 +84,7 @@
                 <td style="cursor: pointer; color: #2d6a4f;" 
                     data-bs-toggle="modal" 
                     data-bs-target="#viewMovementsModal" 
-                    data-imei="{{ product.imei }}">
+                    data-imei="{{ product.product_id }}">
                     {{ product.productname }}
                 </td>
                 <td>{{ product.imei }}</td>
@@ -107,7 +107,7 @@
                     <button type="button" class="btn btn-success btn-sm"
                         data-bs-toggle="modal" 
                         data-bs-target="#createMovementModal"
-                        data-product-id="{{ product.imei }}"
+                        data-product-id="{{ product.product_id }}"
                         data-product-name="{{ product.productname }}"
                         data-origin-warehouse-id="{{ product.warehouse_id }}"
                         {% if product.warehouse_id != current_user.warehouse_id %} disabled data-bs-toggle="tooltip" title="Acción deshabilitada: Producto en otra bodega" {% endif %}>
@@ -212,19 +212,21 @@
                     <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
                         <thead class="bg-success text-white text-center"> 
                             <tr>
-                                <th>ID Movimiento</th>
-                                <th>Tipo</th>
+                                <th>Movement ID</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
                                 <th>Fecha</th>
-                                <th>Bodega Origen</th>
-                                <th>Bodega Destino</th>
-                                <th>Estado Movimiento</th>
+                                <th>Estado</th>
+                                <th>Descripción</th>
+                                <th>Tipo</th>
+                                <th>Usuario</th>
+                                <th>Recibe</th>
                                 <th>Cantidad</th>
-                                <th>Estado Detalle</th>
-                                <th>Razón de Rechazo</th>
-                                <th>ID Devolución</th>
-                                <th>Cantidad Devuelta</th>
-                                <th>Fecha Devolución</th>
-                                <th>Notas de Devolución</th>
+                                <th>Detail Status</th>
+                                <th>Razón rechazo</th>
+                                <th>Cantidad retornada</th>
+                                <th>Fecha retorno</th>
+                                <th>Notas</th>
                             </tr>
                         </thead>
                         <tbody id="movementsTableBody">
@@ -241,7 +243,6 @@
         </div>
     </div>
 </div>
-
 
 
 <!-- Paginación -->

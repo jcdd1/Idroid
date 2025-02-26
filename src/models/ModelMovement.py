@@ -90,7 +90,7 @@ class ModelMovement:
         
 
     @staticmethod
-    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description,destination_user_id, user_id):
+    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description,destination_user_id, user_id, units_to_send):
         try:
             query = text("""
             INSERT INTO movement (
@@ -127,15 +127,16 @@ class ModelMovement:
 
             movement_id = result.fetchone()[0]
             
-            query_movement_detail ="""
+            query_movement_detail =text("""
                 INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
-                VALUES(:movement_id, :product_id, :units, 'pending')       
+                VALUES(:movement_id, :product_id, :units_to_send, 'pending')       
                 """
-            units = 1
+            )
+            
             db.session.execute(query_movement_detail, {
             'movement_id': movement_id,
             'product_id': product_id,
-            'units': units
+            'units_to_send': units_to_send
             })
             db.session.commit()
 
@@ -151,10 +152,10 @@ class ModelMovement:
             
 
     @staticmethod
-    def get_movements_by_imei(db, imei):
-        query = text(SQLQueries.get_movements_by_imei_query())
+    def get_movements_by_imei(db, product_id):
+        query = text(SQLQueries.get_movements_by_product_query())
         params = {
-                'imei': imei
+                'product_id': product_id
             }
 
         result = db.session.execute(query, params).mappings().fetchall()

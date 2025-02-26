@@ -21,19 +21,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     data.movements.forEach(movement => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td class="text-center">${movement.movement_id || 'N/A'}</td>
-                            <td class="text-center">${movement.movement_type || 'N/A'}</td>
-                            <td class="text-center">${formatDate(movement.creation_date) || 'N/A'}</td>
-                            <td class="text-center">${movement.origin_warehouse_name || 'N/A'}</td>
-                            <td class="text-center">${movement.destination_warehouse_name || 'N/A'}</td>
-                            <td class="text-center">${movement.status || 'N/A'}</td>
-                            <td class="text-center">${movement.movement_quantity || 'N/A'}</td>
-                            <td class="text-center">${movement.detail_status || 'N/A'}</td>
-                            <td class="text-center">${movement.rejection_reason || 'N/A'}</td>
-                            <td class="text-center">${movement.return_id || 'N/A'}</td>
-                            <td class="text-center">${movement.returned_quantity || 'N/A'}</td>
-                            <td class="text-center">${formatDate(movement.return_date) || 'N/A'}</td>
-                            <td class="text-center">${movement.return_notes || 'N/A'}</td>
+                            <td>${movement.movement_id || 'N/A'}</td>
+                            <td>${movement.origin_warehouse || 'N/A'}</td>
+                            <td>${movement.destination_warehouse || 'N/A'}</td>
+                            <td>${formatDate(movement.creation_date) || 'N/A'}</td>
+                            <td>${movement.movement_status || 'N/A'}</td>
+                            <td>${movement.movement_notes || 'N/A'}</td>
+                            <td>${movement.movement_type || 'N/A'}</td>
+                            <td>${movement.created_by_user || 'N/A'}</td>
+                            <td>${movement.handled_by_user || 'N/A'}</td>
+                            <td>${movement.moved_quantity || 'N/A'}</td>
+                            <td>${movement.detail_status || 'N/A'}</td>
+                            <td>${movement.rejection_reason || 'N/A'}</td>
+                            <td>${movement.returned_quantity || 'N/A'}</td>
+                            <td>${formatDate(movement.return_date) || 'N/A'}</td>
+                            <td>${movement.return_notes || 'N/A'}</td>
                         `;
                         tableBody.appendChild(row);
                     });

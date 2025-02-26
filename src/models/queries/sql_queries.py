@@ -1,60 +1,64 @@
 class SQLQueries:
+    @staticmethod
+    def get_products_units_ws():
+        query = """
+            SELECT  
+                p.*,
+                w.warehouse_name,
+                w.warehouse_id,
+                ws.units AS stock_disponible
+            FROM 
+                warehousestock ws
+            JOIN 
+                warehouses w ON ws.warehouse_id = w.warehouse_id
+            JOIN 
+                products p ON ws.product_id = p.product_id
+            WHERE
+                w.warehouse_id = :warehouse_id
+
+            """
+        return query
 
     @staticmethod
-    def get_products_units():
+    def get_units_product_query():
         query = """
-            SELECT 
-                    p.*,
-                    w.warehouse_name,
-                    w.warehouse_id,
-                    COALESCE(SUM(CASE 
-                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
-                        WHEN m.movement_type IN ('Sold', 'Transfer') THEN -md.quantity
-                        ELSE 0 
-                    END), 0) AS available_units_in_warehouse
-                FROM 
-                    Products p
-                LEFT JOIN 
-                    MovementDetail md ON p.product_id = md.product_id
-                LEFT JOIN 
-                    Movement m ON md.movement_id = m.movement_id
-                LEFT JOIN 
-                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
-                WHERE
-                    w.warehouse_id = :warehouse_id
-                GROUP BY 
-                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
-                ORDER BY 
-                    w.warehouse_name;
+            SELECT  
+                p.*,
+                w.warehouse_name,
+                w.warehouse_id,
+                ws.units AS stock_disponible
+            FROM 
+                warehousestock ws
+            JOIN 
+                warehouses w ON ws.warehouse_id = w.warehouse_id
+            JOIN 
+                products p ON ws.product_id = p.product_id
+            WHERE
+                w.warehouse_id = :warehouse_id AND p.product_id = :product_id
+
             """
         return query
     
     @staticmethod
     def filter_products_imei():
         query = """
-                SELECT 
-                    p.*,
-                    w.warehouse_name,
-                    w.warehouse_id,
-                    COALESCE(SUM(CASE 
-                        WHEN m.movement_type IN ('Entry', 'Update') THEN md.quantity
-                        WHEN m.movement_type IN ('Sold') THEN -md.quantity
-                        ELSE 0 
-                    END), 0) AS available_units_in_warehouse
-                FROM 
-                    Products p
-                LEFT JOIN 
-                    MovementDetail md ON p.product_id = md.product_id
-                LEFT JOIN 
-                    Movement m ON md.movement_id = m.movement_id
-                LEFT JOIN 
-                    Warehouses w ON m.destination_warehouse_id = w.warehouse_id
+            SELECT  
+                p.*,
+                w.warehouse_name,
+                w.warehouse_id,
+                ws.units AS stock_disponible
+            FROM 
+                warehousestock ws
+            JOIN 
+                warehouses w ON ws.warehouse_id = w.warehouse_id
+            JOIN 
+                products p ON ws.product_id = p.product_id
                 WHERE imei = :imei
-                GROUP BY 
-                    p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
-                ORDER BY 
-                    w.warehouse_name;
-                """
+            GROUP BY 
+                p.product_id, p.productname, p.imei, p.description, p.price, w.warehouse_id, w.warehouse_name
+            ORDER BY 
+                w.warehouse_name;
+        """
         return query
 
     @staticmethod
@@ -519,38 +523,37 @@ class SQLQueries:
     
 
     @staticmethod
-    def get_movements_by_imei_query():
+    def get_movements_by_product_query():
         query = """
-                SELECT
+                SELECT 
                     m.movement_id,
-                    m.movement_type,
+                    ow.warehouse_name AS origin_warehouse,
+                    dw.warehouse_name AS destination_warehouse,
                     m.creation_date,
                     m.status AS movement_status,
-                    m.origin_warehouse_id,
-                    origin.warehouse_name AS origin_warehouse_name,
-                    m.destination_warehouse_id,
-                    destination.warehouse_name AS destination_warehouse_name,
-                    md.quantity AS movement_quantity,
+                    m.notes AS movement_notes,
+                    m.movement_type,
+                    creator.name AS created_by_user,
+                    creator.role AS creator_role,
+                    handler.name AS handled_by_user,
+                    handler.role AS handler_role,
+                    md.detail_id,
+                    md.product_id,
+                    md.quantity AS moved_quantity,
                     md.status AS detail_status,
                     md.rejection_reason,
                     r.return_id,
-                    r.quantity AS return_quantity,
+                    r.quantity AS returned_quantity,
                     r.return_date,
-                    r.notes
-                FROM
-                    movement m
-                JOIN
-                    movementdetail md ON m.movement_id = md.movement_id
-                JOIN
-                    products p ON md.product_id = p.product_id
-                LEFT JOIN
-                    warehouses origin ON m.origin_warehouse_id = origin.warehouse_id
-                LEFT JOIN
-                    warehouses destination ON m.destination_warehouse_id = destination.warehouse_id
-                LEFT JOIN
-                    return r ON md.detail_id = r.movement_detail_id
-                WHERE
-                    p.imei = :imei
+                    r.notes AS return_notes
+                FROM movement AS m
+                JOIN movementdetail AS md ON m.movement_id = md.movement_id
+                LEFT JOIN return AS r ON md.detail_id = r.movement_detail_id
+                JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
+                JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
+                JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+                WHERE md.product_id = :product_id
                 ORDER BY
                     m.creation_date ASC;
         """
