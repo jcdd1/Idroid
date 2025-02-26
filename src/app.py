@@ -98,6 +98,12 @@ def show_invoices():
         invoice_type=invoice_type
     )
 
+@app.route('/add_massive_movement', methods=['POST'])
+def add_massive_movement():
+    # Lógica para manejar el movimiento masivo
+    return redirect(url_for('show_productsUser'))
+
+
 @app.route('/update_units/<imei>', methods=['POST'])
 def update_units(imei):
     try:
