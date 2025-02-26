@@ -10,5 +10,4 @@ class User(UserMixin):
         self.userpassword = userpassword
 
     def get_id(self):
-        # Flask-Login necesita que esto devuelva una cadena
-        return str(self.user_id)
+        return str(self.user_id)  

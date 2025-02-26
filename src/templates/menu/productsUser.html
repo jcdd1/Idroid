@@ -255,7 +255,7 @@
 <div class="modal fade" id="massiveMovementModal" tabindex="-1" aria-labelledby="massiveMovementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="background-color: #f0fdf4;">
-            <form method="POST" action="{{ url_for('add_massive_movement') }}">
+            <form id="massiveMovementForm" action="/add_massive_movement" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="modal-header bg-success text-white">
@@ -319,7 +319,7 @@
 
                 <div class="modal-footer" style="background-color: #d4edda;">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-success" id="createMassiveMovementButton" disabled>Guardar Movimientos</button>
+                    <button type="submit" class="btn btn-success" id="createMassiveMovementButton" disabled>Crear movimiento masivo</button>
                 </div>
             </form>
         </div>

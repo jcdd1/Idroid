@@ -275,23 +275,30 @@ class ModelProduct():
     @staticmethod
     def get_product_imei(db, imei):
         try:
+            print(f" IMEI recibido (sin procesar): '{imei}'")
+
+            # Limpieza del IMEI robusta
+            imei = imei.encode('utf-8', 'ignore').decode('utf-8-sig').strip().replace('\ufeff', '')
+            print(f" IMEI después de limpieza avanzada: '{imei}'")
+
             query = text("""
-                SELECT p.productname, p.storage, p.battery, p.color, p.units, ws.warehouse_id
+                SELECT p.product_id, p.productname, p.storage, p.battery, p.color, p.units, ws.warehouse_id
                 FROM products p
-                JOIN warehousestock ws ON p.product_id = ws.product_id
-                WHERE p.imei = :imei
+                LEFT JOIN warehousestock ws ON p.product_id = ws.product_id
+                WHERE TRIM(BOTH FROM p.imei) = :imei
             """)
             params = {'imei': imei}
 
             result = db.session.execute(query, params).mappings().fetchall()
 
-            if result:
-                products = [dict(row) for row in result]
-            else:
-                products = []
-            return products
+            print(f" Resultado de búsqueda para IMEI '{imei}': {result}")
+
+            return [dict(row) for row in result] if result else []
         except Exception as e:
-            print(f"Error searching products: {e}")
+            print(f" Error searching products: {e}")
+            return []
+
+
 
 
     @staticmethod

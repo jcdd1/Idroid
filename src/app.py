@@ -98,10 +98,81 @@ def show_invoices():
         invoice_type=invoice_type
     )
 
-@app.route('/add_massive_movement', methods=['POST'])
-def add_massive_movement():
-    # Lógica para manejar el movimiento masivo
-    return redirect(url_for('show_productsUser'))
+
+@app.route('/update_movement_status', methods=['POST'])
+def update_movement_status():
+    try:
+        data = request.get_json()
+        movement_id = data.get('movement_id')
+        action = data.get('action')  # 'accept' o 'reject'
+        rejection_reason = data.get('rejection_reason', None)
+
+        if not movement_id or action not in ['accept', 'reject']:
+            return jsonify({'success': False, 'message': 'Datos de entrada inválidos.'}), 400
+
+        # Obtener el movimiento y sus detalles
+        movement = db.session.execute(
+            "SELECT * FROM movement WHERE movement_id = :id",
+            {'id': movement_id}
+        ).fetchone()
+
+        if not movement:
+            return jsonify({'success': False, 'message': 'Movimiento no encontrado.'}), 404
+
+        movement_details = db.session.execute(
+            "SELECT * FROM movementdetail WHERE movement_id = :id",
+            {'id': movement_id}
+        ).fetchall()
+
+        if action == 'accept':
+            # Actualizar unidades en las bodegas y el estado del movimiento
+            for detail in movement_details:
+                origin_warehouse_id = movement.origin_warehouse_id
+                destination_warehouse_id = movement.destination_warehouse_id
+                product_id = detail.product_id
+                quantity = detail.quantity
+
+                # Restar unidades de la bodega de origen
+                db.session.execute("""
+                    UPDATE warehousestock SET units = units - :quantity
+                    WHERE warehouse_id = :warehouse_id AND product_id = :product_id
+                """, {'quantity': quantity, 'warehouse_id': origin_warehouse_id, 'product_id': product_id})
+
+                # Sumar unidades a la bodega de destino
+                db.session.execute("""
+                    INSERT INTO warehousestock (warehouse_id, product_id, units)
+                    VALUES (:warehouse_id, :product_id, :quantity)
+                    ON CONFLICT (warehouse_id, product_id)
+                    DO UPDATE SET units = warehousestock.units + :quantity
+                """, {'warehouse_id': destination_warehouse_id, 'product_id': product_id, 'quantity': quantity})
+
+            # Cambiar estado del movimiento a completado
+            db.session.execute("""
+                UPDATE movement SET status = 'completado'
+                WHERE movement_id = :id
+            """, {'id': movement_id})
+
+        else:  # Rechazar movimiento
+            # Actualizar estado y motivo de rechazo
+            db.session.execute("""
+                UPDATE movement SET status = 'rechazado' WHERE movement_id = :id
+            """, {'id': movement_id})
+
+            if rejection_reason:
+                db.session.execute("""
+                    UPDATE movementdetail SET status = 'rechazado', rejection_reason = :reason
+                    WHERE movement_id = :id
+                """, {'reason': rejection_reason, 'id': movement_id})
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': f"Movimiento {'aceptado' if action == 'accept' else 'rechazado'} correctamente."})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+
 
 
 @app.route('/update_units/<imei>', methods=['POST'])
@@ -221,6 +292,78 @@ def edit_invoice():
         flash("Error al actualizar la factura.", "danger")
 
     return redirect(url_for('show_invoices'))
+
+
+
+@app.route('/add_massive_movement', methods=['POST'])
+def add_massive_movement():
+    try:
+        
+        print(" Datos recibidos:", request.form)
+
+        origin_warehouse_id = request.form.get('origin_warehouse_id')
+        destination_warehouse_id = request.form.get('destination_warehouse_id')
+        created_by_user_id = request.form.get('created_by_user_id')
+        notes = request.form.get('notes', '')
+
+        
+        if not origin_warehouse_id or not destination_warehouse_id or not created_by_user_id:
+            return jsonify({'success': False, 'message': ' Faltan datos requeridos.'}), 400
+
+       
+        db.session.execute("""
+            INSERT INTO movement (origin_warehouse_id, destination_warehouse_id, creation_date, status, notes, created_by_user_id, movement_type)
+            VALUES (:origin, :destination, NOW(), 'pendiente', :notes, :created_by, 'masivo')
+        """, {
+            'origin': origin_warehouse_id,
+            'destination': destination_warehouse_id,
+            'notes': notes,
+            'created_by': created_by_user_id
+        })
+
+       
+        movement_id = db.session.execute("SELECT LASTVAL()").scalar()
+        print(f" ID del movimiento creado: {movement_id}")
+
+       
+        index = 0
+        while f'imei_{index}' in request.form:
+            product_imei = request.form.get(f'imei_{index}')
+            units = int(request.form.get(f'units_{index}'))
+
+            #  Buscar ID del producto por IMEI
+            product_id_query = db.session.execute("""
+                SELECT product_id FROM products WHERE imei = :imei
+            """, {'imei': product_imei}).fetchone()
+
+            if product_id_query:
+                product_id = product_id_query.product_id
+                print(f" Producto encontrado - IMEI: {product_imei}, ID: {product_id}, Unidades: {units}")
+
+                #  Insertar detalle del movimiento
+                db.session.execute("""
+                    INSERT INTO movementdetail (movement_id, product_id, quantity, status)
+                    VALUES (:movement_id, :product_id, :quantity, 'pendiente')
+                """, {
+                    'movement_id': movement_id,
+                    'product_id': product_id,
+                    'quantity': units
+                })
+            else:
+                print(f" Producto con IMEI {product_imei} no encontrado.")
+                return jsonify({'success': False, 'message': f" Producto con IMEI {product_imei} no encontrado."}), 400
+
+            index += 1
+
+        #  Confirmar todos los cambios
+        db.session.commit()
+        print(" Movimiento masivo creado y confirmado exitosamente.")
+        return jsonify({'success': True, 'message': ' Movimiento masivo creado exitosamente.'})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f" Error al crear el movimiento masivo: {str(e)}")
+        return jsonify({'success': False, 'message': f' Error: {str(e)}'}), 500
 
 
 
@@ -434,6 +577,29 @@ def get_users_by_warehouse(warehouse_id):
     except Exception as e:
         print(f" Error al obtener usuarios: {e}")
         return jsonify({'users': [], 'error': str(e)}), 500
+    
+
+from flask_login import current_user
+
+@app.route('/get_user_warehouse', methods=['GET'])
+def get_user_warehouse():
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Usuario no autenticado'}), 401
+
+        print(f" user_id actual (current_user): {current_user.user_id}")
+        print(f" Bodega vinculada: {current_user.warehouse_id}")
+
+        return jsonify({'user_warehouse_id': current_user.warehouse_id})
+
+    except Exception as e:
+        print(f" Error al obtener la bodega del usuario: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
 
 @app.route('/movements', methods=['GET'])
 @login_required
@@ -621,6 +787,25 @@ def show_products():
         active_invoices=active_invoices
     )
 
+
+@app.route('/get_all_warehouses', methods=['GET'])
+def get_all_warehouses():
+    try:
+        result = db.session.execute(
+            text("SELECT warehouse_id, warehouse_name FROM warehouses")
+        ).fetchall()
+
+        print(f" Bodegas encontradas: {result}")  
+
+        warehouses = [{'warehouse_id': row.warehouse_id, 'warehouse_name': row.warehouse_name} for row in result]
+        return jsonify({'warehouses': warehouses})
+
+    except Exception as e:
+        print(f" Error al obtener las bodegas: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+
 @app.route('/productsUser', methods=['GET'])
 @login_required
 def show_productsUser():
@@ -671,6 +856,10 @@ def show_productsUser():
         warehouses=warehouses,
         active_invoices=active_invoices
     )
+
+
+
+
 
 @app.route('/get_product_by_imei/<imei>', methods=['GET'])
 @login_required
