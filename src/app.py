@@ -728,12 +728,6 @@ def create_movement():
         )
 
         if success:
-            #  Actualización del stock tras el movimiento
-            db.session.execute(
-                text("UPDATE products SET units = units - :units WHERE imei = :product_id"),
-                {"units": units_to_send, "product_id": product_id}
-            )
-            db.session.commit()
             return jsonify({"success": True})
         else:
             return jsonify({"success": False, "message": "Error al guardar el movimiento."})
