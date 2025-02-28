@@ -63,6 +63,58 @@ def inject_user_info():
         }
     return {}
 
+@app.route('/pending_movements')
+@login_required
+def pending_movements():
+    user_id = current_user.user_id 
+    
+    print(f"Usuario autenticado: {user_id}") 
+
+    movements = db.session.execute(
+    text("""
+    SELECT m.movement_id, m.origin_warehouse_id, m.destination_warehouse_id, m.creation_date, md.product_id, 
+           md.quantity, p.productname, p.imei
+    FROM movement m
+    JOIN movementdetail md ON m.movement_id = md.movement_id
+    JOIN products p ON md.product_id = p.product_id
+    WHERE m.handled_by_user_id = :user_id AND md.status = 'Pendiente'
+    """),
+    {"user_id": user_id}
+    ).mappings().fetchall()  
+
+
+    print(f"Movements encontrados: {movements}") 
+
+    return render_template("menu/pending_movements.html", movements=movements)
+
+@app.route('/approve_movement/<int:movement_id>', methods=['POST'])
+@login_required
+def approve_movement(movement_id):
+    print(f" Recibida solicitud para aprobar movimiento ID: {movement_id}") 
+    success = ModelMovement.approve_movement(db, movement_id)
+    return jsonify({"success": success, "message": "Movimiento aprobado con éxito." if success else "Error al aprobar el movimiento."}), (200 if success else 500)
+
+
+
+@app.route('/reject_movement/<int:movement_id>', methods=['POST'])
+@login_required
+def reject_movement(movement_id):
+    print(f" Recibida solicitud para rechazar movimiento ID: {movement_id}")  
+    data = request.get_json()
+    reason = data.get("reason", "Sin motivo")
+
+    success = ModelMovement.reject_movement(db, movement_id, reason)
+    return jsonify({"success": success, "message": "Movimiento rechazado con éxito." if success else "Error al rechazar el movimiento."}), (200 if success else 500)
+
+
+
+
+
+
+
+
+
+
 @app.route('/invoices', methods=['GET'])
 @login_required
 def show_invoices():
@@ -293,77 +345,6 @@ def edit_invoice():
 
     return redirect(url_for('show_invoices'))
 
-
-
-@app.route('/add_massive_movement', methods=['POST'])
-def add_massive_movement():
-    try:
-        
-        print(" Datos recibidos:", request.form)
-
-        origin_warehouse_id = request.form.get('origin_warehouse_id')
-        destination_warehouse_id = request.form.get('destination_warehouse_id')
-        created_by_user_id = request.form.get('created_by_user_id')
-        notes = request.form.get('notes', '')
-
-        
-        if not origin_warehouse_id or not destination_warehouse_id or not created_by_user_id:
-            return jsonify({'success': False, 'message': ' Faltan datos requeridos.'}), 400
-
-       
-        db.session.execute("""
-            INSERT INTO movement (origin_warehouse_id, destination_warehouse_id, creation_date, status, notes, created_by_user_id, movement_type)
-            VALUES (:origin, :destination, NOW(), 'pendiente', :notes, :created_by, 'masivo')
-        """, {
-            'origin': origin_warehouse_id,
-            'destination': destination_warehouse_id,
-            'notes': notes,
-            'created_by': created_by_user_id
-        })
-
-       
-        movement_id = db.session.execute("SELECT LASTVAL()").scalar()
-        print(f" ID del movimiento creado: {movement_id}")
-
-       
-        index = 0
-        while f'imei_{index}' in request.form:
-            product_imei = request.form.get(f'imei_{index}')
-            units = int(request.form.get(f'units_{index}'))
-
-            #  Buscar ID del producto por IMEI
-            product_id_query = db.session.execute("""
-                SELECT product_id FROM products WHERE imei = :imei
-            """, {'imei': product_imei}).fetchone()
-
-            if product_id_query:
-                product_id = product_id_query.product_id
-                print(f" Producto encontrado - IMEI: {product_imei}, ID: {product_id}, Unidades: {units}")
-
-                #  Insertar detalle del movimiento
-                db.session.execute("""
-                    INSERT INTO movementdetail (movement_id, product_id, quantity, status)
-                    VALUES (:movement_id, :product_id, :quantity, 'pendiente')
-                """, {
-                    'movement_id': movement_id,
-                    'product_id': product_id,
-                    'quantity': units
-                })
-            else:
-                print(f" Producto con IMEI {product_imei} no encontrado.")
-                return jsonify({'success': False, 'message': f" Producto con IMEI {product_imei} no encontrado."}), 400
-
-            index += 1
-
-        #  Confirmar todos los cambios
-        db.session.commit()
-        print(" Movimiento masivo creado y confirmado exitosamente.")
-        return jsonify({'success': True, 'message': ' Movimiento masivo creado exitosamente.'})
-
-    except Exception as e:
-        db.session.rollback()
-        print(f" Error al crear el movimiento masivo: {str(e)}")
-        return jsonify({'success': False, 'message': f' Error: {str(e)}'}), 500
 
 
 
@@ -599,8 +580,6 @@ def get_user_warehouse():
 
 
 
-
-
 @app.route('/movements', methods=['GET'])
 @login_required
 def show_movements():
@@ -676,65 +655,135 @@ def get_product_units(product_id, warehouse_id):
         return jsonify({"available_units": 0})
 
 
+
+
 @app.route('/create_movement', methods=['POST'])
 @login_required
 def create_movement():
     try:
-        data = request.get_json()  
-        product_id = data.get('product_id')
+        if not request.is_json:
+            return jsonify({"success": False, "message": "Se esperaba formato JSON"}), 400
+            
+        data = request.get_json()
+        print(f" Datos recibidos: {data}")  # Log para depuración
+
+        #  Obtener datos principales del movimiento
+        products = data.get('products', [])
+        if not products:
+            products = [{
+                "product_id": data.get("product_id"),  # En realidad es un IMEI
+                "units_to_send": int(data.get("units_to_send"))
+            }]
+        
         origin_warehouse_id = data.get('origin_warehouse_id')
         destination_warehouse_id = data.get('destination_warehouse_id')
-        movement_description = data.get('movement_description')
+        movement_description = data.get('movement_description', '')
         destination_user_id = data.get('destination_user_id')
-        units_to_send = int(data.get('units_to_send'))  
 
-        print(f" Datos recibidos -> Producto ID: {product_id}, Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Descripción: {movement_description}, Unidades: {units_to_send}")
+        print(f" Procesando movimiento: Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Productos: {products}")
 
-        # Validaciones
-        if not product_id or not origin_warehouse_id or not destination_warehouse_id or units_to_send is None:
-            return jsonify({"success": False, "message": "Faltan datos obligatorios."})
-
+        #  Validaciones
+        if not origin_warehouse_id or not destination_warehouse_id:
+            return jsonify({"success": False, "message": "Faltan datos obligatorios: origen o destino."}), 400
+        
         if origin_warehouse_id == destination_warehouse_id:
-            return jsonify({"success": False, "message": "El almacén de origen y destino no pueden ser iguales."})
+            return jsonify({"success": False, "message": "El almacén de origen y destino no pueden ser iguales."}), 400
+        
+        if not destination_user_id:
+            return jsonify({"success": False, "message": "Falta el usuario de destino."}), 400
 
-        if units_to_send <= 0:
-            return jsonify({"success": False, "message": "La cantidad de unidades debe ser mayor a 0."})
+        # Crear el movimiento en `movement`
+        movement_id = db.session.execute(
+            text("""
+            INSERT INTO movement (
+                origin_warehouse_id,
+                destination_warehouse_id,
+                creation_date,
+                status,
+                notes,
+                created_by_user_id,
+                handled_by_user_id,
+                movement_type
+            ) VALUES (
+                :origin_warehouse_id,
+                :destination_warehouse_id,
+                NOW(),
+                'Pendiente',  
+                :movement_description, 
+                :user_id, 
+                :destination_user_id, 
+                'Transferencia'
+            ) RETURNING movement_id
+            """),
+            {
+                "origin_warehouse_id": origin_warehouse_id,
+                "destination_warehouse_id": destination_warehouse_id,
+                "movement_description": movement_description,
+                "user_id": current_user.user_id,
+                "destination_user_id": destination_user_id
+            }
+        ).scalar()
 
-        #  Obtener el stock actual del producto
-        product = db.session.execute(
-            text("SELECT units FROM products WHERE product_id = :product_id"),
-            {"product_id": product_id}
-        ).fetchone()
+        # Procesar cada producto y guardarlo en `movementdetail`
+        for product_data in products:
+            try:
+                imei = product_data.get("product_id")  
+                units_to_send = int(product_data.get("units_to_send", 0))
 
-        if not product:
-            return jsonify({"success": False, "message": "Producto no encontrado."})
+                if not imei or units_to_send <= 0:
+                    return jsonify({"success": False, "message": f"Datos inválidos para el producto con IMEI {imei}."}), 400
 
-        available_units = product.units
-        print(f"🔍 Unidades disponibles: {available_units}")
+                # Buscar el `product_id` correcto usando el IMEI
+                product = db.session.execute(
+                    text("""
+                    SELECT product_id, units FROM products 
+                    WHERE imei = :imei
+                    """),
+                    {"imei": imei}
+                ).fetchone()
 
-        if units_to_send > available_units:
-            return jsonify({"success": False, "message": f"La cantidad solicitada ({units_to_send}) supera el stock disponible ({available_units})."})
+                if not product:
+                    return jsonify({"success": False, "message": f"Producto con IMEI {imei} no encontrado."}), 404
 
-        #  Llamada al modelo para crear el movimiento
-        success = ModelMovement.create_movement(
-            db=db,
-            product_id=product_id,
-            origin_warehouse_id=origin_warehouse_id,
-            destination_warehouse_id=destination_warehouse_id,
-            movement_description=movement_description,
-            destination_user_id=destination_user_id,
-            user_id=current_user.user_id,
-            units_to_send=units_to_send
-        )
+                product_id = product.product_id  
 
-        if success:
-            return jsonify({"success": True})
-        else:
-            return jsonify({"success": False, "message": "Error al guardar el movimiento."})
+                #  Insertar en `movementdetail` con estado "Pendiente"
+                db.session.execute(
+                    text("""
+                    INSERT INTO movementdetail (
+                        movement_id,
+                        product_id,
+                        quantity,
+                        status
+                    ) VALUES (
+                        :movement_id,
+                        :product_id,
+                        :units,
+                        'Pendiente'
+                    )
+                    """),
+                    {
+                        "movement_id": movement_id,
+                        "product_id": product_id,
+                        "units": units_to_send
+                    }
+                )
+
+            except Exception as e:
+                print(f" Error al procesar el producto con IMEI {imei}: {e}")
+                db.session.rollback()
+                return jsonify({"success": False, "message": f"Error al procesar el producto con IMEI {imei}: {e}"}), 500
+
+        # 6️⃣ Confirmar cambios
+        db.session.commit()
+        print(" Movimiento(s) registrado(s) correctamente.")
+        return jsonify({"success": True, "message": "Movimiento(s) registrado(s) correctamente."})
 
     except Exception as e:
-        print(f" Error al procesar la solicitud: {e}")
-        return jsonify({"success": False, "message": "Error interno en el servidor."})
+        db.session.rollback()
+        print(f" Error al procesar la solicitud: {str(e)}")
+        return jsonify({"success": False, "message": f"Error interno en el servidor: {str(e)}"}), 500
+
 
 
 

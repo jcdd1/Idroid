@@ -5,17 +5,15 @@ from .queries.sql_queries import SQLQueries
 class ModelMovement:
 
     @staticmethod
-    def get_movements_paginated(db, limit, offset):
+    def get_pending_movements(db):
         query = text("""
-            SELECT *
-            FROM movement
+            SELECT * FROM movement
+            WHERE status = 'Pendiente'
             ORDER BY creationdate ASC
-            LIMIT :limit OFFSET :offset;
         """)
-        result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
-        return [
-            Movement(*row) for row in result
-        ]
+        result = db.session.execute(query).fetchall()
+        return [Movement(*row) for row in result]
+
 
     @staticmethod
     def count_movements(db):
@@ -87,66 +85,233 @@ class ModelMovement:
             print(f"Error updating movement: {e}")
             db.session.rollback()
             return False
-        
 
     @staticmethod
-    def create_movement(db, product_id, origin_warehouse_id, destination_warehouse_id, movement_description,destination_user_id, user_id, units_to_send):
+    def approve_movement(db, movement_id):
         try:
-            query = text("""
-            INSERT INTO movement (
-                created_by_user_id, 
-                origin_warehouse_id, 
-                destination_warehouse_id, 
-                creation_date, 
-                movement_type, 
-                status, 
-                notes,
-                handled_by_user_id
-            )
-            VALUES (
-                :user_id,  -- Usuario que crea el movimiento (ajustar según sistema de usuarios)
-                :origin_warehouse_id, 
-                :destination_warehouse_id, 
-                CURRENT_TIMESTAMP, 
-                'Transfer',  -- Tipo de movimiento (ajustar si es necesario)
-                'Pending',  -- Estado del movimiento
-                :movement_description,
-                :destination_user_id
-            )
-            RETURNING movement_id;
-            """)
-            
-            
-            result=db.session.execute(query, {
-            'origin_warehouse_id': origin_warehouse_id,
-            'destination_warehouse_id': destination_warehouse_id,
-            'movement_description': movement_description,
-            'user_id': user_id,
-            'destination_user_id': destination_user_id
-            })
+            # Obtener los productos del movimiento en estado Pendiente
+            movement_details = db.session.execute(
+                text("""
+                SELECT product_id, quantity FROM movementdetail
+                WHERE movement_id = :movement_id AND status = 'Pendiente'
+                """),
+                {"movement_id": movement_id}
+            ).fetchall()
 
-            movement_id = result.fetchone()[0]
-            
-            query_movement_detail =text("""
-                INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
-                VALUES(:movement_id, :product_id, :units_to_send, 'pending')       
-                """
+            for detail in movement_details:
+                product_id = detail.product_id
+                units_to_send = detail.quantity
+
+                # Reducir stock en la bodega de origen
+                db.session.execute(
+                    text("""
+                    UPDATE products 
+                    SET units = units - :units 
+                    WHERE product_id = :product_id
+                    """),
+                    {
+                        "product_id": product_id,
+                        "units": units_to_send
+                    }
+                )
+
+                # Aumentar stock en la bodega destino
+                db.session.execute(
+                    text("""
+                    UPDATE products 
+                    SET units = units + :units 
+                    WHERE product_id = :product_id
+                    """),
+                    {"product_id": product_id, "units": units_to_send}
+                )
+
+            # Marcar como aprobado
+            db.session.execute(
+                text("""
+                UPDATE movementdetail 
+                SET status = 'Aprobado'
+                WHERE movement_id = :movement_id
+                """),
+                {"movement_id": movement_id}
             )
-            
-            db.session.execute(query_movement_detail, {
-            'movement_id': movement_id,
-            'product_id': product_id,
-            'units_to_send': units_to_send
-            })
+
             db.session.commit()
-
-            print(f" Movimiento creado correctamente: Origen {origin_warehouse_id} → Destino {destination_warehouse_id}")
             return True
 
         except Exception as e:
-            print(f" Error al crear el movimiento: {e}")
             db.session.rollback()
+            print(f"❌ Error al aprobar movimiento: {e}")
             return False
+
+    @staticmethod
+    def reject_movement(db, movement_id, reason=""):
+        try:
+            db.session.execute(
+                text("""
+                UPDATE movementdetail 
+                SET status = 'Rechazado', rejection_reason = :reason
+                WHERE movement_id = :movement_id
+                """),
+                {"movement_id": movement_id, "reason": reason}
+            )
+
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error al rechazar movimiento: {e}")
+            return False
+
+
+    @staticmethod
+    def create_movement(db, origin_warehouse_id, destination_warehouse_id, 
+                        movement_description, destination_user_id, user_id, products):
+        try:
+            # 1️⃣ Crear el registro del movimiento en la tabla `movement`
+            movement_id = db.session.execute(
+                text("""
+                    INSERT INTO movement (
+                        origin_warehouse_id, 
+                        destination_warehouse_id, 
+                        creation_date,
+                        status,
+                        notes,
+                        created_by_user_id,
+                        handled_by_user_id,
+                        movement_type
+                    ) VALUES (
+                        :origin_warehouse_id, 
+                        :destination_warehouse_id, 
+                        NOW(),
+                        'Pendiente',  
+                        :movement_description, 
+                        :user_id, 
+                        :destination_user_id, 
+                        'Transferencia'
+                    ) RETURNING movement_id
+                """),
+                {
+                    "origin_warehouse_id": origin_warehouse_id,
+                    "destination_warehouse_id": destination_warehouse_id,
+                    "movement_description": movement_description,
+                    "user_id": user_id,
+                    "destination_user_id": destination_user_id
+                }
+            ).scalar()
+
+            # 2️⃣ Procesar cada producto y registrar en `movementdetail`
+            for product_data in products:
+                product_id = product_data.get("product_id")  
+                units_to_send = int(product_data.get("units_to_send", 0))
+
+                if not product_id or units_to_send <= 0:
+                    return False  # Datos inválidos, terminamos aquí
+
+                # Obtener stock del producto en el almacén de origen
+                product = db.session.execute(
+                    text("""
+                    SELECT product_id, units FROM products 
+                    WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                    """),
+                    {"product_id": product_id, "origin_warehouse_id": origin_warehouse_id}
+                ).fetchone()
+
+                if not product or product.units < units_to_send:
+                    return False  # No hay suficiente stock
+
+                # 3️⃣ Insertar en `movementdetail`
+                db.session.execute(
+                    text("""
+                    INSERT INTO movementdetail (
+                        movement_id,
+                        product_id,
+                        quantity,
+                        status
+                    ) VALUES (
+                        :movement_id,
+                        :product_id,
+                        :units,
+                        'Pendiente'
+                    )
+                    """),
+                    {
+                        "movement_id": movement_id,
+                        "product_id": product_id,
+                        "units": units_to_send
+                    }
+                )
+
+                # 4️⃣ Restar stock en almacén de origen
+                db.session.execute(
+                    text("""
+                    UPDATE products 
+                    SET units = units - :units 
+                    WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                    """),
+                    {
+                        "product_id": product_id,
+                        "units": units_to_send,
+                        "origin_warehouse_id": origin_warehouse_id
+                    }
+                )
+
+                # 5️⃣ Verificar si el producto ya existe en el almacén destino
+                existing_product = db.session.execute(
+                    text("""
+                    SELECT product_id FROM products 
+                    WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
+                    """),
+                    {"product_id": product_id, "destination_warehouse_id": destination_warehouse_id}
+                ).fetchone()
+
+                if existing_product:
+                    # Si ya existe en el destino, aumentar unidades
+                    db.session.execute(
+                        text("""
+                        UPDATE products 
+                        SET units = units + :units 
+                        WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
+                        """),
+                        {"product_id": product_id, "units": units_to_send, "destination_warehouse_id": destination_warehouse_id}
+                    )
+                else:
+                    # Si no existe, crear un nuevo registro en la bodega destino
+                    product_info = db.session.execute(
+                        text("""
+                        SELECT productname, imei, price, product_category_id 
+                        FROM products WHERE product_id = :product_id
+                        """),
+                        {"product_id": product_id}
+                    ).fetchone()
+
+                    db.session.execute(
+                        text("""
+                        INSERT INTO products (
+                            productname, imei, price, units, warehouse_id, product_category_id
+                        ) VALUES (
+                            :productname, :imei, :price, :units, :warehouse_id, :product_category_id
+                        )
+                        """),
+                        {
+                            "productname": product_info.productname,
+                            "imei": product_info.imei,
+                            "price": product_info.price,
+                            "units": units_to_send,
+                            "warehouse_id": destination_warehouse_id,
+                            "product_category_id": product_info.product_category_id
+                        }
+                    )
+
+            # 6️⃣ Confirmar los cambios
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error en create_movement: {e}")
+            return False
+
 
 
             
@@ -193,3 +358,4 @@ class ModelMovement:
 
         except Exception as e:
             raise Exception(f"Error retrieving movements: {str(e)}")
+        

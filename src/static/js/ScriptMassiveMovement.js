@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const userSelect = document.getElementById('user_global');
     const productTableBody = document.getElementById('productSummaryTableBody');
     const createMovementButton = document.getElementById('createMassiveMovementButton');
-    const massiveMovementForm = document.getElementById('massiveMovementForm');
     const notesInput = document.getElementById('notes_global');
 
     let productsData = [];
@@ -16,35 +15,24 @@ document.addEventListener('DOMContentLoaded', function () {
     let userWarehouseId = null;
     let lastProductWarehouseId = null;
 
-    const debugInfo = document.createElement('div');
-    debugInfo.style.color = 'red';
-    debugInfo.style.fontWeight = 'bold';
-    debugInfo.id = 'debugInfo';
-    document.querySelector('.modal-body').appendChild(debugInfo);
-
-    //  Obtener bodega del usuario
+    // 🔄 Obtener la bodega del usuario
     fetch('/get_user_warehouse')
         .then(response => response.json())
         .then(data => {
             if (data && data.user_warehouse_id) {
                 userWarehouseId = String(data.user_warehouse_id).trim();
-                document.getElementById('debugInfo').textContent = ` userWarehouseId: ${userWarehouseId}`;
                 loadWarehouses(userWarehouseId);
             } else {
                 alert("⚠️ Error al obtener el ID de la bodega del usuario.");
             }
         });
 
-    //  Cargar bodegas disponibles (excepto la del usuario) con logs
+    // 🔄 Cargar bodegas disponibles (excepto la del usuario)
     function loadWarehouses(excludedWarehouseId) {
         warehouseSelect.innerHTML = '<option value="">Seleccione una bodega</option>';
         fetch('/get_all_warehouses')
-            .then(response => {
-                console.log('📡 Estado respuesta:', response.status); 
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log("🏬 Bodegas recibidas:", data.warehouses); 
                 if (data.warehouses && data.warehouses.length > 0) {
                     data.warehouses.forEach(warehouse => {
                         if (String(warehouse.warehouse_id).trim() !== excludedWarehouseId) {
@@ -55,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
 
-                    //  Forzar selección de la primera bodega si existe
+                    // Auto-seleccionar la primera bodega si hay opciones
                     if (warehouseSelect.options.length > 1) {
                         warehouseSelect.selectedIndex = 1;
                         fetchUsersByWarehouse(warehouseSelect.value);
@@ -67,10 +55,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => console.error('❌ Error al obtener bodegas:', error));
     }
 
-    //  Obtener usuarios por bodega
+    // 🔄 Obtener usuarios según la bodega seleccionada
     warehouseSelect.addEventListener('change', function () {
         const warehouseId = this.value;
-        console.log("🏢 Bodega seleccionada (ID):", warehouseId); 
         if (warehouseId) fetchUsersByWarehouse(warehouseId);
     });
 
@@ -86,12 +73,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     option.textContent = user.name;
                     userSelect.appendChild(option);
                 });
-                console.log("👤 Usuarios cargados:", data.users); 
             })
             .catch(() => userSelect.innerHTML = '<option value="">Error al cargar usuarios</option>');
     }
 
-    //  Buscar producto por IMEI
+    // 🔎 Buscar producto por IMEI
     imeiInput.addEventListener('input', function () {
         clearTimeout(this.typingTimer);
         this.typingTimer = setTimeout(fetchProductData, 500);
@@ -110,13 +96,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         unitsInput.placeholder = `Máximo ${availableUnits}`;
 
                         lastProductWarehouseId = String(data.product.warehouse_id).trim();
-                        document.getElementById('debugInfo').textContent = `📝 userWarehouseId: ${userWarehouseId} | productWarehouseId: ${lastProductWarehouseId}`;
 
                         if (userWarehouseId === lastProductWarehouseId) {
                             addProductButton.disabled = false;
                             hideAlert();
                         } else {
-                            showAlert("⚠️ El producto no se encuentra en tu bodega. No se puede añadir.");
+                            showAlert("⚠️ El producto no se encuentra en tu bodega.");
                             addProductButton.disabled = true;
                         }
                     } else {
@@ -147,18 +132,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const user = userSelect.options[userSelect.selectedIndex]?.text;
         const userId = userSelect.value;
 
-        if (lastProductWarehouseId !== userWarehouseId) {
-            alert(`⚠️ Error: No puedes añadir el producto porque no pertenece a tu bodega.`);
-            return;
-        }
-
         if (!imei || !productName || !units || !warehouseId || !userId) {
-            alert("⚠️ Todos los campos son obligatorios para añadir el producto.");
-            return;
-        }
-
-        if (parseInt(units) > availableUnits) {
-            alert(`⚠️ Solo hay ${availableUnits} unidades disponibles.`);
+            alert("⚠️ Todos los campos son obligatorios.");
             return;
         }
 
@@ -176,93 +151,80 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${units}</td>
             <td>${warehouse}</td>
             <td>${user}</td>
-            <td class="text-end">
-                <button type="button" class="btn btn-danger btn-sm remove-row">✖</button>
-            </td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-row">✖</button></td>
         `;
         productTableBody.appendChild(row);
 
         row.querySelector('.remove-row').addEventListener('click', function () {
             row.remove();
             productsData = productsData.filter(p => p.imei !== imei);
-            toggleSubmitButton();
-            toggleRequiredFields();
         });
 
         clearFormFields();
-        toggleSubmitButton();
-        toggleRequiredFields();
     });
 
-    // ✅ Crear movimiento masivo con validaciones y logs
+    // ✅ Enviar datos al backend con fetch()
     createMovementButton.addEventListener('click', function (e) {
         e.preventDefault();
-        console.log(" Bodega seleccionada:", warehouseSelect.value); // 🔍 Debug
-        console.log(" Usuario seleccionado:", userSelect.value); // 🔍 Debug
-
-        if (productsData.length >= 2) {
-            if (!warehouseSelect.value) {
-                alert("⚠️ Debe seleccionar una bodega de destino.");
-                console.error("❌ Bodega de destino vacía."); // 🔍 Debug
-                return;
-            }
-            if (!userSelect.value) {
-                alert("⚠️ Debe seleccionar un usuario vinculado.");
-                console.error("❌ Usuario vinculado vacío."); // 🔍 Debug
-                return;
-            }
-
-            imeiInput.removeAttribute('required');
-            unitsInput.removeAttribute('required');
-            warehouseSelect.removeAttribute('required');
-            userSelect.removeAttribute('required');
-
-            const formData = new FormData();
-            formData.append('origin_warehouse_id', userWarehouseId);
-            formData.append('destination_warehouse_id', warehouseSelect.value);
-            formData.append('created_by_user_id', userSelect.value);
-            formData.append('notes', notesInput ? notesInput.value : '');
-            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-            productsData.forEach((product, index) => {
-                formData.append(`imei_${index}`, product.imei);
-                formData.append(`units_${index}`, product.units);
-            });
-
-            console.log("📩 FormData enviado:", [...formData.entries()]);
-
-            fetch(massiveMovementForm.action, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => {
-                    console.log('📩 Estado de la respuesta:', response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log(' Respuesta del servidor:', data);
-                    if (data.success) {
-                        alert(" Movimiento masivo creado exitosamente.");
-                        location.reload();
-                    } else {
-                        alert(`❌ Error: ${data.message}`);
+    
+        if (productsData.length === 0) {
+            alert("⚠️ Debe añadir al menos un producto antes de crear el movimiento.");
+            return;
+        }
+    
+        // Get the CSRF token from your form
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+        // Format products data correctly
+        const formattedProducts = productsData.map(product => ({
+            product_id: product.imei,
+            units_to_send: parseInt(product.units)
+        }));
+    
+        const requestData = {
+            products: formattedProducts,
+            origin_warehouse_id: userWarehouseId,
+            destination_warehouse_id: productsData[0].warehouseId,
+            destination_user_id: productsData[0].userId,
+            movement_description: ""  // Remove notesInput reference if it doesn't exist
+        };
+        
+        console.log("Sending data to server:", requestData);
+    
+        fetch('/create_movement', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON first
+                        const data = JSON.parse(text);
+                        console.error("Server error:", data);
+                        throw new Error(data.message || "Error en el servidor");
+                    } catch (e) {
+                        // If not valid JSON, log the HTML response
+                        console.error("Server returned HTML error:", text);
+                        throw new Error("Error en el servidor - respuesta no válida");
                     }
-                })
-                .catch(error => console.error('❌ Error al enviar el formulario:', error));
-        } else {
-            alert("⚠️ Debe añadir al menos dos productos para crear el movimiento masivo.");
-        }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.success ? "✅ Movimiento creado exitosamente." : `❌ Error: ${data.message}`);
+            if (data.success) location.reload();
+        })
+        .catch((error) => {
+            console.error("Error in fetch:", error);
+            alert(`❌ Error: ${error.message || "Error en el envío"}`);
+        });
     });
-
-    // ✅ Funciones auxiliares
-    function toggleRequiredFields() {
-        if (productsData.length < 2) {
-            imeiInput.setAttribute('required', true);
-            unitsInput.setAttribute('required', true);
-            warehouseSelect.setAttribute('required', true);
-            userSelect.setAttribute('required', true);
-        }
-    }
 
     function clearProductFields() {
         productNameInput.value = '';
@@ -287,10 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
         alertBox.classList.add('d-none');
     }
 
-    function toggleSubmitButton() {
-        createMovementButton.disabled = productsData.length < 2;
-    }
-
-    toggleSubmitButton();
-    toggleRequiredFields();
+    // ✅ El botón siempre está activo, pero valida si hay productos antes de enviar
+    createMovementButton.disabled = false;
 });
+
