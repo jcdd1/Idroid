@@ -1,5 +1,12 @@
 {% extends 'menuUser.html' %}
 
+
+{% block customScripts %}
+    <script src="{{ url_for('static', filename='js/movements.js') }}"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+{% endblock %}
+
 {% block dynamicContent %}
 <h1 class="text-success">Solicitudes de Movimiento Pendientes</h1>
 
@@ -23,6 +30,7 @@
 <div class="table-responsive mt-4">
     <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
         <thead class="bg-success text-white text-center">
+            
             <tr>
                 <th>Movimiento ID</th>
                 <th>Origen</th>
@@ -67,69 +75,6 @@
         </tbody>
     </table>
 </div>
-
-<!-- Script para manejar las acciones de aprobación y rechazo -->
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Capturar clics en los botones de aprobar
-        document.querySelectorAll(".approve-btn").forEach(button => {
-            button.addEventListener("click", function() {
-                let movement_id = this.getAttribute("data-movement-id");
-                approveMovement(movement_id);
-            });
-        });
-
-        // Capturar clics en los botones de rechazar
-        document.querySelectorAll(".reject-btn").forEach(button => {
-            button.addEventListener("click", function() {
-                let movement_id = this.getAttribute("data-movement-id");
-                rejectMovement(movement_id);
-            });
-        });
-    });
-
-    function approveMovement(movement_id) {
-        console.log("✔️ Intentando aprobar movimiento:", movement_id);
-
-        fetch(`/approve_movement/${movement_id}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            if (data.success) {
-                location.reload();  
-            }
-        })
-        .catch(error => console.error("❌ Error:", error));
-    }
-
-    function rejectMovement(movement_id) {
-        console.log("✔️ Intentando rechazar movimiento:", movement_id);
-
-        let reason = prompt("Ingrese la razón del rechazo:");
-        if (!reason) {
-            alert("Debe ingresar una razón para rechazar el movimiento.");
-            return;
-        }
-
-        fetch(`/reject_movement/${movement_id}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reason: reason })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            if (data.success) {
-                location.reload();  
-            }
-        })
-        .catch(error => console.error(" Error:", error));
-    }
-</script>
-
 
 
 {% endblock %}

@@ -57,7 +57,7 @@ class ModelMovement:
         query = text("""
             SELECT *
             FROM movement
-            WHERE movementid = :movement_id
+            WHERE movement_id = :movement_id
         """)
         row = db.session.execute(query, {"movement_id": movement_id}).fetchone()
         return Movement(*row) if row else None
@@ -89,11 +89,15 @@ class ModelMovement:
     @staticmethod
     def approve_movement(db, movement_id):
         try:
+
             # Obtener los productos del movimiento en estado Pendiente
             movement_details = db.session.execute(
                 text("""
-                SELECT product_id, quantity FROM movementdetail
-                WHERE movement_id = :movement_id AND status = 'Pendiente'
+                SELECT movementdetail.product_id, movementdetail.quantity, movement.destination_warehouse_id, 
+                     movement.origin_warehouse_id 
+                FROM movementdetail
+                INNER JOIN movement on movementdetail.movement_id = movement.movement_id
+                WHERE movementdetail.movement_id = :movement_id AND movementdetail.status = 'Pendiente'
                 """),
                 {"movement_id": movement_id}
             ).fetchall()
@@ -101,34 +105,38 @@ class ModelMovement:
             for detail in movement_details:
                 product_id = detail.product_id
                 units_to_send = detail.quantity
+                origin_warehouse = detail.origin_warehouse_id
+                destination_warehouse = detail.destination_warehouse_id
 
                 # Reducir stock en la bodega de origen
-                db.session.execute(
-                    text("""
-                    UPDATE products 
-                    SET units = units - :units 
-                    WHERE product_id = :product_id
-                    """),
-                    {
-                        "product_id": product_id,
-                        "units": units_to_send
-                    }
-                )
-
-                # Aumentar stock en la bodega destino
-                db.session.execute(
-                    text("""
-                    UPDATE products 
-                    SET units = units + :units 
-                    WHERE product_id = :product_id
-                    """),
-                    {"product_id": product_id, "units": units_to_send}
-                )
-
+                query = text("""
+                    WITH updated_source AS (
+                        UPDATE WarehouseStock
+                        SET units = units - :units_to_send
+                        WHERE warehouse_id = :origin_warehouse AND product_id = :product_id
+                        RETURNING units
+                    )
+                    INSERT INTO WarehouseStock (warehouse_id, product_id, units)
+                    VALUES (:destination_warehouse, :product_id, :units_to_send)
+                    ON CONFLICT (warehouse_id, product_id)
+                    DO UPDATE SET units = WarehouseStock.units + EXCLUDED.units;
+                """)
+                db.session.execute(query, {"destination_warehouse": destination_warehouse, 
+                                           "product_id": product_id, "units_to_send": units_to_send, 
+                                           "origin_warehouse": origin_warehouse})
             # Marcar como aprobado
             db.session.execute(
                 text("""
                 UPDATE movementdetail 
+                SET status = 'Aprobado'
+                WHERE movement_id = :movement_id
+                """),
+                {"movement_id": movement_id}
+            )
+                        # Marcar como aprobado
+            db.session.execute(
+                text("""
+                UPDATE movement 
                 SET status = 'Aprobado'
                 WHERE movement_id = :movement_id
                 """),

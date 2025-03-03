@@ -90,9 +90,24 @@ def pending_movements():
 @app.route('/approve_movement/<int:movement_id>', methods=['POST'])
 @login_required
 def approve_movement(movement_id):
-    print(f" Recibida solicitud para aprobar movimiento ID: {movement_id}") 
-    success = ModelMovement.approve_movement(db, movement_id)
-    return jsonify({"success": success, "message": "Movimiento aprobado con éxito." if success else "Error al aprobar el movimiento."}), (200 if success else 500)
+    print(f"Recibida solicitud para aprobar movimiento ID: {movement_id}") 
+
+    try:
+        # Verificar si el movimiento existe antes de aprobar
+        # movement = ModelMovement.get_movement_by_id(db, movement_id)
+        # if not movement:
+        #     return jsonify({"success": False, "message": "El movimiento no existe."}), 404
+
+        success = ModelMovement.approve_movement(db, movement_id)
+
+        if success:
+            return jsonify({"success": True, "message": "Movimiento aprobado con éxito."}), 200
+        else:
+            return jsonify({"success": False, "message": "No se pudo aprobar el movimiento."}), 500
+
+    except Exception as e:
+        print(f"Error al aprobar movimiento: {str(e)}")
+        return jsonify({"success": False, "message": "Error interno del servidor."}), 500
 
 
 
