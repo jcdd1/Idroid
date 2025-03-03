@@ -125,25 +125,25 @@ class ModelMovement:
                                            "product_id": product_id, "units_to_send": units_to_send, 
                                            "origin_warehouse": origin_warehouse})
             # Marcar como aprobado
-            db.session.execute(
-                text("""
-                UPDATE movementdetail 
-                SET status = 'Aprobado'
-                WHERE movement_id = :movement_id
-                """),
-                {"movement_id": movement_id}
-            )
-                        # Marcar como aprobado
-            db.session.execute(
-                text("""
-                UPDATE movement 
-                SET status = 'Aprobado'
-                WHERE movement_id = :movement_id
-                """),
-                {"movement_id": movement_id}
-            )
+                db.session.execute(
+                    text("""
+                    UPDATE movementdetail 
+                    SET status = 'Aprobado'
+                    WHERE movement_id = :movement_id
+                    """),
+                    {"movement_id": movement_id}
+                )
+                            # Marcar como aprobado
+                db.session.execute(
+                    text("""
+                    UPDATE movement 
+                    SET status = 'Aprobado'
+                    WHERE movement_id = :movement_id
+                    """),
+                    {"movement_id": movement_id}
+                )
 
-            db.session.commit()
+                db.session.commit()
             return True
 
         except Exception as e:
