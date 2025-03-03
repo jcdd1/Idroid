@@ -2,6 +2,8 @@
 
 {% block customScripts %}
 <script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptInvoice.js') }}"></script>
+
 {% endblock %}
 
 {% block dynamicContent %}
@@ -130,6 +132,35 @@
                             <label for="units" class="form-label">Unidades Disponibles</label>
                             <input type="text" class="form-control" id="units" readonly>
                         </div>
+                        <div class="col-md-4">
+                            <label for="quantity" class="form-label">Cantidad a Facturar</label>
+                            <input type="number" class="form-control" id="quantity" min="1" required>
+                        </div>
+                        <div class="col-md-12 text-end">
+                            <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered table-hover table-sm shadow-sm rounded">
+                            <thead class="bg-success text-white text-center">
+                                <tr>
+                                    <th>IMEI</th>
+                                    <th>Producto</th>
+                                    <th>Memoria</th>
+                                    <th>Batería</th>
+                                    <th>Color</th>
+                                    <th>Cantidad</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productListBody">
+                                <!-- Productos añadidos dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row g-3 mt-3">
                         <div class="col-md-6">
                             <label for="client" class="form-label">Cliente</label>
                             <input type="text" class="form-control" id="client" name="client" placeholder="Nombre del cliente" autocomplete="off" required>
@@ -165,6 +196,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- Paginación -->
 <div class="d-flex justify-content-between align-items-center mt-4">

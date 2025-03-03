@@ -6,6 +6,21 @@ import pandas as pd
 
 class ModelProduct():
 
+    @staticmethod
+    def get_product_id_by_imei(db, imei):
+        try:
+            query = text("""
+                SELECT product_id FROM products WHERE imei = :imei
+            """)
+
+            result = db.session.execute(query, {"imei": imei}).fetchone()
+            
+            return result[0] if result else None  # Retorna el product_id si existe
+        except Exception as e:
+            print(f"❌ Error al obtener product_id por IMEI: {e}")
+            return None
+
+
 
     @staticmethod
     def update_units(db, imei, amount):

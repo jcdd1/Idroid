@@ -8,6 +8,7 @@ engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
 import pandas as pd
+import json
 import math
 
 #Código de barras
@@ -366,10 +367,11 @@ def edit_invoice():
 
 
 
-@app.route('/add_invoiceUser', methods=['POST'])
+
+@app.route('/add_invoiceUser', methods=['POST']) 
 def add_invoiceUser():
     try:
-        print(f"📝 Formulario recibido: {request.form}")  # 💡 Agregado para depuración
+        print(f"📝 Formulario recibido: {request.form}") 
 
         # Obtener datos del formulario
         invoice_type = request.form.get('type')
@@ -378,15 +380,24 @@ def add_invoiceUser():
         client = request.form.get('client')
         status = request.form.get('status')
 
-        print(f"📦 type: {invoice_type}, doc: {document_number}, date: {date}, client: {client}, status: {status}")
-
-        # Validar datos
         if not invoice_type or not document_number or not date or not client or not status:
             flash('Todos los campos son obligatorios.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
-        # Crear la factura utilizando el modelo
-        success = ModelInvoice.create_invoice(
+        products_json = request.form.get('products')  
+
+        if not products_json:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesUser'))
+
+        products = json.loads(products_json)
+
+        if not products:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesUser'))
+
+        # **1️⃣ Crear la factura**
+        invoice_id = ModelInvoice.create_invoice(
             db=db,
             invoice_type=invoice_type,
             document_number=document_number,
@@ -395,16 +406,39 @@ def add_invoiceUser():
             status=status
         )
 
-        if success:
-            flash('Factura creada exitosamente.', 'success')
-        else:
+        if not invoice_id:
             flash('Error al crear la factura.', 'error')
+            return redirect(url_for('show_invoicesUser'))
+
+        print(f"📄 Factura creada con ID: {invoice_id}")
+
+        # **2️⃣ Crear el movimiento de venta**
+        movement_id = ModelMovement.create_movement(
+            db=db,
+            movement_type="sale",
+            origin_warehouse_id=3,  # Cambiar si es dinámico
+            destination_warehouse_id=None,
+            movement_description=f"Venta asociada a la factura {invoice_id}",
+            user_id=9,  # Cambiar si es dinámico
+            products=products
+        )
+
+        if not movement_id:
+            flash('Error al registrar el movimiento.', 'error')
+            return redirect(url_for('show_invoicesUser'))
+
+        print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
+
+        flash('Factura y movimiento de venta creados exitosamente.', 'success')
 
     except Exception as e:
-        print(f"Error al crear la factura: {e}")
+        print(f"❌ Error al crear la factura y movimientos: {e}")
         flash('Ocurrió un error al procesar la solicitud.', 'error')
 
     return redirect(url_for('show_invoicesUser'))
+
+
+
 
 
 
@@ -446,8 +480,6 @@ def add_invoice():
     return redirect(url_for('invoices.show_invoices'))
 
 
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_login import login_user, current_user
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

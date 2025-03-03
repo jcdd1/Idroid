@@ -5,6 +5,31 @@ from .queries.sql_queries import SQLQueries
 class ModelInvoice:
 
     @staticmethod
+    def create_invoice_detail(db, invoice_id, product_id, quantity, price):
+        try:
+            query = text("""
+                INSERT INTO invoicedetail (invoice_id, product_id, quantity, price)
+                VALUES (:invoice_id, :product_id, :quantity, :price)
+            """)
+
+            db.session.execute(query, {
+                'invoice_id': invoice_id,
+                'product_id': product_id,
+                'quantity': quantity,
+                'price': price
+            })
+            
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"❌ Error al insertar detalle de factura: {e}")
+            db.session.rollback()
+            return False
+
+
+
+
+    @staticmethod
     def get_invoices_active(db):
         query = text(SQLQueries.get_invoices_active_query())
 
@@ -17,6 +42,7 @@ class ModelInvoice:
         else:
             invoice = []  # Si no hay resultados, inicializa la lista vacía
         return invoice
+
 
     @staticmethod
     def get_invoices_paginated(db, limit, offset):
@@ -172,30 +198,21 @@ class ModelInvoice:
             query = text("""
                 INSERT INTO invoices (type, document_number, date, client, status)
                 VALUES (:type, :document_number, :date, :client, :status)
+                RETURNING invoice_id;
             """)
-            db.session.execute(query, {
+
+            result = db.session.execute(query, {
                 'type': invoice_type,
                 'document_number': document_number,
                 'date': date,
                 'client': client,
                 'status': status
             })
+
+            invoice_id = result.fetchone()[0]  # Obtiene el ID generado
             db.session.commit()
-            return True
+            return invoice_id  # Devuelve el invoice_id
         except Exception as e:
-            print(f"Error al insertar factura: {e}")
+            print(f"❌ Error al insertar factura: {e}")
             db.session.rollback()
-            return False
-        
-    @staticmethod
-    def update_invoicedetail(db,product_id, document_number, invoice_quantity, price):
-        query = text(SQLQueries.update_invoicedetail_query())
-
-        params = {
-            "product_id": product_id,
-            "document_number": document_number,
-            "quantity": invoice_quantity,
-            "price": price
-        }
-
-        db.session.execute(query, params)
+            return None
