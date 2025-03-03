@@ -4,8 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".approve-btn").forEach(button => {
         button.addEventListener("click", function () {
             const movementId = this.getAttribute("data-movement-id");
+            const productId = this.getAttribute("data-product-id");
             console.log(`Aprobando movimiento: ${movementId}`);
-            approveMovement(movementId);
+            approveMovement(movementId, productId);
         });
     });
 
@@ -18,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-function approveMovement(movementId) {
+function approveMovement(movementId, productId) {
     console.log(`Enviando solicitud para aprobar movimiento ${movementId}`);
 
     // Obtener CSRF Token desde el <meta>
@@ -29,7 +30,9 @@ function approveMovement(movementId) {
         headers: { 
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken  // Agregar CSRF Token aquí
-        }
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ product_id: productId })
     })
     .then(response => {
         if (!response.ok) {

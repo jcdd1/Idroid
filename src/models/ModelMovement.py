@@ -87,7 +87,7 @@ class ModelMovement:
             return False
 
     @staticmethod
-    def approve_movement(db, movement_id):
+    def approve_movement(db, movement_id, product_id):
         try:
 
             # Obtener los productos del movimiento en estado Pendiente
@@ -98,8 +98,9 @@ class ModelMovement:
                 FROM movementdetail
                 INNER JOIN movement on movementdetail.movement_id = movement.movement_id
                 WHERE movementdetail.movement_id = :movement_id AND movementdetail.status = 'Pendiente'
+                     AND movementdetail.product_id = :product_id
                 """),
-                {"movement_id": movement_id}
+                {"movement_id": movement_id, "product_id": product_id}
             ).fetchall()
 
             for detail in movement_details:
@@ -134,14 +135,14 @@ class ModelMovement:
                     {"movement_id": movement_id}
                 )
                             # Marcar como aprobado
-                db.session.execute(
-                    text("""
-                    UPDATE movement 
-                    SET status = 'Aprobado'
-                    WHERE movement_id = :movement_id
-                    """),
-                    {"movement_id": movement_id}
-                )
+                # db.session.execute(
+                #     text("""
+                #     UPDATE movement 
+                #     SET status = 'Aprobado'
+                #     WHERE movement_id = :movement_id
+                #     """),
+                #     {"movement_id": movement_id}
+                # )
 
                 db.session.commit()
             return True
@@ -157,6 +158,15 @@ class ModelMovement:
             db.session.execute(
                 text("""
                 UPDATE movementdetail 
+                SET status = 'Rechazado', rejection_reason = :reason
+                WHERE movement_id = :movement_id
+                """),
+                {"movement_id": movement_id, "reason": reason}
+            )
+
+            db.session.execute(
+                text("""
+                UPDATE movement 
                 SET status = 'Rechazado', rejection_reason = :reason
                 WHERE movement_id = :movement_id
                 """),

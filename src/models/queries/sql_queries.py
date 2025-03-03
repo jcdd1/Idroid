@@ -14,7 +14,7 @@ class SQLQueries:
             JOIN 
                 products p ON ws.product_id = p.product_id
             WHERE
-                w.warehouse_id = :warehouse_id
+                w.warehouse_id = :warehouse_id and ws.units > 0
 
             """
         return query

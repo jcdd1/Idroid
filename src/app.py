@@ -73,7 +73,7 @@ def pending_movements():
     movements = db.session.execute(
     text("""
     SELECT m.movement_id, m.origin_warehouse_id, m.destination_warehouse_id, m.creation_date, md.product_id, 
-           md.quantity, p.productname, p.imei
+           md.quantity, p.productname, p.imei, p.product_id
     FROM movement m
     JOIN movementdetail md ON m.movement_id = md.movement_id
     JOIN products p ON md.product_id = p.product_id
@@ -93,12 +93,14 @@ def approve_movement(movement_id):
     print(f"Recibida solicitud para aprobar movimiento ID: {movement_id}") 
 
     try:
+        data = request.get_json()
         # Verificar si el movimiento existe antes de aprobar
         # movement = ModelMovement.get_movement_by_id(db, movement_id)
         # if not movement:
         #     return jsonify({"success": False, "message": "El movimiento no existe."}), 404
-
-        success = ModelMovement.approve_movement(db, movement_id)
+        product_id = data.get("product_id")
+        
+        success = ModelMovement.approve_movement(db, movement_id, product_id)
 
         if success:
             return jsonify({"success": True, "message": "Movimiento aprobado con éxito."}), 200
