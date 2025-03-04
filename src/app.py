@@ -776,23 +776,23 @@ def create_movement():
         # Procesar cada producto y guardarlo en `movementdetail`
         for product_data in products:
             try:
-                imei = product_data.get("product_id")  
+                product_id = product_data.get("product_id")  
                 units_to_send = int(product_data.get("units_to_send", 0))
 
-                if not imei or units_to_send <= 0:
-                    return jsonify({"success": False, "message": f"Datos inválidos para el producto con IMEI {imei}."}), 400
+                if not product_id or units_to_send <= 0:
+                    return jsonify({"success": False, "message": f"Datos inválidos para el producto con IMEI {product_id}."}), 400
 
                 # Buscar el `product_id` correcto usando el IMEI
                 product = db.session.execute(
                     text("""
                     SELECT product_id, units FROM products 
-                    WHERE imei = :imei
+                    WHERE product_id = :product_id
                     """),
-                    {"imei": imei}
+                    {"product_id": product_id}
                 ).fetchone()
 
                 if not product:
-                    return jsonify({"success": False, "message": f"Producto con IMEI {imei} no encontrado."}), 404
+                    return jsonify({"success": False, "message": f"Producto con IMEI {product_id} no encontrado."}), 404
 
                 product_id = product.product_id  
 
@@ -819,9 +819,9 @@ def create_movement():
                 )
 
             except Exception as e:
-                print(f" Error al procesar el producto con IMEI {imei}: {e}")
+                print(f" Error al procesar el producto con IMEI {product_id}: {e}")
                 db.session.rollback()
-                return jsonify({"success": False, "message": f"Error al procesar el producto con IMEI {imei}: {e}"}), 500
+                return jsonify({"success": False, "message": f"Error al procesar el producto con IMEI {product_id}: {e}"}), 500
 
         # 6️⃣ Confirmar cambios
         db.session.commit()

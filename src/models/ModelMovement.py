@@ -130,19 +130,26 @@ class ModelMovement:
                     text("""
                     UPDATE movementdetail 
                     SET status = 'Aprobado'
-                    WHERE movement_id = :movement_id
+                    WHERE movement_id = :movement_id AND product_id = :product_id
                     """),
-                    {"movement_id": movement_id}
+                    {"movement_id": movement_id, "product_id": product_id}
                 )
-                            # Marcar como aprobado
-                # db.session.execute(
-                #     text("""
-                #     UPDATE movement 
-                #     SET status = 'Aprobado'
-                #     WHERE movement_id = :movement_id
-                #     """),
-                #     {"movement_id": movement_id}
-                # )
+
+                movement_pending = db.session.execute(
+                    text("""
+                    Select md.movement_id FROM movementdetail as md
+                         WHERE md.movement_id = :movement_id AND md.status = 'Pendiente'
+                    """),{"movement_id": movement_id}).fetchone()
+                if movement_pending is None:
+                    # Marcar como aprobado
+                    db.session.execute(
+                        text("""
+                        UPDATE movement 
+                        SET status = 'Aprobado'
+                        WHERE movement_id = :movement_id
+                        """),
+                        {"movement_id": movement_id}
+                    )
 
                 db.session.commit()
             return True
