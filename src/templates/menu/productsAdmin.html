@@ -5,6 +5,9 @@
 <script src="{{ url_for('static', filename='js/ScriptViewMovement.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptEditUnits.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptMassiveMovement.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptMessageMasive.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
 
 {% endblock %}
 
@@ -26,6 +29,13 @@
     </div>
 {% endif %}
 {% endwith %}
+
+<!-- Botón para movimiento masivo -->
+<div class="text-end">
+    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#massiveMovementModal">
+        Movimiento Masivo
+    </button>
+</div>
 
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_productsAdmin') }}" class="row g-3 mt-4">
@@ -128,6 +138,82 @@
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCargueMasivo">
             📁 Cargar Archivo Masivo
         </button>
+    </div>
+</div>
+
+
+<!-- Modal de Movimiento Masivo -->
+<div class="modal fade" id="massiveMovementModal" tabindex="-1" aria-labelledby="massiveMovementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;">
+            <form id="massiveMovementForm" onsubmit="return false;"> 
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="massiveMovementModalLabel">Movimiento Masivo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="imei_global" class="form-label">IMEI del Producto</label>
+                            <input type="text" class="form-control" id="imei_global" placeholder="Ingrese IMEI" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product_name_global" class="form-label">Nombre Producto</label>
+                            <input type="text" class="form-control" id="product_name_global" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="units_global" class="form-label">Unidades a Enviar</label>
+                            <input type="number" class="form-control" id="units_global" min="1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="warehouse_global" class="form-label">Bodega Destino</label>
+                            <select class="form-select" id="warehouse_global" required>
+                                <option value="">Seleccione una bodega</option>
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.warehouse_id }}">{{ warehouse.warehouse_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="user_global" class="form-label">Usuario Vinculado</label>
+                            <select class="form-select" id="user_global" required>
+                                <option value="">Seleccione un usuario</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered table-hover table-sm shadow-sm rounded">
+                            <thead class="bg-success text-white text-center">
+                                <tr>
+                                    <th>IMEI</th>
+                                    <th>Producto</th>
+                                    <th>Unidades</th>
+                                    <th>Bodega</th>
+                                    <th>Usuario</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productSummaryTableBody">
+                                <!-- Productos añadidos dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-success" id="addMovementRow">+ Añadir Producto</button>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="background-color: #d4edda;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-success" id="createMassiveMovementButton">Crear movimiento masivo</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
