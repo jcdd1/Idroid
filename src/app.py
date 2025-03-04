@@ -786,7 +786,7 @@ def create_movement():
                 product = db.session.execute(
                     text("""
                     SELECT product_id, units FROM products 
-                    WHERE product_id = :product_id
+                    WHERE imei = :product_id
                     """),
                     {"product_id": product_id}
                 ).fetchone()

@@ -314,8 +314,6 @@ class ModelProduct():
             return []
 
 
-
-
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
                        category, units, supplier, current_user, warehouse_id):
