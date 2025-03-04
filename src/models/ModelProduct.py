@@ -162,7 +162,7 @@ class ModelProduct():
             # Caso de filtrado por IMEI
             if imei:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -174,7 +174,7 @@ class ModelProduct():
             # Caso: filtrado por nombre del producto, estado, bodega y categoría
             elif productname and current_status and warehouse and category:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -196,7 +196,7 @@ class ModelProduct():
             # Caso: filtrado solo por bodega
             elif warehouse:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -212,7 +212,7 @@ class ModelProduct():
             # Caso: filtrado solo por nombre de producto
             elif productname:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -228,7 +228,7 @@ class ModelProduct():
             # Caso: filtrado solo por categoría
             elif category:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -244,7 +244,7 @@ class ModelProduct():
             # Caso: filtrado solo por estado
             elif current_status:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
@@ -260,7 +260,7 @@ class ModelProduct():
             # Si no se aplican filtros, devuelve todos los productos con paginación
             else:
                 query = text("""
-                    SELECT p.*, w.warehouse_name
+                    SELECT p.*, w.warehouse_name, w.warehouse_id
                     FROM products p
                     JOIN warehousestock ws ON p.product_id = ws.product_id
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
