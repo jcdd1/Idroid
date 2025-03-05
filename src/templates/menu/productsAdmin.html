@@ -30,10 +30,21 @@
 {% endif %}
 {% endwith %}
 
+
+
 <!-- Botón para movimiento masivo -->
 <div class="text-end">
     <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#massiveMovementModal">
         Movimiento Masivo
+    </button>
+</div>
+
+<!-- Botón para crear producto -->
+<div class="d-flex justify-content-end mb-3">
+    <button type="button" class="btn btn-success btn-lg rounded-pill d-flex align-items-center shadow-sm" 
+            data-bs-toggle="modal" data-bs-target="#addProductModal" style="gap: 10px;">
+        <i class="fas fa-plus-circle" style="font-size: 20px;"></i>
+        <span>Crear producto</span>
     </button>
 </div>
 
@@ -237,6 +248,91 @@
       </div>
     </div>
   </div>
+</div>
+
+
+<!-- Modal para añadir producto -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
+            <form method="POST" action="{{ url_for('add_product') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="add_user_id" name="add_user_id" value="{{ current_user.user_id }}">
+                <input type="hidden" id="add_warehouse_id" name="add_warehouse_id" value="{{ current_user.warehouse_id }}">
+
+                <!-- Encabezado del modal -->
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addProductModalLabel">Añadir Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Cuerpo del modal -->
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Nombre del Producto -->
+                        <div class="col-md-6">
+                            <label for="add_productname" class="form-label">Nombre del Producto</label>
+                            <input type="text" class="form-control" id="add_productname" name="add_productname" required>
+                        </div>
+
+                        <!-- IMEI -->
+                        <div class="col-md-6">
+                            <label for="add_imei" class="form-label">IMEI</label>
+                            <input type="text" class="form-control" id="add_imei" name="add_imei" required>
+                        </div>
+
+                        <!-- Memoria -->
+                        <div class="col-md-6">
+                            <label for="add_storage" class="form-label">Memoria</label>
+                            <input type="number" class="form-control" id="add_storage" name="add_storage" min="1" required>
+                        </div>
+
+                        <!-- Batería -->
+                        <div class="col-md-6">
+                            <label for="add_battery" class="form-label">Batería</label>
+                            <input type="number" class="form-control" id="add_battery" name="add_battery" min="1" required>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="col-md-6">
+                            <label for="add_color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="add_color" name="add_color" required>
+                        </div>
+
+                        <!-- Costo -->
+                        <div class="col-md-6">
+                            <label for="add_cost" class="form-label">Costo</label>
+                            <input type="number" step="0.01" class="form-control" id="add_cost" name="add_cost" required>
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="col-md-6">
+                            <label for="add_category" class="form-label">Categoría</label>
+                            <input type="text" class="form-control" id="add_category" name="add_category" required>
+                        </div>
+
+                        <!-- Unidades -->
+                        <div class="col-md-6">
+                            <label for="add_units" class="form-label">Unidades</label>
+                            <input type="number" class="form-control" id="add_units" name="add_units" min="1" required>
+                        </div>
+
+                        <!-- Proveedor -->
+                        <div class="col-md-6">
+                            <label for="add_supplier" class="form-label">Proveedor</label>
+                            <input type="text" class="form-control" id="add_supplier" name="add_supplier" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pie del modal -->
+                <div class="modal-footer" style="background-color: #d4edda;"> 
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-success">Añadir Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/ScriptMessageMasive.js') }}"></script>
