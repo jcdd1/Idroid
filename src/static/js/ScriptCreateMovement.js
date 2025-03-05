@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const unitsToSendInput = document.getElementById("units_to_send");
     const maxUnitsDisplay = document.getElementById("max_units_display");
     const availableUnitsField = document.getElementById("available_units");
+    const productIdField = document.getElementById("product_id");
 
     // 🟢 Cargar usuarios vinculados al cambiar el almacén destino
     destinationWarehouseSelect.addEventListener("change", function () {
@@ -45,28 +46,26 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("📌 Modal de movimiento abierto");
 
         const button = event.relatedTarget;
-        const row = button.closest("tr");
-
-        if (!row) {
-            console.error("❌ Error: No se pudo encontrar la fila del producto.");
-            alert("Error al obtener los datos del producto.");
-            return;
-        }
-
         const productName = button.getAttribute("data-product-name") || "Desconocido";
         const productId = button.getAttribute("data-product-id") || "";
         const originWarehouseId = button.getAttribute("data-origin-warehouse-id") || "";
 
-        console.log("📦 Producto Seleccionado:", productName);
+        if (!productId) {
+            console.error("❌ Error: product_id no encontrado.");
+            alert("❌ Error: No se pudo obtener el ID del producto.");
+            return;
+        }
 
-        document.getElementById("product_id").value = productId;
+        console.log("📦 Producto Seleccionado:", productName, "ID:", productId);
+
+        productIdField.value = productId;
         document.getElementById("product_name_movement").value = productName;
         document.getElementById("origin_warehouse_id").value = originWarehouseId;
 
         destinationWarehouseSelect.value = "";
         destinationUserSelect.innerHTML = '<option value="">Seleccione una bodega</option>';
 
-        // Ocultar el almacén de origen
+        // Ocultar el almacén de origen en la lista de destinos
         Array.from(destinationWarehouseSelect.options).forEach(option => {
             option.style.display = option.value === originWarehouseId ? "none" : "block";
         });
@@ -81,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 // 📝 Mostrar unidades disponibles y configurar campo de entrada
                 availableUnitsField.textContent = availableUnits;
                 unitsToSendInput.max = availableUnits;
-                unitsToSendInput.value = 1;
+                unitsToSendInput.value = availableUnits > 0 ? 1 : 0;
                 maxUnitsDisplay.textContent = availableUnits;
             })
             .catch(error => {
@@ -93,17 +92,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 🟣 Evento para crear el movimiento al hacer clic en "Guardar Cambios"
     saveMovementButton.addEventListener("click", function () {
-        const productId = document.getElementById("product_id").value;
-        const originWarehouseId = document.getElementById("origin_warehouse_id").value;
-        const destinationWarehouseId = destinationWarehouseSelect.value;
-        const destinationUserId = destinationUserSelect.value;
-        const movementDescription = document.getElementById("movement_description").value;
-        const unitsToSend = unitsToSendInput.value;
+        const productId = productIdField.value.trim();
+        const originWarehouseId = document.getElementById("origin_warehouse_id").value.trim();
+        const destinationWarehouseId = destinationWarehouseSelect.value.trim();
+        const destinationUserId = destinationUserSelect.value.trim();
+        const movementDescription = document.getElementById("movement_description").value.trim();
+        const unitsToSend = parseInt(unitsToSendInput.value, 10);
+
+        if (!productId) {
+            alert("❌ Error: No se encontró el ID del producto.");
+            return;
+        }
 
         if (!destinationWarehouseId || !destinationUserId || unitsToSend <= 0) {
             alert("⚠️ Por favor, complete todos los campos correctamente.");
             return;
         }
+
+        console.log("📤 Enviando datos:", {
+            product_id: productId, 
+            origin_warehouse_id: originWarehouseId,
+            destination_warehouse_id: destinationWarehouseId,
+            destination_user_id: destinationUserId,
+            movement_description: movementDescription,
+            units_to_send: unitsToSend
+        });
 
         // 🟢 Llamada a la API para crear el movimiento
         fetch("/create_movement", {
@@ -121,20 +134,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 units_to_send: unitsToSend
             })
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("✅ Movimiento creado exitosamente.");
-                    location.reload();
-                } else {
-                    console.error("❌ Error al crear el movimiento:", data.message);
-                    alert("❌ Error: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error("❌ Error en la solicitud:", error);
-                alert("❌ Ocurrió un error al procesar la solicitud.");
-            });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("✅ Movimiento creado exitosamente.");
+                location.reload();
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("❌ Error en la solicitud:", error);
+            alert("❌ Ocurrió un error al procesar la solicitud.");
+        });
     });
 
     // 🟣 Restaurar opciones del select al cerrar el modal

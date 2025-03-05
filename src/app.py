@@ -706,42 +706,43 @@ def get_product_units(product_id, warehouse_id):
 
 
 
+
 @app.route('/create_movement', methods=['POST'])
 @login_required
 def create_movement():
     try:
         if not request.is_json:
             return jsonify({"success": False, "message": "Se esperaba formato JSON"}), 400
-            
-        data = request.get_json()
-        print(f" Datos recibidos: {data}")  # Log para depuración
 
-        #  Obtener datos principales del movimiento
+        data = request.get_json()
+        print(f"📥 Datos recibidos: {data}")  # Log para depuración
+
+        # Obtener los productos enviados
         products = data.get('products', [])
         if not products:
             products = [{
-                "product_id": data.get("product_id"),  # En realidad es un IMEI
-                "units_to_send": int(data.get("units_to_send"))
+                "product_id": data.get("product_id"),  # Aquí podría ser el IMEI
+                "units_to_send": int(data.get("units_to_send", 0))
             }]
-        
+
         origin_warehouse_id = data.get('origin_warehouse_id')
         destination_warehouse_id = data.get('destination_warehouse_id')
         movement_description = data.get('movement_description', '')
         destination_user_id = data.get('destination_user_id')
 
-        print(f" Procesando movimiento: Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Productos: {products}")
+        print(f"🔄 Procesando movimiento: Origen: {origin_warehouse_id}, Destino: {destination_warehouse_id}, Productos: {products}")
 
-        #  Validaciones
+        # Validaciones
         if not origin_warehouse_id or not destination_warehouse_id:
             return jsonify({"success": False, "message": "Faltan datos obligatorios: origen o destino."}), 400
-        
+
         if origin_warehouse_id == destination_warehouse_id:
             return jsonify({"success": False, "message": "El almacén de origen y destino no pueden ser iguales."}), 400
-        
+
         if not destination_user_id:
             return jsonify({"success": False, "message": "Falta el usuario de destino."}), 400
 
-        # Crear el movimiento en `movement`
+        # Insertar el movimiento en la tabla `movement`
         movement_id = db.session.execute(
             text("""
             INSERT INTO movement (
@@ -776,27 +777,27 @@ def create_movement():
         # Procesar cada producto y guardarlo en `movementdetail`
         for product_data in products:
             try:
-                product_id = product_data.get("product_id")  
+                product_id_or_imei = product_data.get("product_id")  # Puede ser un IMEI
                 units_to_send = int(product_data.get("units_to_send", 0))
 
-                if not product_id or units_to_send <= 0:
-                    return jsonify({"success": False, "message": f"Datos inválidos para el producto con IMEI {product_id}."}), 400
+                if not product_id_or_imei or units_to_send <= 0:
+                    return jsonify({"success": False, "message": f"Datos inválidos para el producto {product_id_or_imei}."}), 400
 
-                # Buscar el `product_id` correcto usando el IMEI
+                # 🔍 Obtener el verdadero `product_id` desde la BD usando el IMEI
                 product = db.session.execute(
                     text("""
-                    SELECT product_id, units FROM products 
-                    WHERE imei = :product_id
+                    SELECT product_id FROM products 
+                    WHERE imei = :imei OR product_id = :product_id
                     """),
-                    {"product_id": product_id}
+                    {"imei": product_id_or_imei, "product_id": product_id_or_imei}
                 ).fetchone()
 
                 if not product:
-                    return jsonify({"success": False, "message": f"Producto con IMEI {product_id} no encontrado."}), 404
+                    return jsonify({"success": False, "message": f"Producto con IMEI o ID {product_id_or_imei} no encontrado."}), 404
 
-                product_id = product.product_id  
+                product_id = product.product_id  # Obtener el ID real del producto
 
-                #  Insertar en `movementdetail` con estado "Pendiente"
+                # Insertar en `movementdetail` con estado "Pendiente"
                 db.session.execute(
                     text("""
                     INSERT INTO movementdetail (
@@ -819,19 +820,20 @@ def create_movement():
                 )
 
             except Exception as e:
-                print(f" Error al procesar el producto con IMEI {product_id}: {e}")
+                print(f"❌ Error al procesar el producto {product_id_or_imei}: {e}")
                 db.session.rollback()
-                return jsonify({"success": False, "message": f"Error al procesar el producto con IMEI {product_id}: {e}"}), 500
+                return jsonify({"success": False, "message": f"Error al procesar el producto {product_id_or_imei}: {e}"}), 500
 
-        # 6️⃣ Confirmar cambios
+        # Confirmar cambios en la BD
         db.session.commit()
-        print(" Movimiento(s) registrado(s) correctamente.")
-        return jsonify({"success": True, "message": "Movimiento(s) registrado(s) correctamente."})
+        print("✅ Movimiento registrado correctamente.")
+        return jsonify({"success": True, "message": "Movimiento registrado correctamente."})
 
     except Exception as e:
         db.session.rollback()
-        print(f" Error al procesar la solicitud: {str(e)}")
+        print(f"❌ Error al procesar la solicitud: {str(e)}")
         return jsonify({"success": False, "message": f"Error interno en el servidor: {str(e)}"}), 500
+
 
 
 
