@@ -357,10 +357,127 @@ class ModelMovement:
 
 
 
+    @staticmethod
+    def create_movement_invoice(db, movement_type, origin_warehouse_id, 
+                            movement_description, user_id, products):
+            try:
+                # 1️⃣ Crear el movimiento en la tabla `movement`
+                movement_id = db.session.execute(
+                    text("""
+                        INSERT INTO movement (
+                            origin_warehouse_id, 
+                            destination_warehouse_id, 
+                            creation_date,
+                            status,
+                            notes,
+                            created_by_user_id,
+                            handled_by_user_id,
+                            movement_type
+                        ) VALUES (
+                            :origin_warehouse_id, 
+                            :origin_warehouse_id, 
+                            NOW(),
+                            'sale',  
+                            :movement_description, 
+                            :user_id, 
+                            :user_id, 
+                            :movement_type
+                        ) RETURNING movement_id
+                    """),
+                    {
+                        "movement_type": movement_type,
+                        "origin_warehouse_id": origin_warehouse_id,
+                        "movement_description": movement_description,
+                        "user_id": user_id
+                    }
+                ).scalar()
 
+                if not movement_id:
+                    print("❌ No se pudo crear el movimiento.")
+                    return None
 
+                print(f"🚀 Movimiento creado con ID: {movement_id} (Tipo: {movement_type})")
 
-            
+                # 2️⃣ Registrar cada producto en `movementdetail`
+                for product_data in products:
+                    product_id = product_data.get("product_id")  
+                    units_to_move = int(product_data.get("quantity", 0))
+
+                    if not product_id or units_to_move <= 0:
+                        print(f"⚠️ Producto inválido o cantidad incorrecta: {product_id}, {units_to_move}")
+                        continue
+
+                    # Verificar stock en origen
+                    product = db.session.execute(
+                        text("""
+                        SELECT product_id, units FROM warehousestock 
+                        WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                        """),
+                        {"product_id": product_id, "origin_warehouse_id": origin_warehouse_id}
+                    ).fetchone()
+
+                    if not product or product.units < units_to_move:
+                        print(f"⚠️ Stock insuficiente para producto {product_id}, omitiendo...")
+                        continue
+
+                    # 3️⃣ Insertar en `movementdetail`
+                    db.session.execute(
+                        text("""
+                        INSERT INTO movementdetail (
+                            movement_id,
+                            product_id,
+                            quantity,
+                            status
+                        ) VALUES (
+                            :movement_id,
+                            :product_id,
+                            :units,
+                            'completed'
+                        )
+                        """),
+                        {
+                            "movement_id": movement_id,
+                            "product_id": product_id,
+                            "units": units_to_move
+                        }
+                    )
+
+                    
+                    # 4️⃣ Reducir stock en el almacén de origen
+                    db.session.execute(
+                        text("""
+                        WITH updated_source AS (
+                            UPDATE WarehouseStock
+                            SET units = units - :units_to_send
+                            WHERE warehouse_id = :origin_warehouse AND product_id = :product_id
+                            RETURNING units
+                        );
+                        """),
+                        {
+                            "product_id": product_id,
+                            "units": units_to_move,
+                            "origin_warehouse_id": origin_warehouse_id
+                        }
+                    )
+                    db.session.execute(text("""
+                        UPDATE products 
+                        SET units = units - :units 
+                        WHERE product_id = :product_id
+                    """),
+                        {"product_id": product_id,
+                        "units": units_to_move}
+                    )
+                
+
+                # 6️⃣ Confirmar los cambios
+                db.session.commit()
+                return movement_id
+
+            except Exception as e:
+                db.session.rollback()
+                print(f"❌ Error en create_movement: {e}")
+                return None
+
 
     @staticmethod
     def get_movements_by_imei(db, product_id):

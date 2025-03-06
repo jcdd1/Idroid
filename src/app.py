@@ -479,14 +479,15 @@ def add_invoiceUser():
 
         print(f"📄 Factura creada con ID: {invoice_id}")
 
-        # **2️⃣ Crear el movimiento de venta**
-        movement_id = ModelMovement.create_movement(
+
+
+        # # **2️⃣ Crear el movimiento de venta**
+        movement_id = ModelMovement.create_movement_invoice(
             db=db,
             movement_type="sale",
-            origin_warehouse_id=3,  # Cambiar si es dinámico
-            destination_warehouse_id=None,
+            origin_warehouse_id=current_user.warehouse_id,
             movement_description=f"Venta asociada a la factura {invoice_id}",
-            user_id=9,  # Cambiar si es dinámico
+            user_id=current_user.user_id,  # Cambiar si es dinámico
             products=products
         )
 
