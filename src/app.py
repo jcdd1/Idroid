@@ -88,6 +88,34 @@ def pending_movements():
 
     return render_template("menu/pending_movements.html", movements=movements)
 
+
+@app.route('/pending_movements_Admin')
+@login_required
+def pending_movements_Admin():
+    user_id = current_user.user_id 
+    
+    print(f"Usuario autenticado: {user_id}") 
+
+    movements = db.session.execute(
+    text("""
+    SELECT m.movement_id, m.origin_warehouse_id, m.destination_warehouse_id, m.creation_date, md.product_id, 
+           md.quantity, p.productname, p.imei, p.product_id
+    FROM movement m
+    JOIN movementdetail md ON m.movement_id = md.movement_id
+    JOIN products p ON md.product_id = p.product_id
+    WHERE m.handled_by_user_id = :user_id AND md.status = 'Pendiente'
+    """),
+    {"user_id": user_id}
+    ).mappings().fetchall()  
+
+
+    print(f"Movements encontrados: {movements}") 
+
+    return render_template("menu/pending_movements_Admin.html", movements=movements)
+
+
+
+
 @app.route('/approve_movement/<int:movement_id>', methods=['POST'])
 @login_required
 def approve_movement(movement_id):
@@ -111,6 +139,10 @@ def approve_movement(movement_id):
     except Exception as e:
         print(f"Error al aprobar movimiento: {str(e)}")
         return jsonify({"success": False, "message": "Error interno del servidor."}), 500
+    
+
+
+
 
 
 
