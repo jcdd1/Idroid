@@ -5,6 +5,37 @@ from .queries.sql_queries import SQLQueries
 class ModelInvoice:
 
     @staticmethod
+    def update_invoicedetail(db, invoice_id, product_id, quantity, price):
+        try:
+            query = text("""
+                UPDATE invoice_details
+                SET quantity = :quantity, price = :price
+                WHERE invoice_id = :invoice_id AND product_id = :product_id
+            """)
+
+            params = {
+                "invoice_id": invoice_id,
+                "product_id": product_id,
+                "quantity": quantity,
+                "price": price
+            }
+
+            result = db.session.execute(query, params)
+
+            # Verificar si se actualizó alguna fila
+            if result.rowcount == 0:
+                raise ValueError("No se encontró el detalle de factura para actualizar.")
+
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error al actualizar el detalle de la factura: {e}")
+            return False
+
+
+    @staticmethod
     def create_invoice_detail(db, invoice_id, product_id, quantity, price):
         try:
             query = text("""

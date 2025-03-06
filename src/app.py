@@ -326,6 +326,44 @@ def show_invoicesUser():
         status=status
     )
 
+@app.route('/invoicesAdmin', methods=['GET'])
+@login_required
+def show_invoicesAdmin():
+    # Parámetros de búsqueda
+    document_number = request.args.get('document_number', '')  
+    client_name = request.args.get('client_name', '')  
+    invoice_type = request.args.get('type', '')  
+    status = request.args.get('status', '')  # Capturar el estado
+
+    print(f"🔍 Parámetros de búsqueda -> Documento: {document_number}, Cliente: {client_name}, Tipo: {invoice_type}, Estado: {status}")
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    # Consultar facturas con filtro de estado
+    if document_number or client_name or invoice_type or status:
+        invoices, total = ModelInvoice.filter_invoices(
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
+        )
+    else:
+        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        total = ModelInvoice.count_invoices(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/invoicesAdmin.html',
+        invoices=invoices,
+        page=page,
+        total_pages=total_pages,
+        document_number=document_number,
+        client_name=client_name,
+        invoice_type=invoice_type,
+        status=status
+    )
+
 
 
 @app.route('/edit_invoice', methods=['POST'])
@@ -362,9 +400,6 @@ def edit_invoice():
         flash("Error al actualizar la factura.", "danger")
 
     return redirect(url_for('show_invoices'))
-
-
-
 
 
 
@@ -1077,45 +1112,48 @@ def add_product():
 @app.route('/edit_product', methods=['POST'])
 @login_required
 def edit_product():
-    product_id = request.form['edit_product_id']
-    productname = request.form['edit_productname']
-    imei = request.form['edit_imei']
-    storage = request.form['edit_storage']
-    battery = request.form['edit_battery']
-    color = request.form['edit_color']
-    description = request.form['edit_description']
-    cost = request.form['edit_cost']
-    category = request.form['edit_category']
-    units = request.form['edit_units']
-    supplier = request.form['edit_supplier']
-    document_number = request.form['edit_invoice']
-    invoice_quantity = request.form.get('edit_quantity')
-    price = request.form.get('edit_price')
-    current_user = request.form.get('edit_user_id')
+    product_id = request.form.get('edit_product_id')
+    productname = request.form.get('edit_productname', '').strip()
+    imei = request.form.get('edit_imei', '').strip()
+    storage = request.form.get('edit_storage', 0)
+    battery = request.form.get('edit_battery', 0)
+    color = request.form.get('edit_color', '').strip()
+    description = request.form.get('edit_description', '').strip()
+    cost = request.form.get('edit_cost', 0.0)
+    category = request.form.get('edit_category', '').strip()
+    units = request.form.get('edit_units', 0)
+    supplier = request.form.get('edit_supplier', '').strip()
+    document_number = request.form.get('edit_invoice', '').strip()
+    invoice_quantity = request.form.get('edit_quantity', 0)
+    price = request.form.get('edit_price', 0.0)
     warehouse_id = request.form.get('edit_warehouse_id')
+
+    # Obtiene el usuario actual
+    user_id = current_user.user_id  
+
     # Actualiza el producto en la base de datos
     success = ModelProduct.update_product(
         db, product_id, productname, imei, storage, battery, color, description, cost,
-        category, units, supplier, current_user, warehouse_id
+        category, units, supplier, user_id, warehouse_id
     )
 
+    # Si se proporciona un número de factura y cantidad, actualiza la factura
+    success_invoice = False
     if document_number and invoice_quantity:
         success_invoice = ModelInvoice.update_invoicedetail(db, product_id, document_number, invoice_quantity, price)
-    else:
-        success_invoice = False
 
+    # Mensajes Flash
     if success_invoice:
         flash("Factura asociada exitosamente.", "success")
-    else:
-        flash("No se  asoció el producto.", "danger")
+    elif document_number:  # Solo muestra mensaje si intentó asociar factura y falló
+        flash("No se asoció el producto a la factura.", "danger")
 
-    
     if success:
         flash("Producto actualizado exitosamente.", "success")
     else:
         flash("Error al actualizar el producto.", "danger")
 
-    return redirect(url_for('show_products'))
+    return redirect(url_for('show_productsAdmin'))
 
 
 @app.route('/movements/<string:imei>', methods=['GET'])

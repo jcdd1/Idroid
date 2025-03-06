@@ -316,44 +316,59 @@ class ModelProduct():
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
-                       category, units, supplier, current_user, warehouse_id):
-    
+                    category, units, supplier, current_user_id, warehouse_id):
+        
         try:
-            query, query_2, query_3 = text(SQLQueries.update_product_query())
+            # Obtener las tres consultas de SQL
+            queries = SQLQueries.update_product_query()
+
+            if len(queries) != 3:
+                raise ValueError("Error en SQLQueries.update_product_query(), se esperaban 3 queries.")
+
+            query, query_2, query_3 = map(text, queries)
+
+            # Actualizar el producto
             params = {
-                    "productname": productname,
-                    "imei": imei,
-                    "storage": storage,
-                    "battery": battery,
-                    "color": color,
-                    "description": description,
-                    "cost": cost,
-                    "category": category,
-                    "units": units,
-                    "supplier": supplier,
-                    "product_id": product_id
-                    }
+                "productname": productname,
+                "imei": imei,
+                "storage": storage,
+                "battery": battery,
+                "color": color,
+                "description": description,
+                "cost": cost,
+                "category": category,
+                "units": units,
+                "supplier": supplier,
+                "product_id": product_id
+            }
             db.session.execute(query, params)
 
-            query_movement = text(query_2)
-
-            result = db.session.execute(query_movement, {
+            # Registrar el movimiento en la bodega
+            result = db.session.execute(query_2, {
                 'warehouse_id': warehouse_id,
-                'current_user': current_user
+                'current_user': current_user_id
             })
 
-            movement_id = result.fetchone()[0]
+            # Verificar si se obtuvo un movement_id
+            movement_row = result.fetchone()
+            if movement_row is None:
+                raise ValueError("No se pudo obtener el ID del movimiento.")
 
-            # Register initial movement in inventory_movements table
-            query_movement_detail = text(query_3)
-            db.session.execute(query_movement_detail, {
+            movement_id = movement_row[0]
+
+            # Registrar el detalle del movimiento
+            db.session.execute(query_3, {
                 'product_id': product_id,
                 'movement_id': movement_id
             })
-            db.session.commit()
 
+            # Confirmar transacción
+            db.session.commit()
             return True
+
         except Exception as e:
             db.session.rollback()
+            print(f"Error al actualizar el producto: {e}")
             return False
+
        

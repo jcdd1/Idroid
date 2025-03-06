@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("✅ ScriptCreateMovement.js cargado correctamente");
 
     const movementModal = document.getElementById("createMovementModal");
     const saveMovementButton = document.getElementById("saveMovementButton");

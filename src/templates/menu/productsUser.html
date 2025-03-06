@@ -8,6 +8,7 @@
     <script src="{{ url_for('static', filename='js/activartooltips.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptMassiveMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -29,21 +30,23 @@
 {% endif %}
 {% endwith %}
 
-<!-- Botón para movimiento masivo -->
-<div class="text-end">
-    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#massiveMovementModal">
-        Movimiento Masivo
+<!-- Contenedor para alinear los botones -->
+<div class="d-flex justify-content-end gap-3 mb-3">
+    <!-- Botón para movimiento masivo -->
+    <button type="button" class="btn btn-success btn-lg uniform-button" 
+            data-bs-toggle="modal" data-bs-target="#massiveMovementModal">
+        <i class="fas fa-exchange-alt"></i>
+        <span>Movimiento Masivo</span>
     </button>
-</div>
 
-<!-- Botón para crear producto -->
-<div class="d-flex justify-content-end mb-3">
-    <button type="button" class="btn btn-success btn-lg rounded-pill d-flex align-items-center shadow-sm" 
-            data-bs-toggle="modal" data-bs-target="#addProductModal" style="gap: 10px;">
-        <i class="fas fa-plus-circle" style="font-size: 20px;"></i>
+    <!-- Botón para crear producto -->
+    <button type="button" class="btn btn-success btn-lg uniform-button" 
+            data-bs-toggle="modal" data-bs-target="#addProductModal">
+        <i class="fas fa-plus-circle"></i>
         <span>Crear producto</span>
     </button>
 </div>
+
 
 <!-- Formulario de búsqueda -->
 <form method="GET" action="{{ url_for('show_productsUser') }}" class="row g-3 mt-4">
