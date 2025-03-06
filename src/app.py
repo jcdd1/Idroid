@@ -1139,7 +1139,7 @@ def add_product():
         flash('Error al añadir el producto.', 'error')
 
     # Redirigir al listado de productos
-    return redirect(url_for('show_products'))
+    return redirect(url_for('show_productsAdmin'))
 
 
 @app.route('/edit_product', methods=['POST'])
