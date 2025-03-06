@@ -488,7 +488,8 @@ def add_invoiceUser():
             origin_warehouse_id=current_user.warehouse_id,
             movement_description=f"Venta asociada a la factura {invoice_id}",
             user_id=current_user.user_id,  # Cambiar si es dinámico
-            products=products
+            products=products,
+            invoice_id=invoice_id
         )
 
         if not movement_id:

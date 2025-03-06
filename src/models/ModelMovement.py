@@ -359,7 +359,7 @@ class ModelMovement:
 
     @staticmethod
     def create_movement_invoice(db, movement_type, origin_warehouse_id, 
-                            movement_description, user_id, products, invoice_id,quantity,price):
+                            movement_description, user_id, products, invoice_id):
             try:
                 # 1️⃣ Crear el movimiento en la tabla `movement`
                 movement_id = db.session.execute(
@@ -402,6 +402,7 @@ class ModelMovement:
                 for product_data in products:
                     product_id = product_data.get("product_id")  
                     units_to_move = int(product_data.get("quantity", 0))
+                    price = product_data.get("price")
 
                     if not product_id or units_to_move <= 0:
                         print(f"⚠️ Producto inválido o cantidad incorrecta: {product_id}, {units_to_move}")
@@ -415,7 +416,7 @@ class ModelMovement:
                     db.session.execute(query, {
                         'invoice_id': invoice_id,
                         'product_id': product_id,
-                        'quantity': quantity,
+                        'quantity': units_to_move,
                         'price': price
                     })
                     
