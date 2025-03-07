@@ -51,6 +51,10 @@ product_blueprint = Blueprint('product_blueprint', __name__)
 def load_user(user_id):
     return ModelLog.get_by_id(db, user_id)
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     return redirect(url_for('login'))
@@ -398,61 +402,29 @@ def show_invoicesAdmin():
 
 
 
-@app.route('/edit_invoice', methods=['POST'])
-@login_required
-def edit_invoice():
-    # Obtener el ID de la factura
-    invoice_id = request.form.get('invoice_id')
-    
-    invoice = ModelInvoice.get_invoice_by_id(db, invoice_id)
-
-    if not invoice:
-        flash("Factura no encontrada.", "danger")
-        return redirect(url_for('show_invoices'))
-
-    # Actualizar los campos de la factura
-    invoice.type = request.form.get('type')
-    invoice.document_number = request.form.get('document_number')
-    invoice.date = request.form.get('date')
-    invoice.client = request.form.get('client')
-
-    # Si la fecha no está en el formulario o está vacía, asigna None
-    if not invoice.date:
-        invoice.date = None
-    else:
-        # Convierte la fecha al formato datetime, si está presente
-        invoice.date = datetime.strptime(invoice.date, '%Y-%m-%dT%H:%M')
-
-
-    success = ModelInvoice.update_invoice(db, invoice)
-
-    if success:
-        flash("Factura actualizada correctamente.", "success")
-    else:
-        flash("Error al actualizar la factura.", "danger")
-
-    return redirect(url_for('show_invoices'))
+@app.route('/edit_invoiceUser', methods=['POST'])
+def edit_invoiceUser():
+    return redirect(url_for('show_invoicesUser'))
 
 
 
-@app.route('/add_invoiceUser', methods=['POST']) 
+
+@app.route('/add_invoiceUser', methods=['POST'])
 def add_invoiceUser():
     try:
         print(f"📝 Formulario recibido: {request.form}") 
 
-        # Obtener datos del formulario
         invoice_type = request.form.get('type')
         document_number = request.form.get('document_number')
         date = request.form.get('date')
         client = request.form.get('client')
         status = request.form.get('status')
 
-        if not invoice_type or not document_number or not date or not client or not status:
+        if not all([invoice_type, document_number, date, client, status]):
             flash('Todos los campos son obligatorios.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
         products_json = request.form.get('products')  
-
         if not products_json:
             flash('Debe agregar al menos un producto.', 'error')
             return redirect(url_for('show_invoicesUser'))
@@ -463,21 +435,24 @@ def add_invoiceUser():
             flash('Debe agregar al menos un producto.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
-        # **1️⃣ Crear la factura**
-        invoice_id = ModelInvoice.create_invoice(
-            db=db,
-            invoice_type=invoice_type,
-            document_number=document_number,
-            date=date,
-            client=client,
-            status=status
-        )
+        
+        with db.session.begin():  # Garantiza que todas las operaciones sean atómicas
+            # **1️⃣ Crear la factura**
+            invoice_id = ModelInvoice.create_invoice(
+                db=db,
+                invoice_type=invoice_type,
+                document_number=document_number,
+                date=date,
+                client=client,
+                status=status
+            )
 
-        if not invoice_id:
-            flash('Error al crear la factura.', 'error')
-            return redirect(url_for('show_invoicesUser'))
+            if not invoice_id:
+                flash('Error al crear la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
 
-        print(f"📄 Factura creada con ID: {invoice_id}")
+            print(f"📄 Factura creada con ID: {invoice_id}")
 
 
 
@@ -488,23 +463,25 @@ def add_invoiceUser():
             origin_warehouse_id=current_user.warehouse_id,
             movement_description=f"Venta asociada a la factura {invoice_id}",
             user_id=current_user.user_id,  # Cambiar si es dinámico
-            products=products,
-            invoice_id=invoice_id
+            products=products
         )
 
         if not movement_id:
-            flash('Error al registrar el movimiento.', 'error')
-            return redirect(url_for('show_invoicesUser'))
+                flash('Error al registrar el movimiento.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
 
         print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
 
         flash('Factura y movimiento de venta creados exitosamente.', 'success')
 
     except Exception as e:
+        db.session.rollback()  # Revertir cualquier cambio en caso de error
         print(f"❌ Error al crear la factura y movimientos: {e}")
         flash('Ocurrió un error al procesar la solicitud.', 'error')
 
     return redirect(url_for('show_invoicesUser'))
+
 
 
 
@@ -1140,7 +1117,7 @@ def add_product():
         flash('Error al añadir el producto.', 'error')
 
     # Redirigir al listado de productos
-    return redirect(url_for('show_productsAdmin'))
+    return redirect(url_for('show_products'))
 
 
 @app.route('/edit_product', methods=['POST'])

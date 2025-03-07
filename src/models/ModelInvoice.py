@@ -35,30 +35,6 @@ class ModelInvoice:
             return False
 
 
-    @staticmethod
-    def create_invoice_detail(db, invoice_id, product_id, quantity, price):
-        try:
-            query = text("""
-                INSERT INTO invoicedetail (invoice_id, product_id, quantity, price)
-                VALUES (:invoice_id, :product_id, :quantity, :price)
-            """)
-
-            db.session.execute(query, {
-                'invoice_id': invoice_id,
-                'product_id': product_id,
-                'quantity': quantity,
-                'price': price
-            })
-            
-            db.session.commit()
-            return True
-        except Exception as e:
-            print(f"❌ Error al insertar detalle de factura: {e}")
-            db.session.rollback()
-            return False
-
-
-
 
     @staticmethod
     def get_invoices_active(db):
@@ -223,27 +199,71 @@ class ModelInvoice:
         return [{"invoice_id": row[0], "document_number": row[1]} for row in result]
     
 
+
+
     @staticmethod
     def create_invoice(db, invoice_type, document_number, date, client, status):
+        """ Crea una nueva factura en la base de datos """
         try:
-            query = text("""
-                INSERT INTO invoices (type, document_number, date, client, status)
-                VALUES (:type, :document_number, :date, :client, :status)
-                RETURNING invoice_id;
-            """)
+            invoice_id = db.session.execute(
+                text("""
+                    INSERT INTO invoices (type, document_number, date, client, status, invoice_date)
+                    VALUES (:type, :document_number, :date, :client, :status, NOW())
+                    RETURNING invoice_id
+                """),
+                {
+                    "type": invoice_type,
+                    "document_number": document_number,
+                    "date": date,
+                    "client": client,
+                    "status": status
+                }
+            ).scalar()
 
-            result = db.session.execute(query, {
-                'type': invoice_type,
-                'document_number': document_number,
-                'date': date,
-                'client': client,
-                'status': status
-            })
+            return invoice_id
 
-            invoice_id = result.fetchone()[0]  # Obtiene el ID generado
-            db.session.commit()
-            return invoice_id  # Devuelve el invoice_id
         except Exception as e:
-            print(f"❌ Error al insertar factura: {e}")
-            db.session.rollback()
+            print(f"❌ Error en create_invoice: {e}")
             return None
+
+    @staticmethod
+    def create_invoice_detail(db, invoice_id, products):
+        """ Registra los productos en invoicedetail con el product_id correcto """
+        try:
+            for product in products:
+                imei = product["imei"]
+                quantity = product["quantity"]
+                price = product["price"]
+
+                # 🔹 Obtener el product_id basado en el IMEI
+                result = db.session.execute(
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": imei}
+                ).fetchone()
+
+                if not result:
+                    print(f"⚠️ No se encontró un product_id para IMEI: {imei}")
+                    continue  # Saltar este producto si no existe en la base de datos
+
+                product_id = result[0]
+
+                # 🔹 Insertar en `invoicedetail` con el product_id correcto
+                db.session.execute(
+                    text("""
+                        INSERT INTO invoicedetail (invoice_id, product_id, quantity, price)
+                        VALUES (:invoice_id, :product_id, :quantity, :price)
+                    """),
+                    {
+                        "invoice_id": invoice_id,
+                        "product_id": product_id,  # Ahora usamos el ID real del producto
+                        "quantity": quantity,
+                        "price": price
+                    }
+                )
+
+            return True
+
+        except Exception as e:
+            print(f"❌ Error en create_invoice_detail: {e}")
+            return False
+

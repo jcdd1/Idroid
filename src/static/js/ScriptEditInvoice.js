@@ -1,78 +1,53 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const imeiInput = document.getElementById('imei');
-    const createInvoiceButton = document.getElementById('createInvoiceButton');
-    const alertBox = document.getElementById('imeiAlert');
-    const closeButton = document.querySelector('#addInvoiceModal .btn-close');
-    const modalElement = document.getElementById('addInvoiceModal');
-    let typingTimer;
-    const typingInterval = 500;
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".editInvoiceBtn").forEach(button => {
+        button.addEventListener("click", async function () {
+            const invoiceId = this.dataset.id;
+            document.getElementById("edit_invoice_id").value = invoiceId;
 
-    // 🔄 Limpia los campos al cerrar el modal (X o botón "Cerrar")
-    closeButton.addEventListener('click', clearFormFields);
-    modalElement.addEventListener('hidden.bs.modal', clearFormFields);
+            // Obtener datos de la factura
+            const response = await fetch(`/get_invoice_details/${invoiceId}`);
+            const data = await response.json();
 
-    imeiInput.addEventListener('input', function () {
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(fetchProductData, typingInterval);
+            document.getElementById("edit_type").value = data.type;
+            document.getElementById("edit_date").value = data.date;
+            document.getElementById("edit_status").value = data.status;
+
+            // Cargar productos
+            const productListBody = document.getElementById("edit_productListBody");
+            productListBody.innerHTML = "";
+
+            data.products.forEach(product => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${product.imei}</td>
+                    <td>${product.name}</td>
+                    <td>${product.storage}</td>
+                    <td>${product.battery}</td>
+                    <td>${product.color}</td>
+                    <td>${product.quantity}</td>
+                    <td><button class="btn btn-danger btn-sm delete-btn" data-imei="${product.imei}">❌</button></td>
+                `;
+                productListBody.appendChild(row);
+            });
+
+            // Eliminar productos
+            document.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    this.closest("tr").remove();
+                });
+            });
+        });
     });
 
-    function fetchProductData() {
-        const imei = imeiInput.value.trim();
-        if (imei.length >= 5) {
-            fetch(`/get_product_by_imei/${imei}`)
+    // Confirmar eliminación de factura
+    document.querySelectorAll(".deleteInvoiceBtn").forEach(button => {
+        button.addEventListener("click", function () {
+            const invoiceId = this.dataset.id;
+            if (confirm("¿Seguro que deseas eliminar esta factura?")) {
+                fetch(`/delete_invoice/${invoiceId}`, { method: "POST" })
                 .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('product_name').value = data.product.productname;
-                        document.getElementById('storage').value = data.product.storage;
-                        document.getElementById('battery').value = data.product.battery;
-                        document.getElementById('color').value = data.product.color;
-                        document.getElementById('units').value = data.product.units;
-
-                        if (data.product.warehouse_id !== data.current_user_warehouse_id) {
-                            createInvoiceButton.disabled = true;
-                            alertBox.textContent = "⚠️ El producto no se encuentra en tu bodega.";
-                            alertBox.classList.remove('d-none');
-                        } else {
-                            createInvoiceButton.disabled = false;
-                            alertBox.classList.add('d-none');
-                        }
-                    } else {
-                        alertBox.textContent = data.message;
-                        alertBox.classList.remove('d-none');
-                        createInvoiceButton.disabled = true;
-                        clearProductFields();
-                    }
-                })
-                .catch(() => {
-                    alertBox.textContent = '⚠️ Error al obtener la información del producto.';
-                    alertBox.classList.remove('d-none');
-                    createInvoiceButton.disabled = true;
-                    clearProductFields();
-                });
-        } else {
-            clearProductFields();
-            createInvoiceButton.disabled = true;
-            alertBox.classList.add('d-none');
-        }
-    }
-
-    function clearProductFields() {
-        document.getElementById('product_name').value = '';
-        document.getElementById('storage').value = '';
-        document.getElementById('battery').value = '';
-        document.getElementById('color').value = '';
-        document.getElementById('units').value = '';
-    }
-
-    function clearFormFields() {
-        imeiInput.value = '';
-        clearProductFields();
-        alertBox.classList.add('d-none');
-        createInvoiceButton.disabled = true;
-        document.getElementById('client').value = '';
-        document.getElementById('document_number').value = '';
-        document.getElementById('date').value = '';
-        document.getElementById('status').selectedIndex = 0;
-    }
+                .then(() => location.reload());
+            }
+        });
+    });
 });
