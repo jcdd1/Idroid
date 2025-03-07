@@ -190,6 +190,8 @@ class ModelMovement:
 
 
 
+
+
     @staticmethod
     def create_movement(db, movement_type, origin_warehouse_id, destination_warehouse_id, movement_description, user_id, products):
         """ 
@@ -261,7 +263,6 @@ class ModelMovement:
                 # 🔹 Insertar en `movementdetail` con el product_id correcto
                 db.session.execute(
                     text("""
-<<<<<<< HEAD
                     INSERT INTO movementdetail (
                         movement_id,
                         product_id,
@@ -281,10 +282,10 @@ class ModelMovement:
                     }
                 )
 
-                # 4️⃣ Reducir stock en el almacén de origen
+                # 🔹 Reducir stock en el almacén de origen (ahora en `warehousestock`)
                 db.session.execute(
                     text("""
-                    UPDATE products 
+                    UPDATE warehousestock 
                     SET units = units - :units 
                     WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
                     """),
@@ -295,12 +296,12 @@ class ModelMovement:
                     }
                 )
 
-                # 5️⃣ Si es transferencia, aumentar stock en el destino
+                # 🔹 Si es transferencia, aumentar stock en el destino
                 if movement_type == "transfer":
                     # Verificar si el producto ya existe en el almacén destino
                     existing_product = db.session.execute(
                         text("""
-                        SELECT product_id FROM products 
+                        SELECT product_id FROM warehousestock 
                         WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
                         """),
                         {"product_id": product_id, "destination_warehouse_id": destination_warehouse_id}
@@ -310,7 +311,7 @@ class ModelMovement:
                         # Si ya existe en el destino, aumentar unidades
                         db.session.execute(
                             text("""
-                            UPDATE products 
+                            UPDATE warehousestock 
                             SET units = units + :units 
                             WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
                             """),
@@ -322,33 +323,22 @@ class ModelMovement:
                         )
                     else:
                         # Si no existe, crear un nuevo registro en la bodega destino
-                        product_info = db.session.execute(
-                            text("""
-                            SELECT productname, imei, price, category 
-                            FROM products WHERE product_id = :product_id
-                            """),
-                            {"product_id": product_id}
-                        ).fetchone()
-
                         db.session.execute(
                             text("""
-                            INSERT INTO products (
-                                productname, imei, price, units, warehouse_id, category
+                            INSERT INTO warehousestock (
+                                warehouse_id, product_id, units
                             ) VALUES (
-                                :productname, :imei, :price, :units, :warehouse_id, :category
+                                :warehouse_id, :product_id, :units
                             )
                             """),
                             {
-                                "productname": product_info.productname,
-                                "imei": product_info.imei,
-                                "price": product_info.price,
-                                "units": units_to_move,
                                 "warehouse_id": destination_warehouse_id,
-                                "category": product_info.category
+                                "product_id": product_id,
+                                "units": units_to_move
                             }
                         )
 
-            # 6️⃣ Confirmar los cambios
+            # 🔹 Confirmar los cambios
             db.session.commit()
             return movement_id
 
@@ -356,6 +346,7 @@ class ModelMovement:
             db.session.rollback()
             print(f"❌ Error en create_movement: {e}")
             return None
+
 
 
 
@@ -440,8 +431,6 @@ class ModelMovement:
                     # 3️⃣ Insertar en `movementdetail`
                     db.session.execute(
                         text("""
-=======
->>>>>>> 550730a (fix: add create invoice)
                         INSERT INTO movementdetail (
                             movement_id,
                             product_id,

@@ -51,9 +51,6 @@ product_blueprint = Blueprint('product_blueprint', __name__)
 def load_user(user_id):
     return ModelLog.get_by_id(db, user_id)
 
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    db.session.remove()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -837,14 +834,23 @@ def create_movement():
                 if not product_id_or_imei or units_to_send <= 0:
                     return jsonify({"success": False, "message": f"Datos inválidos para el producto {product_id_or_imei}."}), 400
 
-                # 🔍 Obtener el verdadero `product_id` desde la BD usando el IMEI
+                # 🔍 Obtener el verdadero `product_id` desde la BD usando el IMEI o el ID
                 product = db.session.execute(
-                    text("""
-                    SELECT product_id FROM products 
-                    WHERE imei = :imei OR product_id = :product_id
-                    """),
-                    {"imei": product_id_or_imei, "product_id": product_id_or_imei}
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": product_id_or_imei}
                 ).fetchone()
+
+                # Si no lo encuentra por IMEI, intenta buscar por product_id si es un número válido
+                if not product:
+                    try:
+                        product_id_int = int(product_id_or_imei)  # Convertir a entero si es posible
+                        product = db.session.execute(
+                            text("SELECT product_id FROM products WHERE product_id = :product_id"),
+                            {"product_id": product_id_int}
+                        ).fetchone()
+                    except ValueError:
+                        # Si no se puede convertir a entero, significa que no es un product_id válido
+                        product = None
 
                 if not product:
                     return jsonify({"success": False, "message": f"Producto con IMEI o ID {product_id_or_imei} no encontrado."}), 404
@@ -887,9 +893,6 @@ def create_movement():
         db.session.rollback()
         print(f"❌ Error al procesar la solicitud: {str(e)}")
         return jsonify({"success": False, "message": f"Error interno en el servidor: {str(e)}"}), 500
-
-
-
 
 
 
@@ -1008,23 +1011,49 @@ def show_productsUser():
 
 
 
+import time
+from flask import make_response
 
 @app.route('/get_product_by_imei/<imei>', methods=['GET'])
 @login_required
 def get_product_by_imei(imei):
     try:
+        print(f"📡 Solicitud recibida para IMEI: {imei}")
+
+        start_time = time.time()  # ⏱️ Medir tiempo de ejecución
+
         product = ModelProduct.get_product_imei(db, imei)
+
         if product:
             product = product[0]
-            return jsonify(
-                success=True, 
-                product=product, 
-                current_user_warehouse_id=current_user.warehouse_id
-            )
-        else:
-            return jsonify(success=False, message="Producto no encontrado.")
+
+            response_data = {
+                "success": True,
+                "product": product,
+                "current_user_warehouse_id": current_user.warehouse_id
+            }
+
+            print(f"✅ Producto encontrado en {time.time() - start_time:.4f} segundos")
+
+            # 🔹 Convertir la respuesta en JSON
+            response = make_response(jsonify(response_data))
+
+            # 🔹 Evitar que el navegador almacene en caché la respuesta
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "-1"
+
+            return response
+
+        print(f"⚠️ Producto no encontrado en {time.time() - start_time:.4f} segundos")
+        return make_response(jsonify({"success": False, "message": "Producto no encontrado"}), 200)
+
     except Exception as e:
-        return jsonify(success=False, message=str(e))
+        print(f"❌ Error en la búsqueda del IMEI: {e}")
+        return make_response(jsonify({"success": False, "message": str(e)}), 500)
+
+
+
 
 
 
