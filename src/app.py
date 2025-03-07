@@ -454,26 +454,34 @@ def add_invoiceUser():
 
             print(f"📄 Factura creada con ID: {invoice_id}")
 
+            # **2️⃣ Insertar detalles de factura**
+            success = ModelInvoice.create_invoice_detail(db, invoice_id, products)
+            if not success:
+                flash('Error al registrar los productos en la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
 
+            print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
 
-        # # **2️⃣ Crear el movimiento de venta**
-        movement_id = ModelMovement.create_movement_invoice(
-            db=db,
-            movement_type="sale",
-            origin_warehouse_id=current_user.warehouse_id,
-            movement_description=f"Venta asociada a la factura {invoice_id}",
-            user_id=current_user.user_id,  # Cambiar si es dinámico
-            products=products
-        )
+            # **3️⃣ Crear el movimiento de venta**
+            movement_id = ModelMovement.create_movement(
+                db=db,
+                movement_type="sale",
+                origin_warehouse_id=3,  
+                destination_warehouse_id=None,
+                movement_description=f"Venta asociada a la factura {invoice_id}",
+                user_id=9,  
+                products=products
+            )
 
-        if not movement_id:
+            if not movement_id:
                 flash('Error al registrar el movimiento.', 'error')
                 db.session.rollback()
                 return redirect(url_for('show_invoicesUser'))
 
-        print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
+            print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
 
-        flash('Factura y movimiento de venta creados exitosamente.', 'success')
+            flash('Factura y movimiento de venta creados exitosamente.', 'success')
 
     except Exception as e:
         db.session.rollback()  # Revertir cualquier cambio en caso de error
