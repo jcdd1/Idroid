@@ -174,7 +174,7 @@ class ModelMovement:
             db.session.execute(
                 text("""
                 UPDATE movement 
-                SET status = 'Rechazado', rejection_reason = :reason
+                SET status = 'Rechazado', notes = :reason
                 WHERE movement_id = :movement_id
                 """),
                 {"movement_id": movement_id, "reason": reason}
