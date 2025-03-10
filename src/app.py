@@ -44,6 +44,8 @@ csrf.init_app(app)
 from flask import Blueprint
 
 
+
+
 product_blueprint = Blueprint('product_blueprint', __name__)
 
 
@@ -64,6 +66,150 @@ def inject_user_info():
             "current_warehouse_id": current_user.warehouse_id
         }
     return {}
+
+
+@app.route('/users', methods=['GET'])
+@login_required
+def show_users():
+    try:
+        # Obtener los usuarios con la bodega asociada
+        users = db.session.execute(text("""
+            SELECT u.user_id, u.name, u.role, u.username, w.warehouse_name, u.warehouse_id
+            FROM users u
+            LEFT JOIN warehouses w ON u.warehouse_id = w.warehouse_id
+        """)).mappings().all()
+
+        users_list = [dict(user) for user in users]
+
+        # Obtener todas las bodegas disponibles
+        warehouses = db.session.execute(text("""
+            SELECT warehouse_id AS id, warehouse_name AS name FROM warehouses
+        """)).mappings().all()
+
+        warehouses_list = [dict(warehouse) for warehouse in warehouses]
+
+        return render_template("menu/users.html", users=users_list, warehouses=warehouses_list)
+
+    except Exception as e:
+        flash(f"❌ Error al obtener los datos: {e}", "error")
+        return redirect(url_for('dashboard'))
+
+
+
+@app.route('/edit_user', methods=['POST'])
+@login_required
+def edit_user():
+    try:
+        user_id = request.form.get('user_id')
+        name = request.form.get('name')
+        role = request.form.get('role')
+        warehouse_id = request.form.get('warehouse_id')
+        username = request.form.get('username')
+
+        db.session.execute(text("""
+            UPDATE users
+            SET name = :name, role = :role, warehouse_id = :warehouse_id, username = :username
+            WHERE user_id = :user_id
+        """), {
+            "user_id": user_id,
+            "name": name,
+            "role": role,
+            "warehouse_id": warehouse_id,
+            "username": username
+        })
+
+        db.session.commit()
+        flash("Usuario actualizado con éxito", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al actualizar usuario: {e}", "error")
+
+    return redirect(url_for("show_users"))
+
+
+
+
+@app.route('/create_user', methods=['GET', 'POST'])
+@login_required
+def create_user():
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            role = request.form.get('role')
+            warehouse_id = request.form.get('warehouse_id')
+            username = request.form.get('username')
+            password = request.form.get('userpassword')  # Contraseña ingresada por el usuario
+
+            # Insertar usuario con la contraseña encriptada con bcrypt
+            db.session.execute(text("""
+                INSERT INTO users (name, role, warehouse_id, username, userpassword)
+                VALUES (:name, :role, :warehouse_id, :username, crypt(:password, gen_salt('bf')))
+            """), {"name": name, "role": role, "warehouse_id": warehouse_id, "username": username, "password": password})
+
+            db.session.commit()
+            flash("✅ Usuario creado con éxito", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"❌ Error: {e}", "error")
+
+        return redirect(url_for("show_users"))
+
+    # 🔹 Obtener las bodegas disponibles para el desplegable
+    warehouses = db.session.execute(text("SELECT warehouse_id, warehouse_name FROM warehouses")).fetchall()
+    warehouses_list = [{"id": w.warehouse_id, "name": w.warehouse_name} for w in warehouses]
+
+    return render_template("menu/create_user.html", warehouses=warehouses_list)
+
+
+
+
+@app.route('/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    try:
+        # Verificar si el usuario existe
+        user = db.session.execute(text("SELECT * FROM users WHERE user_id = :user_id"), {"user_id": user_id}).fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "Usuario no encontrado"}), 404
+
+        # Ejecutar la eliminación
+        db.session.execute(text("DELETE FROM users WHERE user_id = :user_id"), {"user_id": user_id})
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Usuario eliminado correctamente"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+
+@app.route('/pending_movementsSuperAd')
+@login_required
+def pending_movementsSuperAd():
+    user_id = current_user.user_id 
+    
+    print(f"Usuario autenticado: {user_id}") 
+
+    movements = db.session.execute(
+    text("""
+    SELECT m.movement_id, m.origin_warehouse_id, m.destination_warehouse_id, m.creation_date, md.product_id, 
+           md.quantity, p.productname, p.imei, p.product_id
+    FROM movement m
+    JOIN movementdetail md ON m.movement_id = md.movement_id
+    JOIN products p ON md.product_id = p.product_id
+    WHERE m.handled_by_user_id = :user_id AND md.status = 'Pendiente'
+    """),
+    {"user_id": user_id}
+    ).mappings().fetchall()  
+
+
+    print(f"Movements encontrados: {movements}") 
+
+    return render_template("menu/pending_movementsSuperAd.html", movements=movements)
+
+
+
+
 
 @app.route('/pending_movements')
 @login_required
@@ -173,17 +319,19 @@ def show_invoices():
     document_number = request.args.get('document_number', '')  
     client_name = request.args.get('client_name', '')  
     invoice_type = request.args.get('type', '')  
+    status = request.args.get('status', '')  # Capturar el estado
+
+    print(f"🔍 Parámetros de búsqueda -> Documento: {document_number}, Cliente: {client_name}, Tipo: {invoice_type}, Estado: {status}")
 
     # Paginación
     page = request.args.get('page', 1, type=int)
     per_page = 10
     offset = (page - 1) * per_page
 
-
-    # Consultar facturas
-    if document_number or client_name or invoice_type:
+    # Consultar facturas con filtro de estado
+    if document_number or client_name or invoice_type or status:
         invoices, total = ModelInvoice.filter_invoices(
-            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, limit=per_page, offset=offset
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
         )
     else:
         invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
@@ -198,7 +346,8 @@ def show_invoices():
         total_pages=total_pages,
         document_number=document_number,
         client_name=client_name,
-        invoice_type=invoice_type
+        invoice_type=invoice_type,
+        status=status
     )
 
 
@@ -634,6 +783,40 @@ def show_returnsAdmin():
         movement_detail_id=movement_detail_id
     )
 
+
+
+@app.route('/returnSuperAd', methods=['GET'])
+@login_required
+def show_returnSuperAd():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Capturar parámetros de búsqueda
+    return_id = request.args.get('return_id', '').strip()
+    movement_detail_id = request.args.get('movement_detail_id', '').strip()
+
+    print(f" Parámetros de búsqueda -> ID Devolución: {return_id}, ID Movimiento: {movement_detail_id}")
+
+    # Consultar devoluciones con filtros
+    if return_id or movement_detail_id:
+        returns, total = ModelReturn.filter_returns(db, return_id=return_id, movement_detail_id=movement_detail_id, limit=per_page, offset=offset)
+    else:
+        returns = ModelReturn.get_returns_paginated(db, limit=per_page, offset=offset)
+        total = ModelReturn.count_returns(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/returnSuperAd.html',
+        returns=returns,
+        page=page,
+        total_pages=total_pages,
+        return_id=return_id,
+        movement_detail_id=movement_detail_id
+    )
+
+
 @app.route('/menuUser', methods=['GET', 'POST'])
 @login_required
 def menuUser():
@@ -896,49 +1079,6 @@ def create_movement():
 
 
 
-@app.route('/products', methods=['GET'])
-@login_required
-def show_products():
-    
-    # Parámetros de búsqueda
-    imei = request.args.get('imei')  # Valor del IMEI
-    productname = request.args.get('productname')  # Nombre del producto
-    current_status = request.args.get('current_status')  # Estado actual
-    category = request.args.get('category')
-    warehouse = request.args.get('warehouse_name')
-
-    # Paginación
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    offset = (page - 1) * per_page
-
-    warehouses_name = ModelWarehouse.get_all_warehouses(db)
-    active_invoices = ModelInvoice.get_invoices_active(db)
-    
-    # Verifica si hay filtros
-    if imei or productname or current_status or warehouse or category:
-        # Aplica filtro si hay parámetros
-        products = ModelProduct.filter_products(
-            db, imei=imei, productname=productname, current_status=current_status, warehouse = warehouse, category = category,limit=per_page, offset=offset
-        )    
-    else:
-        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
-
-    total = len(products)
-    
-    total_pages = (total + per_page - 1) // per_page
-
-    return render_template(
-        'menu/products.html',
-        products=products,
-        page=page,
-        total_pages=total_pages,
-        current_status=current_status,
-        warehouses_name = warehouses_name,
-        active_invoices=active_invoices
-    )
-
-
 @app.route('/get_all_warehouses', methods=['GET'])
 def get_all_warehouses():
     try:
@@ -1051,6 +1191,60 @@ def get_product_by_imei(imei):
     except Exception as e:
         print(f"❌ Error en la búsqueda del IMEI: {e}")
         return make_response(jsonify({"success": False, "message": str(e)}), 500)
+
+
+
+@app.route('/products', methods=['GET'])
+@login_required
+def show_products():
+    # Parámetros de búsqueda
+    imei = request.args.get('imei')
+    productname = request.args.get('productname')
+    current_status = request.args.get('current_status')
+    category = request.args.get('category')
+    warehouse = request.args.get('warehouse_name')
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Obtener los almacenes y facturas activas (solo una vez)
+    warehouses = ModelWarehouse.get_all_warehouses(db)
+    active_invoices = ModelInvoice.get_invoices_active(db)
+
+    # Verificar si hay almacenes disponibles
+    if not warehouses:
+        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
+
+    # Obtener productos con o sin filtros
+    if imei or productname or current_status or warehouse or category:
+        products = ModelProduct.filter_products(
+            db, imei=imei, productname=productname, current_status=current_status, 
+            warehouse=warehouse, category=category, limit=per_page, offset=offset
+        )
+    else:
+        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
+
+    # Verificar si hay productos y si contienen la bodega
+    if products:
+        print("🔍 Ejemplo de producto obtenido:", products[0])
+    else:
+        print("⚠️ No se encontraron productos.")
+
+    total = len(products)
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/products.html',
+        products=products,
+        page=page,
+        total_pages=total_pages,
+        current_status=current_status,
+        warehouses=warehouses,
+        active_invoices=active_invoices
+    )
+
 
 
 
