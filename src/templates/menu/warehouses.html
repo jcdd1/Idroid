@@ -1,0 +1,140 @@
+{% extends 'menu.html' %}
+
+{% block customScripts %}
+<script src="{{ url_for('static', filename='js/ScriptWarehouses.js') }}"></script>
+{% endblock %}
+
+{% block dynamicContent %}
+<h1 class="text-success">Gestión de Bodegas</h1>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    <div class="mt-3">
+        {% for category, message in messages %}
+            {% if category == 'success' %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <strong>{{ message }}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
+{% endwith %}
+
+<!-- Botón para agregar bodega -->
+<div class="d-flex justify-content-end mb-3">
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createWarehouseModal">
+        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Añadir" style="width: 25px; height: 25px;"> Crear Bodega
+    </button>
+</div>
+
+<!-- Tabla de Bodegas -->
+<div class="table-responsive mt-4">
+    <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
+        <thead class="bg-success text-white text-center">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Ubicación</th>
+                <th>Capacidad</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for warehouse in warehouses %}
+            <tr>
+                <td>{{ warehouse.warehouse_id }}</td>
+                <td>{{ warehouse.warehouse_name }}</td>
+                <td>{{ warehouse.address }}</td>
+                <td>{{ warehouse.phone }}</td>
+                <td class="text-center">
+                    <!-- Botón Editar -->
+                    <button class="btn btn-success btn-sm edit-warehouse-btn" 
+                        data-bs-toggle="modal"
+                        data-bs-target="#editWarehouseModal"
+                        data-warehouse='{{ warehouse | tojson }}'>
+                        <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        
+    </table>
+</div>
+
+<!-- Modal para editar bodega -->
+<div class="modal fade" id="editWarehouseModal" tabindex="-1" aria-labelledby="editWarehouseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('edit_warehouse') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="edit_warehouse_id" name="warehouse_id">
+
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="editWarehouseModalLabel">Editar Bodega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_warehouse_name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="edit_warehouse_name" name="warehouse_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_address" class="form-label">Dirección</label>
+                        <input type="text" class="form-control" id="edit_address" name="address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_phone" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="edit_phone" name="phone" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="background-color: #d4edda;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal para crear bodega -->
+<div class="modal fade" id="createWarehouseModal" tabindex="-1" aria-labelledby="createWarehouseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('create_warehouse') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="createWarehouseModalLabel">Crear Bodega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="warehouse_name" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="warehouse_name" name="warehouse_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="address" class="form-label">Ubicación</label>
+                            <input type="text" class="form-control" id="address" name="address" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Telefono</label>
+                            <input type="number" class="form-control" id="phone" name="phone" min="1" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="background-color: #d4edda;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-success">Crear Bodega</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -554,6 +554,77 @@ def edit_invoiceUser():
 
 
 
+# 📌 Ruta para mostrar todas las bodegas
+@app.route('/warehouses', methods=['GET'])
+def show_warehouses():
+    warehouses = db.session.execute(text("SELECT * FROM warehouses")).mappings().all()
+    
+    # Convertir a lista de diccionarios
+    warehouses_list = [dict(warehouse) for warehouse in warehouses]
+
+    # 🔍 Ver en consola qué datos está trayendo
+    print("📊 Datos de bodegas:", warehouses_list)
+
+    return render_template("menu/warehouses.html", warehouses=warehouses_list)
+
+
+# 📌 Ruta para crear una nueva bodega
+@app.route('/create_warehouse', methods=['POST'])
+def create_warehouse():
+    try:
+        data = request.form
+        warehouse_name = data.get('warehouse_name')
+        address = data.get('address')
+        phone = data.get('phone')
+
+        print(f"📥 Datos recibidos: {warehouse_name}, {address}, {phone}")
+
+        if not warehouse_name or not address or not phone:
+            flash("⚠️ Todos los campos son obligatorios", "danger")
+            return redirect(url_for('show_warehouses'))
+
+        # ⚠️ NO incluir warehouse_id en el INSERT
+        query = text("INSERT INTO warehouses (warehouse_name, address, phone) VALUES (:warehouse_name, :address, :phone)")
+        db.session.execute(query, {"warehouse_name": warehouse_name, "address": address, "phone": phone})
+        db.session.commit()
+
+        flash("✅ Bodega creada correctamente.", "success")
+        return redirect(url_for('show_warehouses'))
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error al crear bodega: {str(e)}")
+        flash(f"❌ Error al crear bodega: {str(e)}", "danger")
+        return redirect(url_for('show_warehouses'))
+
+# 📌 Ruta para editar una bodega
+@app.route('/edit_warehouse', methods=['POST'])
+def edit_warehouse():
+    try:
+        warehouse_id = request.form.get('warehouse_id')
+        warehouse_name = request.form.get('warehouse_name')
+        address = request.form.get('address')
+        phone = request.form.get('phone')
+
+        if not warehouse_id or not warehouse_name or not address or not phone:
+            flash("⚠️ Todos los campos son obligatorios.", "danger")
+            return redirect(url_for('show_warehouses'))
+
+        # ⚠️ Asegurar que los nombres de columnas coincidan con la base de datos
+        query = text("UPDATE warehouses SET warehouse_name = :warehouse_name, address = :address, phone = :phone WHERE warehouse_id = :warehouse_id")
+        db.session.execute(query, {"warehouse_name": warehouse_name, "address": address, "phone": phone, "warehouse_id": warehouse_id})
+        db.session.commit()
+
+        flash("✅ Bodega editada correctamente.", "success")
+        return redirect(url_for('show_warehouses'))
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error al editar bodega: {str(e)}")
+        flash(f"❌ Error al editar bodega: {str(e)}", "danger")
+        return redirect(url_for('show_warehouses'))
+
+
 
 @app.route('/add_invoiceUser', methods=['POST'])
 def add_invoiceUser():
