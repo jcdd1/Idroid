@@ -303,15 +303,6 @@ def reject_movement(movement_id):
     success = ModelMovement.reject_movement(db, movement_id, reason)
     return jsonify({"success": success, "message": "Movimiento rechazado con éxito." if success else "Error al rechazar el movimiento."}), (200 if success else 500)
 
-
-
-
-
-
-
-
-
-
 @app.route('/invoices', methods=['GET'])
 @login_required
 def show_invoices():
@@ -680,14 +671,16 @@ def add_invoiceUser():
 
             print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
 
+
+
             # **3️⃣ Crear el movimiento de venta**
             movement_id = ModelMovement.create_movement(
                 db=db,
                 movement_type="sale",
-                origin_warehouse_id=3,  
+                origin_warehouse_id= current_user.warehouse_id,  
                 destination_warehouse_id=None,
                 movement_description=f"Venta asociada a la factura {invoice_id}",
-                user_id=9,  
+                user_id= current_user.user_id,  
                 products=products
             )
 

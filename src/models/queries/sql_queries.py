@@ -26,13 +26,16 @@ class SQLQueries:
                 p.*,
                 w.warehouse_name,
                 w.warehouse_id,
-                ws.units AS stock_disponible
+                (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible,
+                MAX(md.status) AS status
             FROM 
                 warehousestock ws
             JOIN 
                 warehouses w ON ws.warehouse_id = w.warehouse_id
             JOIN 
                 products p ON ws.product_id = p.product_id
+            LEFT JOIN
+                movementdetail md ON md.product_id = p.product_id AND md.status = 'Transfer'
             WHERE
                 w.warehouse_id = :warehouse_id AND p.product_id = :product_id
 

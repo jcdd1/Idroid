@@ -113,7 +113,7 @@
                 <td>{{ product.color }}</td>
                 <td>{{ product.description }}</td>
                 <td>{{ product.category }}</td>
-                <td>{{ product.units }}</td>
+                <td>{{ product.stock_disponible }}</td>
                 <td class="text-center">
                     <span class="badge {% if product.current_status == 'Sold' %}bg-success{% elif product.current_status == 'Under Repair' %}bg-warning{% else %}bg-secondary{% endif %}">
                         {{ product.current_status }}

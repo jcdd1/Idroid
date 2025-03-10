@@ -296,6 +296,18 @@ class ModelMovement:
                     }
                 )
 
+                db.session.execute(
+                    text("""
+                    UPDATE products 
+                    SET units = units - :units 
+                    WHERE product_id = :product_id
+                    """),
+                    {
+                        "product_id": product_id,
+                        "units": units_to_move
+                    }
+                )
+
                 # 🔹 Si es transferencia, aumentar stock en el destino
                 if movement_type == "transfer":
                     # Verificar si el producto ya existe en el almacén destino
