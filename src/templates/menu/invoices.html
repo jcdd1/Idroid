@@ -4,6 +4,7 @@
 <script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptInvoiceDetail.js') }}"></script>
 
 {% endblock %}
 
@@ -36,7 +37,7 @@
 
 
 <!-- 🔍 Formulario de búsqueda -->
-<form method="GET" action="{{ url_for('show_invoicesUser') }}" class="row g-3 mt-4">
+<form method="GET" action="{{ url_for('show_invoices') }}" class="row g-3 mt-4">
     <div class="col-md-3">
         <input type="text" name="document_number" class="form-control border-success" placeholder="Buscar por Número de Documento" value="{{ document_number }}">
     </div>
@@ -77,7 +78,13 @@
             {% for invoice in invoices %}
             <tr class="table-light">
                 <td class="text-center">{{ invoice.invoice_id }}</td>
-                <td class="text-center">{{ invoice.type }}</td>
+                <td class="text-center" 
+                    style="cursor: pointer; color: #2d6a4f;"
+                    data-bs-toggle="modal"
+                    data-bs-target="#invoiceDetailModal"
+                    data-invoice-id="{{ invoice.invoice_id }}">
+                    {{ invoice.type }}
+                </td>
                 <td class="text-center">{{ invoice.document_number }}</td>
                 <td class="text-center">{{ invoice.date }}</td>
                 <td class="text-center">{{ invoice.client }}</td>
@@ -110,12 +117,44 @@
 </div>
 
 
+<!-- Modal para Detalle de Factura -->
+<div class="modal fade" id="invoiceDetailModal" tabindex="-1" aria-labelledby="invoiceDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f8f9fa;">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="invoiceDetailModalLabel">Detalle de Factura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm shadow-sm rounded">
+                        <thead class="bg-success text-white text-center">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceDetailBody">
+                            <!-- Contenido dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: #e9ecef;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Modal para editar factura -->
 <div class="modal fade" id="editInvoiceModal" tabindex="-1" aria-labelledby="editInvoiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="background-color: #f0fdf4;"> 
-            <form id="editInvoiceForm" method="POST" action="{{ url_for('edit_invoiceUser') }}">
+            <form id="editInvoiceForm" method="POST" action="{{ url_for('edit_invoice') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="edit_invoice_id" name="invoice_id">
 
@@ -194,7 +233,7 @@
 <div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="background-color: #f0fdf4;"> 
-            <form method="POST" action="{{ url_for('add_invoiceUser') }}">
+            <form method="POST" action="{{ url_for('add_invoice') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="modal-header bg-success text-white"> 
@@ -302,13 +341,13 @@
 <!-- Paginación -->
 <div class="d-flex justify-content-between align-items-center mt-4">
     {% if page > 1 %}
-        <a href="{{ url_for('show_invoicesUser', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
+        <a href="{{ url_for('show_invoices', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
     {% endif %}
 
     <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
 
     {% if page > total_pages %}
-        <a href="{{ url_for('show_invoicesUser', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
+        <a href="{{ url_for('show_invoices', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
     {% endif %}
 </div>
 

@@ -9,6 +9,8 @@
     <script src="{{ url_for('static', filename='js/ScriptMassiveMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptEditUnits.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -104,7 +106,7 @@
                 <td style="cursor: pointer; color: #2d6a4f;" 
                     data-bs-toggle="modal" 
                     data-bs-target="#viewMovementsModal" 
-                    data-imei="{{ product.product_id }}">
+                    data-imei="{{ product.imei }}">
                     {{ product.productname }}
                 </td>
                 <td>{{ product.imei }}</td>
@@ -113,7 +115,21 @@
                 <td>{{ product.color }}</td>
                 <td>{{ product.description }}</td>
                 <td>{{ product.category }}</td>
-                <td>{{ product.stock_disponible }}</td>
+
+                <!-- Edición de unidades -->
+                <td class="unit-field" data-imei="{{ product.imei }}">
+                    <span class="unit-display">{{ product.stock_disponible }}</span>
+                    <button class="btn btn-sm btn-primary btn-edit-units">Edit</button>
+                    <div class="unit-editor d-none mt-2">
+                        <div class="input-group">
+                            <button class="btn btn-danger btn-sm btn-subtract">-</button>
+                            <input type="text" class="form-control text-center unit-input" value="{{ product.stock_disponible }}" readonly>
+                            <button class="btn btn-success btn-sm btn-add">+</button>
+                        </div>
+                        <button class="btn btn-secondary btn-sm btn-cancel-edit mt-1">Cancelar</button>
+                    </div>
+                </td>
+
                 <td class="text-center">
                     <span class="badge {% if product.current_status == 'Sold' %}bg-success{% elif product.current_status == 'Under Repair' %}bg-warning{% else %}bg-secondary{% endif %}">
                         {{ product.current_status }}
@@ -137,6 +153,7 @@
                     <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}">
                         Código
                     </button>
+
                     <!-- Botón de editar -->
                     <button type="button" class="btn btn-success btn-sm" 
                             data-bs-toggle="modal" 
@@ -145,7 +162,14 @@
                             data-product='{{ product | tojson | safe }}'>  
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
-                </td>
+
+                    <!-- Botones para cambiar estado -->
+                    <button class="btn btn-warning btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="Under Repair">
+                        Reparar
+                    </button>
+                    <button class="btn btn-secondary btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="In Warehouse">
+                        Bodega
+                    </button>
                 </td>   
             </tr>
             {% endfor %}
@@ -399,7 +423,7 @@
 <!-- Modal de Movimiento Masivo -->
 <div class="modal fade" id="massiveMovementModal" tabindex="-1" aria-labelledby="massiveMovementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;">
+        <div class="modal-content" style="background-color: #f0fdf4; height: 90vh;">
             <form id="massiveMovementForm" onsubmit="return false;"> 
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -408,7 +432,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
+                <!-- Hacer el contenido completamente desplazable -->
+                <div class="modal-body" style="height: 75vh; overflow-y: auto;">
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label for="imei_global" class="form-label">IMEI del Producto</label>

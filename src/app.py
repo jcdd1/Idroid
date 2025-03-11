@@ -303,43 +303,6 @@ def reject_movement(movement_id):
     success = ModelMovement.reject_movement(db, movement_id, reason)
     return jsonify({"success": success, "message": "Movimiento rechazado con éxito." if success else "Error al rechazar el movimiento."}), (200 if success else 500)
 
-@app.route('/invoices', methods=['GET'])
-@login_required
-def show_invoices():
-    # Parámetros de búsqueda
-    document_number = request.args.get('document_number', '')  
-    client_name = request.args.get('client_name', '')  
-    invoice_type = request.args.get('type', '')  
-    status = request.args.get('status', '')  # Capturar el estado
-
-    print(f"🔍 Parámetros de búsqueda -> Documento: {document_number}, Cliente: {client_name}, Tipo: {invoice_type}, Estado: {status}")
-
-    # Paginación
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-    offset = (page - 1) * per_page
-
-    # Consultar facturas con filtro de estado
-    if document_number or client_name or invoice_type or status:
-        invoices, total = ModelInvoice.filter_invoices(
-            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
-        )
-    else:
-        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
-        total = ModelInvoice.count_invoices(db)
-
-    total_pages = (total + per_page - 1) // per_page
-
-    return render_template(
-        'menu/invoices.html',
-        invoices=invoices,
-        page=page,
-        total_pages=total_pages,
-        document_number=document_number,
-        client_name=client_name,
-        invoice_type=invoice_type,
-        status=status
-    )
 
 
 @app.route('/update_movement_status', methods=['POST'])
@@ -459,11 +422,49 @@ def update_status(imei):
             return jsonify({'success': False, 'message': response.get('error', 'Error desconocido.')}), 404
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+    
 
-
-@app.route('/invoicesUser', methods=['GET'])
+@app.route('/get_invoice_details/<int:invoice_id>')
 @login_required
-def show_invoicesUser():
+def get_invoice_details(invoice_id):
+    try:
+        details = db.session.execute(
+            text("""
+                SELECT p.productname, id.quantity, id.price
+                FROM invoicedetail id
+                JOIN products p ON id.product_id = p.product_id
+                WHERE id.invoice_id = :invoice_id
+            """),
+            {"invoice_id": invoice_id}
+        ).mappings().fetchall()
+
+        print(f"Detalles obtenidos para factura {invoice_id}: {details}")  # Depuración en consola
+
+        if not details:
+            return jsonify({"message": f"La factura {invoice_id} no tiene productos asociados."}), 200
+
+        return jsonify([
+            {
+                "product_name": row["productname"], 
+                "quantity": row["quantity"], 
+                "price": float(row["price"]) 
+            }
+            for row in details
+        ])
+
+    except Exception as e:
+        print(f"Error al obtener detalles de la factura {invoice_id}: {str(e)}")
+        return jsonify({"error": "Error en el servidor"}), 500
+
+
+
+
+
+
+
+@app.route('/invoices', methods=['GET'])
+@login_required
+def show_invoices():
     # Parámetros de búsqueda
     document_number = request.args.get('document_number', '')  
     client_name = request.args.get('client_name', '')  
@@ -489,7 +490,7 @@ def show_invoicesUser():
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
-        'menu/invoicesUser.html',
+        'menu/invoices.html',
         invoices=invoices,
         page=page,
         total_pages=total_pages,
@@ -498,6 +499,7 @@ def show_invoicesUser():
         invoice_type=invoice_type,
         status=status
     )
+
 
 @app.route('/invoicesAdmin', methods=['GET'])
 @login_required
@@ -539,9 +541,20 @@ def show_invoicesAdmin():
 
 
 
+
 @app.route('/edit_invoiceUser', methods=['POST'])
 def edit_invoiceUser():
     return redirect(url_for('show_invoicesUser'))
+
+@app.route('/edit_invoice', methods=['POST'])
+def edit_invoice():
+    return redirect(url_for('show_invoices'))
+
+
+@app.route('/edit_invoiceAdmin', methods=['POST'])
+def edit_invoiceAdmin():
+    return redirect(url_for('show_invoicesAdmin'))
+
 
 
 
@@ -701,7 +714,88 @@ def add_invoiceUser():
     return redirect(url_for('show_invoicesUser'))
 
 
+@app.route('/add_invoiceAdmin', methods=['POST'])
+def add_invoiceAdmin():
+    try:
+        print(f"📝 Formulario recibido: {request.form}") 
 
+        invoice_type = request.form.get('type')
+        document_number = request.form.get('document_number')
+        date = request.form.get('date')
+        client = request.form.get('client')
+        status = request.form.get('status')
+
+        if not all([invoice_type, document_number, date, client, status]):
+            flash('Todos los campos son obligatorios.', 'error')
+            return redirect(url_for('show_invoicesAdmin'))
+
+        products_json = request.form.get('products')  
+        if not products_json:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesAdmin'))
+
+        products = json.loads(products_json)
+
+        if not products:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesAdmin'))
+
+        
+        with db.session.begin():  # Garantiza que todas las operaciones sean atómicas
+            # **1️⃣ Crear la factura**
+            invoice_id = ModelInvoice.create_invoice(
+                db=db,
+                invoice_type=invoice_type,
+                document_number=document_number,
+                date=date,
+                client=client,
+                status=status
+            )
+
+            if not invoice_id:
+                flash('Error al crear la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
+
+            print(f"📄 Factura creada con ID: {invoice_id}")
+
+            # **2️⃣ Insertar detalles de factura**
+            success = ModelInvoice.create_invoice_detail(db, invoice_id, products)
+            if not success:
+                flash('Error al registrar los productos en la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
+
+            print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
+
+
+
+            # **3️⃣ Crear el movimiento de venta**
+            movement_id = ModelMovement.create_movement(
+                db=db,
+                movement_type="sale",
+                origin_warehouse_id= current_user.warehouse_id,  
+                destination_warehouse_id=None,
+                movement_description=f"Venta asociada a la factura {invoice_id}",
+                user_id= current_user.user_id,  
+                products=products
+            )
+
+            if not movement_id:
+                flash('Error al registrar el movimiento.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesAdmin'))
+
+            print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
+
+            flash('Factura y movimiento de venta creados exitosamente.', 'success')
+
+    except Exception as e:
+        db.session.rollback()  # Revertir cualquier cambio en caso de error
+        print(f"❌ Error al crear la factura y movimientos: {e}")
+        flash('Ocurrió un error al procesar la solicitud.', 'error')
+
+    return redirect(url_for('show_invoicesAdmin'))
 
 
 
@@ -709,39 +803,85 @@ def add_invoiceUser():
 @app.route('/add_invoice', methods=['POST'])
 def add_invoice():
     try:
-        # Obtener datos del formulario
+        print(f"📝 Formulario recibido: {request.form}") 
+
         invoice_type = request.form.get('type')
         document_number = request.form.get('document_number')
         date = request.form.get('date')
         client = request.form.get('client')
         status = request.form.get('status')
 
-        # Validar datos
-        if not invoice_type or not document_number or not date or not client or not status:
+        if not all([invoice_type, document_number, date, client, status]):
             flash('Todos los campos son obligatorios.', 'error')
-            return redirect(url_for('invoices.show_invoices'))
+            return redirect(url_for('show_invoicesUser'))
 
-        # Crear la factura utilizando el modelo
-        success = ModelInvoice.create_invoice(
-            db=db,
-            invoice_type=invoice_type,
-            document_number=document_number,
-            date=date,
-            client=client,
-            status=status
-        )
+        products_json = request.form.get('products')  
+        if not products_json:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesUser'))
 
-        if success:
-            flash('Factura creada exitosamente.', 'success')
-        else:
-            flash('Error al crear la factura.', 'error')
+        products = json.loads(products_json)
+
+        if not products:
+            flash('Debe agregar al menos un producto.', 'error')
+            return redirect(url_for('show_invoicesUser'))
+
+        
+        with db.session.begin():  # Garantiza que todas las operaciones sean atómicas
+            # **1️⃣ Crear la factura**
+            invoice_id = ModelInvoice.create_invoice(
+                db=db,
+                invoice_type=invoice_type,
+                document_number=document_number,
+                date=date,
+                client=client,
+                status=status
+            )
+
+            if not invoice_id:
+                flash('Error al crear la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
+
+            print(f"📄 Factura creada con ID: {invoice_id}")
+
+            # **2️⃣ Insertar detalles de factura**
+            success = ModelInvoice.create_invoice_detail(db, invoice_id, products)
+            if not success:
+                flash('Error al registrar los productos en la factura.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoicesUser'))
+
+            print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
+
+
+
+            # **3️⃣ Crear el movimiento de venta**
+            movement_id = ModelMovement.create_movement(
+                db=db,
+                movement_type="sale",
+                origin_warehouse_id= current_user.warehouse_id,  
+                destination_warehouse_id=None,
+                movement_description=f"Venta asociada a la factura {invoice_id}",
+                user_id= current_user.user_id,  
+                products=products
+            )
+
+            if not movement_id:
+                flash('Error al registrar el movimiento.', 'error')
+                db.session.rollback()
+                return redirect(url_for('show_invoices'))
+
+            print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
+
+            flash('Factura y movimiento de venta creados exitosamente.', 'success')
 
     except Exception as e:
-        print(f"Error al crear la factura: {e}")
+        db.session.rollback()  # Revertir cualquier cambio en caso de error
+        print(f"❌ Error al crear la factura y movimientos: {e}")
         flash('Ocurrió un error al procesar la solicitud.', 'error')
 
-    # Redirigir al listado de facturas
-    return redirect(url_for('invoices.show_invoices'))
+    return redirect(url_for('show_invoices'))
 
 
 

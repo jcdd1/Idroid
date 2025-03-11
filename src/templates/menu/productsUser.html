@@ -263,10 +263,11 @@
         </div>
     </div>
 </div>
+
 <!-- Modal de Movimiento Masivo -->
 <div class="modal fade" id="massiveMovementModal" tabindex="-1" aria-labelledby="massiveMovementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;">
+        <div class="modal-content" style="background-color: #f0fdf4; height: 90vh;">
             <form id="massiveMovementForm" onsubmit="return false;"> 
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -275,7 +276,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
+                <!-- Hacer el contenido completamente desplazable -->
+                <div class="modal-body" style="height: 75vh; overflow-y: auto;">
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label for="imei_global" class="form-label">IMEI del Producto</label>
@@ -337,6 +339,8 @@
         </div>
     </div>
 </div>
+
+
 
 
 <!-- Modal para añadir producto -->
