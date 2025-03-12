@@ -1,0 +1,91 @@
+{% extends 'menuAdmin.html' %}
+
+{% block dynamicContent %}
+<h1 class="text-success">Movimientos en mi bodega</h1>
+
+<!-- Mensajes Flash -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    <div class="mt-3">
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endwith %}
+
+<!-- Formulario de búsqueda por tipo de movimiento -->
+<form method="GET" action="{{ url_for('get_movements_admin') }}" class="row g-3 mt-4">
+    <div class="col-md-4">
+        <select name="movement_type" class="form-select border-success">
+            <option value="" {% if not request.args.get('movement_type') %}selected{% endif %}>Todos los tipos</option>
+            <option value="Entry" {% if request.args.get('movement_type') == 'Entry' %}selected{% endif %}>Entrada</option>
+            <option value="Transferencia" {% if request.args.get('movement_type') == 'Transfer' %}selected{% endif %}>Transferencia</option>
+            <option value="sale" {% if request.args.get('movement_type') == 'Sale' %}selected{% endif %}>Venta</option>
+            <option value="Update-Data" {% if request.args.get('movement_type') == 'Update-Data' %}selected{% endif %}>Actualizar Datos</option>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <button type="submit" class="btn btn-success w-100">Buscar</button>
+    </div>
+</form>
+
+<!-- Tabla de movimientos -->
+<div class="table-responsive mt-4">
+    <table class="table table-striped table-bordered table-hover shadow-sm rounded">
+        <thead class="bg-success text-white text-center">
+            <tr>
+                <th>ID</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th>Creado Por</th>
+                <th>Rol Creador</th>
+                <th>Manejado Por</th>
+                <th>Rol Manejo</th>
+                <th>Cantidad</th>
+                <th>Estado Detalle</th>
+                <th>Razón Rechazo</th>
+                <th>Cantidad Retornada</th>
+                <th>Fecha Retorno</th>
+                <th>Notas Retorno</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if movements %}
+                {% for movement in movements %}
+                <tr>
+                    <td>{{ movement.movement_id }}</td>
+                    <td>{{ movement.origin_warehouse }}</td>
+                    <td>{{ movement.destination_warehouse }}</td>
+                    <td>{{ movement.creation_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>{{ movement.movement_status }}</td>
+                    <td>{{ movement.movement_notes or 'N/A' }}</td>
+                    <td>{{ movement.movement_type }}</td>
+                    <td>{{ movement.created_by_user }}</td>
+                    <td>{{ movement.creator_role }}</td>
+                    <td>{{ movement.handled_by_user }}</td>
+                    <td>{{ movement.handler_role }}</td>
+                    <td>{{ movement.moved_quantity }}</td>
+                    <td>{{ movement.detail_status }}</td>
+                    <td>{{ movement.rejection_reason or 'N/A' }}</td>
+                    <td>{{ movement.returned_quantity or 'N/A' }}</td>
+                    <td>{{ movement.return_date.strftime('%d/%m/%Y') if movement.return_date else 'N/A' }}</td>
+                    <td>{{ movement.return_notes or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="17" class="text-center text-muted">⚠️ No hay movimientos en esta bodega.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

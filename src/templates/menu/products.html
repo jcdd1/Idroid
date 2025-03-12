@@ -41,6 +41,13 @@
         <span>Movimiento Masivo</span>
     </button>
 
+       <!-- Botón para abrir el modal de carga masiva -->
+    <button type="button" class="btn btn-success btn-lg uniform-button" 
+            data-bs-toggle="modal" data-bs-target="#cargaMasivaModal">
+        <i class="fas fa-upload"></i>
+        <span>Carga Masiva</span>
+    </button>
+
     <!-- Botón para crear producto -->
     <button type="button" class="btn btn-success btn-lg uniform-button" 
             data-bs-toggle="modal" data-bs-target="#addProductModal">
@@ -106,7 +113,7 @@
                 <td style="cursor: pointer; color: #2d6a4f;" 
                     data-bs-toggle="modal" 
                     data-bs-target="#viewMovementsModal" 
-                    data-imei="{{ product.imei }}">
+                    data-imei="{{ product.product_id }}">
                     {{ product.productname }}
                 </td>
                 <td>{{ product.imei }}</td>
@@ -245,6 +252,46 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Carga Masiva -->
+<div class="modal fade" id="cargaMasivaModal" tabindex="-1" aria-labelledby="cargaMasivaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="cargaMasivaModalLabel">Cargue Masivo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Mensajes Flash -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Formulario de carga masiva -->
+                <form action="{{ url_for('carga_masiva') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="archivo" class="form-label">Seleccionar archivo (.xlsx)</label>
+                        <input type="file" class="form-control" name="archivo" id="archivo" accept=".xlsx" required>
+                    </div>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-success">Subir Archivo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- Modal para editar producto -->
 <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">

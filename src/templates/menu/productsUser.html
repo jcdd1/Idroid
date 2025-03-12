@@ -347,7 +347,7 @@
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="background-color: #f0fdf4;"> 
-            <form method="POST" action="{{ url_for('add_product') }}">
+            <form method="POST" action="{{ url_for('add_productUser') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="add_user_id" name="add_user_id" value="{{ current_user.user_id }}">
                 <input type="hidden" id="add_warehouse_id" name="add_warehouse_id" value="{{ current_user.warehouse_id }}">

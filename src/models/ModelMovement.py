@@ -525,24 +525,264 @@ class ModelMovement:
 
 
 
+    @staticmethod
+    def get_all_movements_paginated(db, movement_type=None, page=1, per_page=10):
+        try:
+            offset = (page - 1) * per_page
+
+            query = """
+                SELECT 
+                    m.movement_id,
+                    ow.warehouse_name AS origin_warehouse,
+                    dw.warehouse_name AS destination_warehouse,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    m.notes AS movement_notes,
+                    LOWER(m.movement_type) AS movement_type,
+                    creator.name AS created_by_user,
+                    creator.role AS creator_role,
+                    handler.name AS handled_by_user,
+                    handler.role AS handler_role,
+                    md.detail_id,
+                    md.product_id,
+                    md.quantity AS moved_quantity,
+                    md.status AS detail_status,
+                    md.rejection_reason,
+                    r.return_id,
+                    r.quantity AS returned_quantity,
+                    r.return_date,
+                    r.notes AS return_notes
+                FROM movement AS m
+                JOIN movementdetail AS md ON m.movement_id = md.movement_id
+                LEFT JOIN return AS r ON md.detail_id = r.movement_detail_id
+                JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
+                JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
+                JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+            """
+
+            count_query = "SELECT COUNT(*) FROM movement"
+
+            params = {}
+            if movement_type:
+                query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+                count_query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+                params['movement_type'] = movement_type.lower()
+
+            query += " ORDER BY m.creation_date DESC LIMIT :per_page OFFSET :offset"
+
+            params['per_page'] = per_page
+            params['offset'] = offset
+
+            result = db.session.execute(text(query), params).mappings().fetchall()
+            total_movements = db.session.execute(text(count_query), params).scalar()
+
+            movements = [dict(row) for row in result] if result else []
+
+            return movements, total_movements
+
+        except Exception as e:
+            print(f"Error al obtener movimientos: {str(e)}")
+            return [], 0
+
+
+
+
+
+
+
+
+    @staticmethod
+    def get_movements_by_admin(db, warehouse_id, movement_type=None):
+        try:
+            query = """
+                SELECT 
+                    m.movement_id,
+                    ow.warehouse_name AS origin_warehouse,
+                    dw.warehouse_name AS destination_warehouse,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    m.notes AS movement_notes,
+                    LOWER(m.movement_type) AS movement_type,
+                    creator.name AS created_by_user,
+                    creator.role AS creator_role,
+                    handler.name AS handled_by_user,
+                    handler.role AS handler_role,
+                    md.detail_id,
+                    md.product_id,
+                    md.quantity AS moved_quantity,
+                    md.status AS detail_status,
+                    md.rejection_reason,
+                    r.return_id,
+                    r.quantity AS returned_quantity,
+                    r.return_date,
+                    r.notes AS return_notes
+                FROM movement AS m
+                JOIN movementdetail AS md ON m.movement_id = md.movement_id
+                LEFT JOIN return AS r ON md.detail_id = r.movement_detail_id
+                JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
+                JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
+                JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+                WHERE (m.origin_warehouse_id = :warehouse_id OR m.destination_warehouse_id = :warehouse_id)
+            """
+
+            # Aplicar filtro opcional por tipo de movimiento
+            if movement_type:
+                query += " AND LOWER(m.movement_type) = LOWER(:movement_type)"
+
+            query += " ORDER BY m.creation_date DESC"
+
+            params = {'warehouse_id': warehouse_id}
+            if movement_type:
+                params['movement_type'] = movement_type.lower()
+
+            result = db.session.execute(text(query), params).mappings().fetchall()
+            movements = [dict(row) for row in result] if result else []
+
+            return movements
+
+        except Exception as e:
+            print(f"Error al obtener movimientos de la bodega: {str(e)}")
+            return []
+
+    @staticmethod
+    def get_all_movements(db, movement_type=None):
+        try:
+            query = """
+                SELECT 
+                    m.movement_id,
+                    ow.warehouse_name AS origin_warehouse,
+                    dw.warehouse_name AS destination_warehouse,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    m.notes AS movement_notes,
+                    LOWER(m.movement_type) AS movement_type,
+                    creator.name AS created_by_user,
+                    creator.role AS creator_role,
+                    handler.name AS handled_by_user,
+                    handler.role AS handler_role,
+                    md.detail_id,
+                    md.product_id,
+                    md.quantity AS moved_quantity,
+                    md.status AS detail_status,
+                    md.rejection_reason,
+                    r.return_id,
+                    r.quantity AS returned_quantity,
+                    r.return_date,
+                    r.notes AS return_notes
+                FROM movement AS m
+                JOIN movementdetail AS md ON m.movement_id = md.movement_id
+                LEFT JOIN return AS r ON md.detail_id = r.movement_detail_id
+                JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
+                JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
+                JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+            """
+
+            # Aplicar filtro opcional por tipo de movimiento
+            if movement_type:
+                query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+
+            query += " ORDER BY m.creation_date DESC"
+
+            params = {}
+            if movement_type:
+                params['movement_type'] = movement_type.lower()
+
+            result = db.session.execute(text(query), params).mappings().fetchall()
+            movements = [dict(row) for row in result] if result else []
+
+            return movements
+
+        except Exception as e:
+            print(f"Error al obtener movimientos: {str(e)}")
+            return []
+
+
+
+
+
+
+
+
+
+
+
+
+    @staticmethod
+    def get_movements_by_user(db, user_id, movement_type=None):
+        try:
+            query = """
+                SELECT 
+                    m.movement_id,
+                    ow.warehouse_name AS origin_warehouse,
+                    dw.warehouse_name AS destination_warehouse,
+                    m.creation_date,
+                    m.status AS movement_status,
+                    m.notes AS movement_notes,
+                    m.movement_type,
+                    creator.name AS created_by_user,
+                    md.quantity AS moved_quantity
+                FROM movement AS m
+                JOIN movementdetail AS md ON m.movement_id = md.movement_id
+                JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
+                JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
+                JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                WHERE (m.created_by_user_id = :user_id OR m.handled_by_user_id = :user_id)
+            """
+
+            # Aplicar filtro opcional por tipo de movimiento
+            if movement_type:
+                query += " AND LOWER(m.movement_type) = LOWER(:movement_type)"
+
+
+
+            query += " ORDER BY m.creation_date DESC"
+
+            params = {'user_id': user_id}
+            if movement_type:
+                params['movement_type'] = movement_type.lower()
+
+
+            result = db.session.execute(text(query), params).mappings().fetchall()
+            movements = [dict(row) for row in result] if result else []
+
+            return movements
+
+        except Exception as e:
+            print(f"Error al obtener movimientos: {str(e)}")
+            return []
+
+
+
+
+
+
+
+
 
 
 
     @staticmethod
     def get_movements_by_imei(db, product_id):
-        query = text(SQLQueries.get_movements_by_product_query())
-        params = {
-                'product_id': product_id
-            }
+        try:
+            query = text(SQLQueries.get_movements_by_product_query())
+            params = {'product_id': product_id}
 
-        result = db.session.execute(query, params).mappings().fetchall()
-                            
-        if result:
-            movements = [dict(row) for row in result]
-        else:
-            movements = []
-        
-        return movements
+            print(f"Ejecutando consulta con: {params}")
+            result = db.session.execute(query, params).mappings().fetchall()
+
+            print(f"Resultados obtenidos: {result}")  # Verifica si hay datos
+
+            movements = [dict(row) for row in result] if result else []
+
+            return movements
+
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return []
+
     
     @staticmethod
     def get_pending_movements(db, warehouseid, limit, offset):

@@ -1554,6 +1554,176 @@ def add_product():
     # Redirigir al listado de productos
     return redirect(url_for('show_products'))
 
+@app.route('/add_productUser', methods=['POST'])
+def add_productUser():
+    productname = request.form.get('add_productname')
+    imei = request.form.get('add_imei')
+    storage = request.form.get('add_storage')
+    battery = request.form.get('add_battery')
+    color = request.form.get('add_color')
+    description = request.form.get('add_description')
+    cost = request.form.get('add_cost')
+    warehouse_id = request.form.get('add_warehouse_id')
+    category = request.form.get('add_category')
+    units = request.form.get('add_units')
+    supplier = request.form.get('add_supplier')
+    current_user = request.form.get('add_user_id')
+    
+    # Validar datos
+    if not productname or not imei:
+        flash('El nombre del producto e IMEI son obligatorios.', 'error')
+        return redirect(url_for('show_products'))
+
+    # Intentar añadir el producto utilizando el modelo
+    success = ModelProduct.add_product_with_initial_movement(
+        db=db,
+        productname=productname,
+        imei=imei,
+        storage=storage,
+        battery=battery,
+        color=color,
+        description=description,
+        cost=cost,
+        category=category,
+        units = units,
+        supplier = supplier,
+        warehouse_id= warehouse_id,
+        current_user = current_user
+    )
+
+    
+
+    # Mostrar mensaje según el resultado
+    if success:
+        flash('Producto añadido exitosamente.', 'success')
+    else:
+        flash('Error al añadir el producto.', 'error')
+
+    # Redirigir al listado de productos
+    return redirect(url_for('show_productsUser'))
+
+
+@app.route('/movementsUser', methods=['GET'])
+@login_required
+def get_movements_user():
+    try:
+        user_id = current_user.user_id  # Usuario autenticado
+        movement_type = request.args.get('movement_type', None)  # Captura el tipo de movimiento
+
+        # Obtener movimientos filtrados
+        movements = ModelMovement.get_movements_by_user(db, user_id, movement_type)
+
+        return render_template('menu/movementsUser.html', movements=movements)
+
+    except Exception as e:
+        flash(f"Error al cargar movimientos: {str(e)}", "danger")
+        return redirect(url_for('menu/movementsUser.html'))
+
+
+@app.route('/movementsAdmin', methods=['GET'])
+@login_required
+def get_movements_admin():
+    try:
+        warehouse_id = current_user.warehouse_id  # Obtiene la bodega del Admin
+        movement_type = request.args.get('movement_type')  # Obtiene el filtro del formulario
+
+        # Consulta solo los movimientos dentro de la bodega del Admin
+        movements = ModelMovement.get_movements_by_admin(db, warehouse_id, movement_type)
+
+        return render_template('menu/movementsAdmin.html', movements=movements)
+
+    except Exception as e:
+        flash(f"Error al cargar movimientos: {str(e)}", "danger")
+        return redirect(url_for('menu/movementsAdmin.html'))
+    
+
+
+@app.route('/movementsSuperAdmin', methods=['GET'])
+@login_required
+def get_movements_superadmin():
+    try:
+        if current_user.role != 'superAdmin':
+            flash("No tienes permisos para acceder a esta vista.", "danger")
+            return redirect(url_for('dashboard'))
+
+        # Obtiene el tipo de movimiento del formulario
+        movement_type = request.args.get('movement_type')
+
+        # Obtiene el número de página actual (por defecto 1)
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Número de movimientos por página
+
+        # Consulta con paginación
+        movements, total_movements = ModelMovement.get_all_movements_paginated(db, movement_type, page, per_page)
+
+        total_pages = (total_movements // per_page) + (1 if total_movements % per_page > 0 else 0)
+
+        return render_template(
+            'menu/movementsSuperAdmin.html',
+            movements=movements,
+            page=page,
+            total_pages=total_pages,
+            movement_type=movement_type
+        )
+
+    except Exception as e:
+        flash(f"Error al cargar movimientos: {str(e)}", "danger")
+        return redirect(url_for('get_movements_superadmin'))
+
+
+
+
+@app.route('/add_productAdmin', methods=['POST'])
+def add_productAdmin():
+    productname = request.form.get('add_productname')
+    imei = request.form.get('add_imei')
+    storage = request.form.get('add_storage')
+    battery = request.form.get('add_battery')
+    color = request.form.get('add_color')
+    description = request.form.get('add_description')
+    cost = request.form.get('add_cost')
+    warehouse_id = request.form.get('add_warehouse_id')
+    category = request.form.get('add_category')
+    units = request.form.get('add_units')
+    supplier = request.form.get('add_supplier')
+    current_user = request.form.get('add_user_id')
+    
+    # Validar datos
+    if not productname or not imei:
+        flash('El nombre del producto e IMEI son obligatorios.', 'error')
+        return redirect(url_for('show_products'))
+
+    # Intentar añadir el producto utilizando el modelo
+    success = ModelProduct.add_product_with_initial_movement(
+        db=db,
+        productname=productname,
+        imei=imei,
+        storage=storage,
+        battery=battery,
+        color=color,
+        description=description,
+        cost=cost,
+        category=category,
+        units = units,
+        supplier = supplier,
+        warehouse_id= warehouse_id,
+        current_user = current_user
+    )
+
+    
+
+    # Mostrar mensaje según el resultado
+    if success:
+        flash('Producto añadido exitosamente.', 'success')
+    else:
+        flash('Error al añadir el producto.', 'error')
+
+    # Redirigir al listado de productos
+    return redirect(url_for('show_productsAdmin'))
+
+
+
+
 
 @app.route('/edit_product', methods=['POST'])
 @login_required
@@ -1606,9 +1776,9 @@ def edit_product():
 def get_movements_by_imei(imei):
     try:
         
-        # Supongamos que este método devuelve una lista de movimientos
+        
         movements = ModelMovement.get_movements_by_imei(db, imei)
-        # Devuelve los movimientos como JSON
+        
         
         return jsonify({"movements": [movement for movement in movements]})
     except Exception as e:
