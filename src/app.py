@@ -458,6 +458,45 @@ def get_invoice_details(invoice_id):
 
 
 
+@app.route('/invoicesUser', methods=['GET'])
+@login_required
+def show_invoicesUser():
+    # Parámetros de búsqueda
+    document_number = request.args.get('document_number', '')  
+    client_name = request.args.get('client_name', '')  
+    invoice_type = request.args.get('type', '')  
+    status = request.args.get('status', '')  # Capturar el estado
+
+    print(f"🔍 Parámetros de búsqueda -> Documento: {document_number}, Cliente: {client_name}, Tipo: {invoice_type}, Estado: {status}")
+
+    # Paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    # Consultar facturas con filtro de estado
+    if document_number or client_name or invoice_type or status:
+        invoices, total = ModelInvoice.filter_invoices(
+            db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
+        )
+    else:
+        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        total = ModelInvoice.count_invoices(db)
+
+    total_pages = (total + per_page - 1) // per_page
+
+    return render_template(
+        'menu/invoicesUser.html',
+        invoices=invoices,
+        page=page,
+        total_pages=total_pages,
+        document_number=document_number,
+        client_name=client_name,
+        invoice_type=invoice_type,
+        status=status
+    )
+
+
 
 
 
