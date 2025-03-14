@@ -565,8 +565,8 @@ class ModelMovement:
 
             params = {}
             if movement_type:
-                query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
-                count_query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+                query += " WHERE LOWER(movement_type) = LOWER(:movement_type)"
+                count_query += " WHERE LOWER(movement_type) = LOWER(:movement_type)"
                 params['movement_type'] = movement_type.lower()
 
             query += " ORDER BY m.creation_date DESC LIMIT :per_page OFFSET :offset"

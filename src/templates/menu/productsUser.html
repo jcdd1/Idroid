@@ -69,12 +69,14 @@
     </div>
     <div class="col-md-3">
         <select name="warehouse_name" class="form-select border-success">
-            <option value="" {% if not warehouse_name %}selected{% endif %}>Bodegas</option>
+            <option value="" {% if not warehouse_name %}selected{% endif %}>Mi bodega</option>
             {% for warehouse in warehouses %}
-            <option value="{{ warehouse['warehouse_name'] }}" {% if warehouse_name == warehouse['warehouse_name'] %}selected{% endif %}>{{ warehouse['warehouse_name'] }}</option>
+                <option value="{{ warehouse['warehouse_name'] }}" {% if warehouse_name == warehouse['warehouse_name'] %}selected{% endif %}>
+                    {{ warehouse['warehouse_name'] }}
+                </option>
             {% endfor %}
         </select>
-    </div>
+    </div>    
     <div class="col-md-1">
         <button type="submit" class="btn btn-success w-100">Buscar</button>
     </div>
@@ -130,21 +132,38 @@
                         data-product-id="{{ product.product_id }}"
                         data-product-name="{{ product.productname }}"
                         data-origin-warehouse-id="{{ product.warehouse_id }}"
-                        {% if product.warehouse_id != current_user.warehouse_id %} disabled data-bs-toggle="tooltip" title="Acción deshabilitada: Producto en otra bodega" {% endif %}>
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
                 
                     <!-- Botón para generar código de barras -->
-                    <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}"
-                        {% if product.warehouse_id != current_user.warehouse_id %} disabled data-bs-toggle="tooltip" title="Acción deshabilitada: Producto en otra bodega" {% endif %}>
+                    <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}" 
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         Código
                     </button>
-                </td>   
+            
+                </td>
+                   
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+
+<!-- Paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+    {% if page > 1 %}
+        <a href="{{ url_for('show_productsUser', page=page-1, imei=request.args.get('imei', ''), productname=request.args.get('productname', ''), current_status=request.args.get('current_status', ''), warehouse_name=request.args.get('warehouse_name', ''), category=request.args.get('category', '')) }}" class="btn btn-outline-success">Anterior</a>
+    {% endif %}
+
+    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('show_productsUser', page=page+1, imei=request.args.get('imei', ''), productname=request.args.get('productname', ''), current_status=request.args.get('current_status', ''), warehouse_name=request.args.get('warehouse_name', ''), category=request.args.get('category', '')) }}" class="btn btn-outline-success">Siguiente</a>
+    {% endif %}
+</div>
+
 
 <!-- Modal para Crear Movimiento -->
 <div class="modal fade" id="createMovementModal" tabindex="-1" aria-labelledby="createMovementModalLabel" aria-hidden="true">
@@ -425,20 +444,6 @@
             </form>
         </div>
     </div>
-</div>
-
-
-<!-- Paginación -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    {% if page > 1 %}
-        <a href="{{ url_for('show_productsUser', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
-    {% endif %}
-
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
-
-    {% if page < total_pages %}
-        <a href="{{ url_for('show_productsUser', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
-    {% endif %}
 </div>
 {% endblock %}
 

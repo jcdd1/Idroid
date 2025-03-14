@@ -60,6 +60,7 @@
     </div>
 </form>
 
+
 <!-- Tabla de facturas -->
 <div class="table-responsive mt-4">
     <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
@@ -114,6 +115,20 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<!-- Paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+    {% if page > 1 %}
+        <a href="{{ url_for('show_invoices', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
+    {% endif %}
+
+<span class="text-success">Página {{ page }} de {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('show_invoices', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
+    {% endif %}
+
 </div>
 
 
@@ -338,17 +353,5 @@
 </div>
 
 
-<!-- Paginación -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    {% if page > 1 %}
-        <a href="{{ url_for('show_invoices', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
-    {% endif %}
-
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
-
-    {% if page > total_pages %}
-        <a href="{{ url_for('show_invoices', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
-    {% endif %}
-</div>
 
 {% endblock %}

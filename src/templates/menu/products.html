@@ -184,6 +184,36 @@
     </table>
 </div>
 
+
+<!-- Paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+    {% if page > 1 %}
+        <a href="{{ url_for('show_products', 
+                page=page-1, 
+                imei=request.args.get('imei', ''), 
+                productname=request.args.get('productname', ''), 
+                current_status=request.args.get('current_status', ''), 
+                warehouse_name=request.args.get('warehouse_name', ''), 
+                category=request.args.get('category', '')) }}" 
+                class="btn btn-outline-success">Anterior</a>
+    {% endif %}
+
+    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('show_products', 
+                page=page+1, 
+                imei=request.args.get('imei', ''), 
+                productname=request.args.get('productname', ''), 
+                current_status=request.args.get('current_status', ''), 
+                warehouse_name=request.args.get('warehouse_name', ''), 
+                category=request.args.get('category', '')) }}" 
+                class="btn btn-outline-success">Siguiente</a>
+    {% endif %}
+</div>
+
+
+
 <!-- Modal para Crear Movimiento -->
 <div class="modal fade" id="createMovementModal" tabindex="-1" aria-labelledby="createMovementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -629,17 +659,5 @@
 </div>
 
 
-<!-- Paginación -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    {% if page > 1 %}
-        <a href="{{ url_for('show_products', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
-    {% endif %}
-
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
-
-    {% if page < total_pages %}
-        <a href="{{ url_for('show_products', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
-    {% endif %}
-</div>
 {% endblock %}
 

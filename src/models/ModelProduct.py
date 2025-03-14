@@ -156,147 +156,243 @@ class ModelProduct():
             db.session.rollback()  # Rollback on error
             return False
 
+
     @staticmethod
-    def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None, limit=20, offset=0):
+    def count_products_in_warehouse(db, warehouse_id):
+        query = text("SELECT COUNT(*) FROM products p JOIN warehousestock ws ON p.product_id = ws.product_id WHERE ws.warehouse_id = :warehouse_id;")
+        result = db.session.execute(query, {"warehouse_id": warehouse_id}).scalar()
+        return result if result else 0
+
+
+    @staticmethod
+    def get_products_in_warehouse_paginated(db, warehouse_id, limit, offset):
+        query = text("""
+            SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+            FROM products p
+            JOIN warehousestock ws ON p.product_id = ws.product_id
+            JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+            WHERE ws.warehouse_id = :warehouse_id
+            ORDER BY p.product_id
+            LIMIT :limit OFFSET :offset
+        """)
+        result = db.session.execute(query, {
+            "warehouse_id": warehouse_id,
+            "limit": limit,
+            "offset": offset
+        }).mappings().fetchall()
+
+        products = [dict(row) for row in result] if result else []
+
+        # 🔹 Añadir campo de verificación de acceso
+        for product in products:
+            product["user_has_access"] = product["warehouse_id"] == warehouse_id
+
+        return products
+
+
+
+
+    @staticmethod
+    def count_all_products(db):
+        query = text("SELECT COUNT(*) FROM products;")
+        result = db.session.execute(query).scalar()
+        return result
+
+
+
+
+
+
+
+    @staticmethod
+    def count_filtered_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None):
         try:
-            # Caso de filtrado por IMEI
+            # Base de la consulta de conteo
+            query = text("""
+                SELECT COUNT(DISTINCT p.product_id)
+                FROM products p
+                JOIN warehousestock ws ON p.product_id = ws.product_id
+                JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                WHERE 1=1
+            """)
+
+            params = {}
+
+            # Aplicar filtros opcionales
             if imei:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id,
-                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transfer'
-                    WHERE p.imei = '355237865723042'
-                    GROUP BY p.product_id, w.warehouse_id, ws.units
-                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) > 0
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {'imei': imei, 'limit': limit, 'offset': offset}
-
-            # Caso: filtrado por nombre del producto, estado, bodega y categoría
-            elif productname and current_status and warehouse and category:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    WHERE p.productname ILIKE :productname
-                    AND p.current_status = :current_status
-                    AND w.warehouse_name ILIKE :warehouse
-                    AND p.category ILIKE :category
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'productname': f"%{productname}%",
-                    'current_status': current_status,
-                    'warehouse': f"%{warehouse}%",
-                    'category': f"%{category}%",
-                    'limit': limit,
-                    'offset': offset
-                }
-
-            # Caso: filtrado solo por bodega
-            elif warehouse:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id,
-                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transfer'
-                    WHERE w.warehouse_name ILIKE :warehouse
-                    GROUP BY p.product_id, w.warehouse_id, ws.units
-                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) > 0
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'warehouse': f"%{warehouse}%",
-                    'limit': limit,
-                    'offset': offset
-                }
-
-            # Caso: filtrado solo por nombre de producto
-            elif productname:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    WHERE p.productname ILIKE :productname
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'productname': f"%{productname}%",
-                    'limit': limit,
-                    'offset': offset
-                }
-
-            # Caso: filtrado solo por categoría
-            elif category:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id,
-                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transfer'
-                    WHERE p.category ILIKE :category
-                    GROUP BY p.product_id, w.warehouse_id, ws.units
-                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transfer' THEN md.quantity ELSE 0 END), 0)) > 0
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'category': f"%{category}%",
-                    'limit': limit,
-                    'offset': offset
-                }
-
-            # Caso: filtrado solo por estado
-            elif current_status:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w., ws.units AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    WHERE p.current_status = :current_status
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'current_status': current_status,
-                    'limit': limit,
-                    'offset': offset
-                }
-
-            # Si no se aplican filtros, devuelve todos los productos con paginación
-            else:
-                query = text("""
-                    SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
-                    FROM products p
-                    JOIN warehousestock ws ON p.product_id = ws.product_id
-                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                    LIMIT :limit OFFSET :offset
-                """)
-                params = {
-                    'limit': limit,
-                    'offset': offset
-                }
+                query = text(str(query) + " AND p.imei = :imei")
+                params["imei"] = imei
+            if productname:
+                query = text(str(query) + " AND LOWER(p.productname) LIKE LOWER(:productname)")
+                params["productname"] = f"%{productname}%"
+            if current_status:
+                query = text(str(query) + " AND p.current_status = :current_status")
+                params["current_status"] = current_status
+            if warehouse:
+                query = text(str(query) + " AND w.warehouse_name ILIKE :warehouse")
+                params["warehouse"] = f"%{warehouse}%"
+            if category:
+                query = text(str(query) + " AND p.category ILIKE :category")
+                params["category"] = f"%{category}%"
 
             # Ejecutar la consulta
-            result = db.session.execute(query, params).mappings().fetchall()
+            result = db.session.execute(query, params).scalar()
 
-            # Procesar resultados
-            if result:
-                products = [dict(row) for row in result]
-            else:
-                products = []
-
-            return products
+            return result if result else 0
 
         except Exception as e:
-            print(f"⚠️ Error filtering products: {e}")
-            return []
+            print(f"⚠️ Error counting products: {e}")
+            return 0
+
+
+
+
+    @staticmethod
+    def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None, limit=20, offset=0):
+            try:
+                # Caso de filtrado por IMEI
+                if imei:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE p.imei ILIKE :imei
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {'imei': imei, 'limit': limit, 'offset': offset}
+
+                # Caso: filtrado por nombre del producto, estado, bodega y categoría
+                elif productname and current_status and warehouse and category:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        WHERE p.productname ILIKE :productname
+                        AND p.current_status = :current_status
+                        AND w.warehouse_name ILIKE :warehouse
+                        AND p.category ILIKE :category
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'productname': f"%{productname}%",
+                        'current_status': current_status,
+                        'warehouse': f"%{warehouse}%",
+                        'category': f"%{category}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Caso: filtrado solo por bodega
+                elif warehouse:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE w.warehouse_name ILIKE :warehouse
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'warehouse': f"%{warehouse}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Caso: filtrado solo por nombre de producto
+                elif productname:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        WHERE p.productname ILIKE :productname
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'productname': f"%{productname}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Caso: filtrado solo por categoría
+                elif category:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE p.category ILIKE :category
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'category': f"%{category}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Caso: filtrado solo por estado
+                elif current_status:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w., ws.units AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        WHERE p.current_status = :current_status
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'current_status': current_status,
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Si no se aplican filtros, devuelve todos los productos con paginación
+                else:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'limit': limit,
+                        'offset': offset
+                    }
+
+                # Ejecutar la consulta
+                result = db.session.execute(query, params).mappings().fetchall()
+
+                # Procesar resultados
+                if result:
+                    products = [dict(row) for row in result]
+                else:
+                    products = []
+
+                return products
+
+            except Exception as e:
+                print(f"⚠️ Error filtering products: {e}")
+                return []
+
+
+
+
 
         
     @staticmethod

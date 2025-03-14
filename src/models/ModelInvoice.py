@@ -76,7 +76,7 @@ class ModelInvoice:
 
     @staticmethod
     def count_invoices(db):
-        query = text("SELECT COUNT(*) FROM invoices")
+        query = text("SELECT COUNT(*) FROM invoices;")
         total = db.session.execute(query).scalar()
         return total
 

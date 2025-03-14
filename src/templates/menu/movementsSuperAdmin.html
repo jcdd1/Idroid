@@ -23,8 +23,8 @@
         <select name="movement_type" class="form-select border-success">
             <option value="" {% if not movement_type %}selected{% endif %}>Todos los tipos</option>
             <option value="Entry" {% if movement_type == 'Entry' %}selected{% endif %}>Entrada</option>
-            <option value="Transfer" {% if movement_type == 'Transfer' %}selected{% endif %}>Transferencia</option>
-            <option value="Sale" {% if movement_type == 'Sale' %}selected{% endif %}>Venta</option>
+            <option value="Transferencia" {% if movement_type == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+            <option value="sale" {% if movement_type == 'sale' %}selected{% endif %}>Venta</option>
             <option value="Update-Data" {% if movement_type == 'Update-Data' %}selected{% endif %}>Actualizar Datos</option>
         </select>
     </div>

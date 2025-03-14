@@ -527,6 +527,7 @@ def show_invoices():
         total = ModelInvoice.count_invoices(db)
 
     total_pages = (total + per_page - 1) // per_page
+    print(f"📊 Total de facturas: {total}, Total de páginas: {total_pages}, Página actual: {page}")
 
     return render_template(
         'menu/invoices.html',
@@ -1343,43 +1344,36 @@ def get_all_warehouses():
 @app.route('/productsUser', methods=['GET'])
 @login_required
 def show_productsUser():
+    # Obtener la bodega del usuario actual
+    user_warehouse_id = current_user.warehouse_id
+
+    # Obtener todas las bodegas menos la del usuario
+    warehouses = ModelWarehouse.get_all_warehouses(db)
+    warehouses_filtered = [w for w in warehouses if w['warehouse_id'] != user_warehouse_id]
+
     # Parámetros de búsqueda
     imei = request.args.get('imei')
     productname = request.args.get('productname')
     current_status = request.args.get('current_status')
-    category = request.args.get('category')
     warehouse = request.args.get('warehouse_name')
+    category = request.args.get('category')
 
     # Paginación
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 18
     offset = (page - 1) * per_page
 
-    # Obtener los almacenes y facturas activas (solo una vez)
-    warehouses = ModelWarehouse.get_all_warehouses(db)
-    active_invoices = ModelInvoice.get_invoices_active(db)
-
-    # Verificar si hay almacenes disponibles
-    if not warehouses:
-        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
-
-    # Obtener productos con o sin filtros
+    # Buscar productos si hay filtros
     if imei or productname or current_status or warehouse or category:
-        products = ModelProduct.filter_products(
-            db, imei=imei, productname=productname, current_status=current_status, 
-            warehouse=warehouse, category=category, limit=per_page, offset=offset
-        )
+        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
     else:
-        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
+        total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id, limit=per_page, offset=offset)
 
-    # Verificar si hay productos y si contienen la bodega
-    if products:
-        print("🔍 Ejemplo de producto obtenido:", products[0])
-    else:
-        print("⚠️ No se encontraron productos.")
-
-    total = len(products)
+    # Calcular total de páginas
     total_pages = (total + per_page - 1) // per_page
+    
 
     return render_template(
         'menu/productsUser.html',
@@ -1387,9 +1381,9 @@ def show_productsUser():
         page=page,
         total_pages=total_pages,
         current_status=current_status,
-        warehouses=warehouses,
-        active_invoices=active_invoices
+        warehouses=warehouses_filtered, 
     )
+
 
 
 
@@ -1449,33 +1443,23 @@ def show_products():
 
     # Paginación
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 18
     offset = (page - 1) * per_page
 
-    # Obtener los almacenes y facturas activas (solo una vez)
+    # Obtener almacenes y facturas activas
     warehouses = ModelWarehouse.get_all_warehouses(db)
     active_invoices = ModelInvoice.get_invoices_active(db)
 
-    # Verificar si hay almacenes disponibles
-    if not warehouses:
-        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
-
-    # Obtener productos con o sin filtros
+    # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
-        products = ModelProduct.filter_products(
-            db, imei=imei, productname=productname, current_status=current_status, 
-            warehouse=warehouse, category=category, limit=per_page, offset=offset
-        )
+        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
     else:
-        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
+        # Contar productos de la bodega del usuario y aplicar paginación
+        total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id, limit=per_page, offset=offset)
 
-    # Verificar si hay productos y si contienen la bodega
-    if products:
-        print("🔍 Ejemplo de producto obtenido:", products[0])
-    else:
-        print("⚠️ No se encontraron productos.")
-
-    total = len(products)
+    # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
@@ -1487,9 +1471,6 @@ def show_products():
         warehouses=warehouses,
         active_invoices=active_invoices
     )
-
-
-
 
 
 
@@ -1506,33 +1487,23 @@ def show_productsAdmin():
 
     # Paginación
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 18
     offset = (page - 1) * per_page
 
-    # Obtener los almacenes y facturas activas (solo una vez)
+    # Obtener almacenes y facturas activas
     warehouses = ModelWarehouse.get_all_warehouses(db)
     active_invoices = ModelInvoice.get_invoices_active(db)
 
-    # Verificar si hay almacenes disponibles
-    if not warehouses:
-        print("⚠️ Advertencia: No hay almacenes disponibles en la base de datos.")
-
-    # Obtener productos con o sin filtros
+    # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
-        products = ModelProduct.filter_products(
-            db, imei=imei, productname=productname, current_status=current_status, 
-            warehouse=warehouse, category=category, limit=per_page, offset=offset
-        )
+        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
     else:
-        products = ModelProduct.get_products_units_ws(db, current_user.warehouse_id)
+        # Contar productos de la bodega del usuario y aplicar paginación
+        total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id, limit=per_page, offset=offset)
 
-    # Verificar si hay productos y si contienen la bodega
-    if products:
-        print("🔍 Ejemplo de producto obtenido:", products[0])
-    else:
-        print("⚠️ No se encontraron productos.")
-
-    total = len(products)
+    # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
 
     return render_template(
