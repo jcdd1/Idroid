@@ -107,7 +107,6 @@ class ModelProduct():
         try:
             # Insert product into products table
             query_1, query_2, query_3, query_4 = SQLQueries.add_product_with_initial_movement_query()
-            print(productname)
             query_product = text(query_1)
             result = db.session.execute(query_product, {
                 'productname': productname,
@@ -159,7 +158,19 @@ class ModelProduct():
 
     @staticmethod
     def count_products_in_warehouse(db, warehouse_id):
-        query = text("SELECT COUNT(*) FROM products p JOIN warehousestock ws ON p.product_id = ws.product_id WHERE ws.warehouse_id = :warehouse_id;")
+        query = text("""
+                SELECT COUNT(*) 
+                FROM (
+                     SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE ws.warehouse_id = :warehouse_id
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0)
+                     """)
         result = db.session.execute(query, {"warehouse_id": warehouse_id}).scalar()
         return result if result else 0
 
@@ -167,13 +178,16 @@ class ModelProduct():
     @staticmethod
     def get_products_in_warehouse_paginated(db, warehouse_id, limit, offset):
         query = text("""
-            SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
-            FROM products p
-            JOIN warehousestock ws ON p.product_id = ws.product_id
-            JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-            WHERE ws.warehouse_id = :warehouse_id
-            ORDER BY p.product_id
-            LIMIT :limit OFFSET :offset
+            SELECT p.*, w.warehouse_name, w.warehouse_id,
+                    (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                FROM products p
+                JOIN warehousestock ws ON p.product_id = ws.product_id
+                JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                WHERE ws.warehouse_id = :warehouse_id
+                GROUP BY p.product_id, w.warehouse_id, ws.units
+                HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                LIMIT :limit OFFSET :offset
         """)
         result = db.session.execute(query, {
             "warehouse_id": warehouse_id,
@@ -189,54 +203,76 @@ class ModelProduct():
 
         return products
 
-
-
-
     @staticmethod
     def count_all_products(db):
         query = text("SELECT COUNT(*) FROM products;")
         result = db.session.execute(query).scalar()
         return result
 
-
-
-
-
-
-
     @staticmethod
     def count_filtered_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None):
         try:
             # Base de la consulta de conteo
             query = text("""
-                SELECT COUNT(DISTINCT p.product_id)
-                FROM products p
-                JOIN warehousestock ws ON p.product_id = ws.product_id
-                JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                WHERE 1=1
-            """)
-
+                SELECT COUNT(*) 
+                FROM (
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE """)
             params = {}
 
             # Aplicar filtros opcionales
             if imei:
-                query = text(str(query) + " AND p.imei = :imei")
+                query = text(str(query) + " p.imei = :imei ")
                 params["imei"] = imei
-            if productname:
-                query = text(str(query) + " AND LOWER(p.productname) LIKE LOWER(:productname)")
+            elif productname and warehouse:
+                query = text(str(query) + " p.productname ILIKE :productname AND w.warehouse_name ILIKE :warehouse ")
                 params["productname"] = f"%{productname}%"
-            if current_status:
-                query = text(str(query) + " AND p.current_status = :current_status")
-                params["current_status"] = current_status
-            if warehouse:
-                query = text(str(query) + " AND w.warehouse_name ILIKE :warehouse")
                 params["warehouse"] = f"%{warehouse}%"
-            if category:
-                query = text(str(query) + " AND p.category ILIKE :category")
+            elif productname and current_status:
+                query = text(str(query) + " p.productname ILIKE :productname AND p.current_status = :current_status ")
+                params["productname"] = f"%{productname}%"
+                params["current_status"] = current_status
+            elif productname and current_status and warehouse and category:
+                query = text(str(query) + " p.productname ILIKE :productname AND p.current_status = :current_status AND w.warehouse_name ILIKE :warehouse AND p.category ILIKE :category ")
+                params["productname"] = f"%{productname}%"
+                params["current_status"] = current_status
+                params["warehouse"] = f"%{warehouse}%"
                 params["category"] = f"%{category}%"
+            elif productname and current_status and warehouse:
+                query = text(str(query) + " p.productname ILIKE :productname AND p.current_status = :current_status AND w.warehouse_name ILIKE :warehouse ")
+                params["productname"] = f"%{productname}%"
+                params["current_status"] = current_status
+                params["warehouse"] = f"%{warehouse}%"
+            elif category:
+                query = text(str(query) + " AND p.category ILIKE :category ")
+                params["category"] = f"%{category}%"
+            elif warehouse:
+                query = text(str(query) + " w.warehouse_name ILIKE :warehouse ")
+                params["warehouse"] = f"%{warehouse}%"
+            elif productname:
+                query = text(str(query) + " p.productname ILIKE :productname ")
+                params["productname"] = f"%{productname}%"
+                
+            elif category:
+                query = text(str(query) + " p.category ILIKE :category ")
+                params["category"] = f"%{category}%"
+            
+            elif current_status:
+                query = text(str(query) + " p.current_status = :current_status ")
+                params["current_status"] = current_status
 
+            query = text(str(query) + """ GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                    ) AS resultado""")
             # Ejecutar la consulta
+
+                
+            print(query)
             result = db.session.execute(query, params).scalar()
 
             return result if result else 0
@@ -266,18 +302,64 @@ class ModelProduct():
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {'imei': imei, 'limit': limit, 'offset': offset}
+                    
+                elif productname and warehouse:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE p.productname ILIKE :productname
+                        AND w.warehouse_name ILIKE :warehouse 
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'productname': f"%{productname}%",
+                        'warehouse': f"%{warehouse}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
+                
+                elif productname and current_status:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE p.productname ILIKE :productname
+                        AND p.current_status = :current_status
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'productname': f"%{productname}%",
+                        'current_status': current_status,
+                        'limit': limit,
+                        'offset': offset
+                    }
 
                 # Caso: filtrado por nombre del producto, estado, bodega y categoría
                 elif productname and current_status and warehouse and category:
                     query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
                         FROM products p
                         JOIN warehousestock ws ON p.product_id = ws.product_id
                         JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.productname ILIKE :productname
                         AND p.current_status = :current_status
                         AND w.warehouse_name ILIKE :warehouse
                         AND p.category ILIKE :category
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -289,6 +371,28 @@ class ModelProduct():
                         'offset': offset
                     }
 
+                elif productname and current_status and warehouse:
+                    query = text("""
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                        FROM products p
+                        JOIN warehousestock ws ON p.product_id = ws.product_id
+                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                        WHERE p.productname ILIKE :productname
+                        AND p.current_status = :current_status
+                        AND w.warehouse_name ILIKE :warehouse
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    params = {
+                        'productname': f"%{productname}%",
+                        'current_status': current_status,
+                        'warehouse': f"%{warehouse}%",
+                        'limit': limit,
+                        'offset': offset
+                    }
                 # Caso: filtrado solo por bodega
                 elif warehouse:
                     query = text("""
@@ -312,11 +416,15 @@ class ModelProduct():
                 # Caso: filtrado solo por nombre de producto
                 elif productname:
                     query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
                         FROM products p
                         JOIN warehousestock ws ON p.product_id = ws.product_id
                         JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.productname ILIKE :productname
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -348,11 +456,15 @@ class ModelProduct():
                 # Caso: filtrado solo por estado
                 elif current_status:
                     query = text("""
-                        SELECT p.*, w.warehouse_name, w., ws.units AS stock_disponible
+                        SELECT p.*, w.warehouse_name, w.warehouse_id,
+                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
                         FROM products p
                         JOIN warehousestock ws ON p.product_id = ws.product_id
                         JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.current_status = :current_status
+                        GROUP BY p.product_id, w.warehouse_id, ws.units
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -368,6 +480,8 @@ class ModelProduct():
                         FROM products p
                         JOIN warehousestock ws ON p.product_id = ws.product_id
                         JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                        WHERE ws.warehouse_id = :warehouse_id
+                        ORDER BY p.product_id
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
