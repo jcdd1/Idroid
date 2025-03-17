@@ -298,7 +298,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.imei ILIKE :imei
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {'imei': imei, 'limit': limit, 'offset': offset}
@@ -314,7 +314,7 @@ class ModelProduct():
                         WHERE p.productname ILIKE :productname
                         AND w.warehouse_name ILIKE :warehouse 
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -335,7 +335,7 @@ class ModelProduct():
                         WHERE p.productname ILIKE :productname
                         AND p.current_status = :current_status
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -359,7 +359,7 @@ class ModelProduct():
                         AND w.warehouse_name ILIKE :warehouse
                         AND p.category ILIKE :category
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -383,7 +383,7 @@ class ModelProduct():
                         AND p.current_status = :current_status
                         AND w.warehouse_name ILIKE :warehouse
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -404,7 +404,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE w.warehouse_name ILIKE :warehouse
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -424,7 +424,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.productname ILIKE :productname
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -444,7 +444,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.category ILIKE :category
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -464,7 +464,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.current_status = :current_status
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
