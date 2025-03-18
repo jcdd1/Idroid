@@ -1732,6 +1732,58 @@ def add_productAdmin():
     # Redirigir al listado de productos
     return redirect(url_for('show_productsAdmin'))
 
+@app.route('/edit_productAdmin', methods=['POST'])
+@login_required
+def edit_productAdmin():
+    product_id = request.form.get('edit_product_id')
+    productname = request.form.get('edit_productname', '').strip()
+    imei = request.form.get('edit_imei', '').strip()
+    storage = request.form.get('edit_storage', 0)
+    battery = request.form.get('edit_battery', 0)
+    color = request.form.get('edit_color', '').strip()
+    description = request.form.get('edit_description', '').strip()
+    category = request.form.get('edit_category', '').strip()
+    units = request.form.get('edit_units', 0)
+    supplier = request.form.get('edit_supplier', '').strip()
+    document_number = request.form.get('edit_invoice', '').strip()
+    invoice_quantity = request.form.get('edit_quantity', 0)
+    price = request.form.get('edit_price', 0.0)
+    warehouse_id = request.form.get('edit_warehouse_id')
+    cost = request.form.get('edit_cost')
+    cost = float(cost) if cost and cost.strip() else float('NaN')
+
+    # Nuevo: Capturar el estado del producto
+    current_status = request.form.get('edit_current_status', '').strip()
+
+    # Obtiene el usuario actual
+    user_id = current_user.user_id  
+
+    # Actualiza el producto en la base de datos
+    success = ModelProduct.update_product(
+        db, product_id, productname, imei, storage, battery, color, description, cost,
+        category, units, supplier, user_id, warehouse_id, current_status
+    )
+
+    # Si se proporciona un número de factura y cantidad, actualiza la factura
+    success_invoice = False
+    if document_number and invoice_quantity:
+        success_invoice = ModelInvoice.update_invoicedetail(db, product_id, document_number, invoice_quantity, price)
+
+    # Mensajes Flash
+    if success_invoice:
+        flash("Factura asociada exitosamente.", "success")
+    elif document_number:
+        flash("No se asoció el producto a la factura.", "danger")
+
+    if success:
+        flash("Producto actualizado exitosamente.", "success")
+    else:
+        flash("Error al actualizar el producto.", "danger")
+
+    return redirect(url_for('show_productsAdmin'))
+
+
+
 
 
 
