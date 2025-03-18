@@ -135,20 +135,21 @@
                 <td class="text-center">
                     <!-- Botón de agregar movimiento -->
                     <button type="button" class="btn btn-success btn-sm"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#createMovementModal"
-                        data-product-id="{{ product.product_id }}"
-                        data-product-name="{{ product.productname }}"
-                        data-origin-warehouse-id="{{ product.warehouse_id }}"
-                        {% if not product.user_has_access %}disabled{% endif %}>
-                        <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
+                    data-bs-toggle="modal" 
+                    data-bs-target="#createMovementModal"
+                    data-product-id="{{ product.product_id }}"
+                    data-product-name="{{ product.productname }}"
+                    data-origin-warehouse-id="{{ product.warehouse_id }}"
+                    {% if not product.user_has_access %}disabled{% endif %}>
+                    <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
-                
+
                     <!-- Botón para generar código de barras -->
                     <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}" 
-                        {% if not product.user_has_access %}disabled{% endif %}>
-                        Código
+                    {% if not product.user_has_access %}disabled{% endif %}>
+                    Código
                     </button>
+
                 </td>
             </tr>
             {% endfor %}

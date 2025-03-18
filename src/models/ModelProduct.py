@@ -174,9 +174,8 @@ class ModelProduct():
         result = db.session.execute(query, {"warehouse_id": warehouse_id}).scalar()
         return result if result else 0
 
-
     @staticmethod
-    def get_products_in_warehouse_paginated(db, warehouse_id):
+    def get_products_in_warehouse_paginated(db, warehouse_id, user_warehouse_id):
         query = text("""
             SELECT p.*, w.warehouse_name, w.warehouse_id,
                     (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
@@ -194,11 +193,14 @@ class ModelProduct():
 
         products = [dict(row) for row in result] if result else []
 
-        # 🔹 Añadir campo de verificación de acceso
+        # 🔹 Bloquear productos que no están en la bodega del usuario
         for product in products:
-            product["user_has_access"] = product["warehouse_id"] == warehouse_id
+            product["user_has_access"] = (product["warehouse_id"] == user_warehouse_id)
 
         return products
+
+
+
 
     @staticmethod
     def count_all_products(db):
@@ -246,7 +248,7 @@ class ModelProduct():
                 params["current_status"] = current_status
                 params["warehouse"] = f"%{warehouse}%"
             elif category:
-                query = text(str(query) + " AND p.category ILIKE :category ")
+                query = text(str(query) + "p.category ILIKE :category ")
                 params["category"] = f"%{category}%"
             elif warehouse:
                 query = text(str(query) + " w.warehouse_name ILIKE :warehouse ")
@@ -282,207 +284,159 @@ class ModelProduct():
 
 
     @staticmethod
-    def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None):
-            try:
-                # Caso de filtrado por IMEI
-                if current_status == 'Sold':
-                    units_min = -1
-                else:
-                    units_min = 0
-                if imei:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.imei ILIKE :imei
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
-                    """)
-                    params = {'imei': imei}
-                    
-                elif productname and warehouse:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.productname ILIKE :productname
-                        AND w.warehouse_name ILIKE :warehouse 
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
-                    """)
-                    params = {
-                        'productname': f"%{productname}%",
-                        'warehouse': f"%{warehouse}%"
-                    }
-                
-                elif productname and current_status:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.productname ILIKE :productname
-                        AND p.current_status = :current_status
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
-                    """)
-                    params = {
-                        'productname': f"%{productname}%",
-                        'current_status': current_status,
-                        'units_min': units_min
-                    }
+    def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None, user_warehouse_id=None):
+        try:
+            # Caso de filtrado por IMEI
+            if current_status == 'Sold':
+                units_min = -1
+            else:
+                units_min = 0
 
-                # Caso: filtrado por nombre del producto, estado, bodega y categoría
-                elif productname and current_status and warehouse and category:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.productname ILIKE :productname
-                        AND p.current_status = :current_status
-                        AND w.warehouse_name ILIKE :warehouse
-                        AND p.category ILIKE :category
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
-                    """)
-                    params = {
-                        'productname': f"%{productname}%",
-                        'current_status': current_status,
-                        'warehouse': f"%{warehouse}%",
-                        'category': f"%{category}%",
-                        'units_min': units_min
-                    }
+            if imei:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.imei ILIKE :imei
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                """)
+                params = {'imei': imei}
 
-                elif productname and current_status and warehouse:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.productname ILIKE :productname
-                        AND p.current_status = :current_status
-                        AND w.warehouse_name ILIKE :warehouse
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
-                    """)
-                    params = {
-                        'productname': f"%{productname}%",
-                        'current_status': current_status,
-                        'warehouse': f"%{warehouse}%",
-                        'units_min': units_min
-                    }
-                # Caso: filtrado solo por bodega
-                elif warehouse:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE w.warehouse_name ILIKE :warehouse
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
-                    """)
-                    params = {
-                        'warehouse': f"%{warehouse}%"
-                    }
+            elif productname and warehouse:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.productname ILIKE :productname
+                    AND w.warehouse_name ILIKE :warehouse 
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                """)
+                params = {
+                    'productname': f"%{productname}%",
+                    'warehouse': f"%{warehouse}%"
+                }
 
-                # Caso: filtrado solo por nombre de producto
-                elif productname:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.productname ILIKE :productname
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
-                    """)
-                    params = {
-                        'productname': f"%{productname}%"
-                    }
+            elif productname and current_status:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.productname ILIKE :productname
+                    AND p.current_status = :current_status
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
+                """)
+                params = {
+                    'productname': f"%{productname}%",
+                    'current_status': current_status,
+                    'units_min': units_min
+                }
 
-                # Caso: filtrado solo por categoría
-                elif category:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.category ILIKE :category
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
-                    """)
-                    params = {
-                        'category': f"%{category}%"
-                    }
+            elif warehouse:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE w.warehouse_name ILIKE :warehouse
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                """)
+                params = {
+                    'warehouse': f"%{warehouse}%"
+                }
 
-                # Caso: filtrado solo por estado
-                elif current_status:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id,
-                            (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
-                        WHERE p.current_status = :current_status
-                        GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
-                    """)
-                    params = {
-                        'current_status': current_status,
-                        'units_min': units_min
-                    }
+            elif productname:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.productname ILIKE :productname
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                """)
+                params = {
+                    'productname': f"%{productname}%"
+                }
 
-                # Si no se aplican filtros, devuelve todos los productos con paginación
-                else:
-                    query = text("""
-                        SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
-                        FROM products p
-                        JOIN warehousestock ws ON p.product_id = ws.product_id
-                        JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
-                        WHERE ws.warehouse_id = :warehouse_id
-                        ORDER BY p.product_id
-                    """)
-                    params = {
-                    }
+            elif category:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.category ILIKE :category
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
+                """)
+                params = {
+                    'category': f"%{category}%"
+                }
 
-                # Ejecutar la consulta
-                result = db.session.execute(query, params).mappings().fetchall()
+            elif current_status:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE p.current_status = :current_status
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
+                """)
+                params = {
+                    'current_status': current_status,
+                    'units_min': units_min
+                }
 
-                # Procesar resultados
-                if result:
-                    products = [dict(row) for row in result]
-                else:
-                    products = []
+            else:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id, ws.units AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    WHERE ws.warehouse_id = :warehouse_id
+                    ORDER BY p.product_id
+                """)
+                params = {}
 
-                return products
+            # Ejecutar la consulta
+            result = db.session.execute(query, params).mappings().fetchall()
 
-            except Exception as e:
-                print(f"⚠️ Error filtering products: {e}")
-                return []
+            # Procesar resultados
+            if result:
+                products = [dict(row) for row in result]
+            else:
+                products = []
 
+            # 🔹 Verificar si el usuario tiene acceso a los productos
+            for product in products:
+                product["user_has_access"] = (product["warehouse_id"] == user_warehouse_id)
 
+            return products
 
+        except Exception as e:
+            print(f"⚠️ Error filtering products: {e}")
+            return []
 
 
         

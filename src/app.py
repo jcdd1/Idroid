@@ -1344,8 +1344,7 @@ def get_all_warehouses():
 @app.route('/productsUser', methods=['GET'])
 @login_required
 def show_productsUser():
-    # Obtener la bodega del usuario actual
-    user_warehouse_id = current_user.warehouse_id
+    user_warehouse_id = current_user.warehouse_id  # ID de la bodega del usuario
 
     # Obtener todas las bodegas menos la del usuario
     warehouses = ModelWarehouse.get_all_warehouses(db)
@@ -1366,15 +1365,22 @@ def show_productsUser():
     # Buscar productos si hay filtros
     if imei or productname or current_status or warehouse or category:
         total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
+        products = ModelProduct.filter_products(
+            db, 
+            imei=imei, 
+            productname=productname, 
+            current_status=current_status, 
+            warehouse=warehouse, 
+            category=category, 
+            user_warehouse_id=user_warehouse_id 
+        )
     else:
         total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id, user_warehouse_id)
 
     # Calcular total de páginas
     total_pages = (total + per_page - 1) // per_page
     
-
     return render_template(
         'menu/productsUser.html',
         products=products,
@@ -1383,6 +1389,7 @@ def show_productsUser():
         current_status=current_status,
         warehouses=warehouses_filtered, 
     )
+
 
 
 
