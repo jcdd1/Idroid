@@ -2,6 +2,14 @@
 
 {% block customScripts %}
     <script src="{{ url_for('static', filename='js/ScriptViewReturns.js') }}"></script>
+    <!-- CSS de DataTables -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- JS de DataTables -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -78,5 +86,15 @@
            class="btn btn-outline-success">Siguiente</a>
     {% endif %}
 </div>
+
+<script>
+    $(document).ready(function() {
+        $('.table').DataTable({
+            "ordering": true,  // Habilitar la ordenación
+            "paging": true,    // Habilitar la paginación (opcional)
+            "searching": true  // Habilitar la búsqueda (opcional)
+        });
+    });
+</script>
 
 {% endblock %}

@@ -11,6 +11,14 @@
     <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptEditUnits.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
+    <!-- DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -94,7 +102,7 @@
 
 <!-- Tabla de productos -->
 <div class="table-responsive mt-4">
-    <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
+    <table id="tabla-productos" class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
         <thead class="bg-success text-white text-center">
             <tr>
                 <th>Producto</th>
@@ -107,7 +115,7 @@
                 <th>Unidades</th>
                 <th>Estado</th>
                 <th>Bodega</th>
-                <th>Acciones</th>
+                <th data-orderable="false">Acciones</th> <!-- Se desactiva el ordenado en esta columna -->
             </tr>
         </thead>
         <tbody>
@@ -188,18 +196,7 @@
 </div>
 
 
-<!-- Paginación -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    {% if page > 1 %}
-        <a href="{{ url_for('show_productsAdmin', page=page-1, imei=request.args.get('imei', ''), productname=request.args.get('productname', ''), current_status=request.args.get('current_status', ''), warehouse_name=request.args.get('warehouse_name', ''), category=request.args.get('category', '')) }}" class="btn btn-outline-success">Anterior</a>
-    {% endif %}
 
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
-
-    {% if page < total_pages %}
-        <a href="{{ url_for('show_productsAdmin', page=page+1, imei=request.args.get('imei', ''), productname=request.args.get('productname', ''), current_status=request.args.get('current_status', ''), warehouse_name=request.args.get('warehouse_name', ''), category=request.args.get('category', '')) }}" class="btn btn-outline-success">Siguiente</a>
-    {% endif %}
-</div>
 
 
 
@@ -649,5 +646,22 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        $('#tabla-productos').DataTable({
+            "ordering": true,  // Habilita ordenamiento
+            "paging": true,    // Habilita paginación
+            "searching": false, // Habilita la barra de búsqueda
+            "columnDefs": [
+                { "orderable": false, "targets": -1 }  // Desactiva el orden en la última columna (Acciones)
+            ],
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.12.1/i18n/Spanish.json"
+            }
+        });
+    });
+</script>
+
 {% endblock %}
 

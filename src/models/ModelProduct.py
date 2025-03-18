@@ -176,7 +176,7 @@ class ModelProduct():
 
 
     @staticmethod
-    def get_products_in_warehouse_paginated(db, warehouse_id, limit, offset):
+    def get_products_in_warehouse_paginated(db, warehouse_id):
         query = text("""
             SELECT p.*, w.warehouse_name, w.warehouse_id,
                     (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
@@ -187,12 +187,9 @@ class ModelProduct():
                 WHERE ws.warehouse_id = :warehouse_id
                 GROUP BY p.product_id, w.warehouse_id, ws.units
                 HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
-                LIMIT :limit OFFSET :offset
         """)
         result = db.session.execute(query, {
-            "warehouse_id": warehouse_id,
-            "limit": limit,
-            "offset": offset
+            "warehouse_id": warehouse_id
         }).mappings().fetchall()
 
         products = [dict(row) for row in result] if result else []

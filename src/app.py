@@ -1369,7 +1369,7 @@ def show_productsUser():
         products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
     else:
         total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id, limit=per_page, offset=offset)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id)
 
     # Calcular total de páginas
     total_pages = (total + per_page - 1) // per_page
@@ -1457,7 +1457,7 @@ def show_products():
     else:
         # Contar productos de la bodega del usuario y aplicar paginación
         total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id, limit=per_page, offset=offset)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id)
 
     # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
@@ -1501,7 +1501,7 @@ def show_productsAdmin():
     else:
         # Contar productos de la bodega del usuario y aplicar paginación
         total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id, limit=per_page, offset=offset)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id)
 
     # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page

@@ -9,6 +9,14 @@
     <script src="{{ url_for('static', filename='js/ScriptMassiveMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptCreateMovement.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
+    <!-- CSS de DataTables -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- JS de DataTables -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -445,5 +453,22 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        $('#tabla-productos').DataTable({
+            "ordering": true,  // Habilita ordenamiento
+            "paging": true,    // Habilita paginación
+            "searching": false, // Habilita la barra de búsqueda
+            "columnDefs": [
+                { "orderable": false, "targets": -1 }  // Desactiva el orden en la última columna (Acciones)
+            ],
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.12.1/i18n/Spanish.json"
+            }
+        });
+    });
+</script>
+
 {% endblock %}
 
