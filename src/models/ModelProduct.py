@@ -288,6 +288,10 @@ class ModelProduct():
     def filter_products(db, imei=None, productname=None, current_status=None, warehouse=None, category=None, limit=20, offset=0):
             try:
                 # Caso de filtrado por IMEI
+                if current_status == 'Sold':
+                    units_min = -1
+                else:
+                    units_min = 0
                 if imei:
                     query = text("""
                         SELECT p.*, w.warehouse_name, w.warehouse_id,
@@ -314,7 +318,7 @@ class ModelProduct():
                         WHERE p.productname ILIKE :productname
                         AND w.warehouse_name ILIKE :warehouse 
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -335,14 +339,15 @@ class ModelProduct():
                         WHERE p.productname ILIKE :productname
                         AND p.current_status = :current_status
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
                         'productname': f"%{productname}%",
                         'current_status': current_status,
                         'limit': limit,
-                        'offset': offset
+                        'offset': offset,
+                        'units_min': units_min
                     }
 
                 # Caso: filtrado por nombre del producto, estado, bodega y categoría
@@ -359,7 +364,7 @@ class ModelProduct():
                         AND w.warehouse_name ILIKE :warehouse
                         AND p.category ILIKE :category
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -368,7 +373,8 @@ class ModelProduct():
                         'warehouse': f"%{warehouse}%",
                         'category': f"%{category}%",
                         'limit': limit,
-                        'offset': offset
+                        'offset': offset,
+                        'units_min': units_min
                     }
 
                 elif productname and current_status and warehouse:
@@ -383,7 +389,7 @@ class ModelProduct():
                         AND p.current_status = :current_status
                         AND w.warehouse_name ILIKE :warehouse
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -391,7 +397,8 @@ class ModelProduct():
                         'current_status': current_status,
                         'warehouse': f"%{warehouse}%",
                         'limit': limit,
-                        'offset': offset
+                        'offset': offset,
+                        'units_min': units_min
                     }
                 # Caso: filtrado solo por bodega
                 elif warehouse:
@@ -404,7 +411,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE w.warehouse_name ILIKE :warehouse
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -424,7 +431,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.productname ILIKE :productname
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -444,7 +451,7 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.category ILIKE :category
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > 0
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
@@ -464,13 +471,14 @@ class ModelProduct():
                         LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                         WHERE p.current_status = :current_status
                         GROUP BY p.product_id, w.warehouse_id, ws.units
-                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > -1
+                        HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
                         LIMIT :limit OFFSET :offset
                     """)
                     params = {
                         'current_status': current_status,
                         'limit': limit,
-                        'offset': offset
+                        'offset': offset,
+                        'units_min': units_min
                     }
 
                 # Si no se aplican filtros, devuelve todos los productos con paginación
