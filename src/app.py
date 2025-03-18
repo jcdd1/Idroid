@@ -1911,7 +1911,7 @@ def generate_barcode(code):
         # ✅ Usar ImageReader para insertar la imagen sin archivos temporales
         img_reader = ImageReader(img_bytes)
         c.drawImage(img_reader, 150, 650, width=300, height=80)
-        c.drawString(250, 730, f"IMEI: {product[0]['imei']}")
+        c.drawString(250, 730, f"IMEI: {code}")
         c.save()
         pdf_bytes.seek(0)
 

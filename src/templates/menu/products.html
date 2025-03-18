@@ -192,6 +192,12 @@
     </table>
 </div>
 
+<!-- Vista HTML -->
+<form action="{{ url_for('download_excel') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="products" value='{{ products | tojson | safe }}'>
+    <button type="submit">Descargar Excel</button>
+</form>
 
 <!-- Paginación -->
 <div class="d-flex justify-content-between align-items-center mt-4">
