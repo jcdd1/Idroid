@@ -1442,6 +1442,7 @@ def get_product_by_imei(imei):
 @login_required
 def show_products():
     # Parámetros de búsqueda
+    user_warehouse_id = current_user.warehouse_id
     imei = request.args.get('imei')
     productname = request.args.get('productname')
     current_status = request.args.get('current_status')
@@ -1459,12 +1460,19 @@ def show_products():
 
     # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
-        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
+        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)
+        products = ModelProduct.filter_products(
+            db, 
+            imei=imei, 
+            productname=productname, 
+            current_status=current_status, 
+            warehouse=warehouse, 
+            category=category, 
+            user_warehouse_id=user_warehouse_id 
+        )
     else:
-        # Contar productos de la bodega del usuario y aplicar paginación
-        total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id)
+        total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id, user_warehouse_id)
 
     # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
@@ -1486,6 +1494,7 @@ def show_products():
 @login_required
 def show_productsAdmin():
     # Parámetros de búsqueda
+    user_warehouse_id = current_user.warehouse_id
     imei = request.args.get('imei')
     productname = request.args.get('productname')
     current_status = request.args.get('current_status')
@@ -1501,15 +1510,21 @@ def show_productsAdmin():
     warehouses = ModelWarehouse.get_all_warehouses(db)
     active_invoices = ModelInvoice.get_invoices_active(db)
 
-    # Si hay filtros, usar `filter_products()`
+     # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
-        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
+        total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)
+        products = ModelProduct.filter_products(
+            db, 
+            imei=imei, 
+            productname=productname, 
+            current_status=current_status, 
+            warehouse=warehouse, 
+            category=category, 
+            user_warehouse_id=user_warehouse_id 
+        )
     else:
-        # Contar productos de la bodega del usuario y aplicar paginación
-        total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
-        products = ModelProduct.get_products_in_warehouse_paginated(db, current_user.warehouse_id)
-
+        total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
+        products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id, user_warehouse_id)
     # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
     print(f"📦 Datos enviados al frontend: {products}")
