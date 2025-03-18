@@ -1366,7 +1366,7 @@ def show_productsUser():
     # Buscar productos si hay filtros
     if imei or productname or current_status or warehouse or category:
         total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
     else:
         total = ModelProduct.count_products_in_warehouse(db, user_warehouse_id)
         products = ModelProduct.get_products_in_warehouse_paginated(db, user_warehouse_id)
@@ -1453,7 +1453,7 @@ def show_products():
     # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
         total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
     else:
         # Contar productos de la bodega del usuario y aplicar paginación
         total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
@@ -1497,7 +1497,7 @@ def show_productsAdmin():
     # Si hay filtros, usar `filter_products()`
     if imei or productname or current_status or warehouse or category:
         total = ModelProduct.count_filtered_products(db, imei, productname, current_status, warehouse, category)  
-        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category, limit=per_page, offset=offset)
+        products = ModelProduct.filter_products(db, imei=imei, productname=productname, current_status=current_status, warehouse=warehouse, category=category)
     else:
         # Contar productos de la bodega del usuario y aplicar paginación
         total = ModelProduct.count_products_in_warehouse(db, current_user.warehouse_id)
