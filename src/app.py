@@ -1505,6 +1505,7 @@ def show_productsAdmin():
 
     # Calcular total de páginas correctamente
     total_pages = (total + per_page - 1) // per_page
+    print(f"📦 Datos enviados al frontend: {products}")
 
     return render_template(
         'menu/productsAdmin.html',

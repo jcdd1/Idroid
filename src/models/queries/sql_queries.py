@@ -495,24 +495,24 @@ class SQLQueries:
     @staticmethod
     def update_product_query():
         query = """
-                UPDATE products
-                SET 
-                    productname = :productname,
-                    imei = :imei,
-                    storage = :storage,
-                    battery = :battery,
-                    color = :color,
-                    description = :description,
-                    cost = :cost,
-                    category = :category,
-                    units = :units,
-                    supplier = :supplier
+            UPDATE products
+            SET 
+                productname = :productname,
+                imei = :imei,
+                storage = :storage,
+                battery = :battery,
+                color = :color,
+                description = :description,
+                cost = :cost,
+                category = :category,
+                units = :units,
+                supplier = :supplier
+            WHERE product_id = :product_id
+        """
 
-                WHERE product_id = :product_id
-            """
         query_movement = """
             INSERT INTO Movement (movement_type, origin_warehouse_id, destination_warehouse_id, 
-                      creation_date, status, notes, created_by_user_id, handled_by_user_id)
+                    creation_date, status, notes, created_by_user_id, handled_by_user_id)
             VALUES('Update-Data', :warehouse_id, :warehouse_id, CURRENT_TIMESTAMP, 'Update-Data', 'Actualización', :current_user, :current_user)
             RETURNING movement_id;
         """
@@ -520,9 +520,17 @@ class SQLQueries:
         query_movement_detail ="""
             INSERT INTO MovementDetail (movement_id, product_id, quantity, status)
             VALUES(:movement_id, :product_id, 0, 'completed')       
-            """
+        """
 
-        return query, query_movement, query_movement_detail
+        
+        query_update_warehouse_stock = """
+            UPDATE warehousestock
+            SET units = :units  -- Cambié `stock` por `units`
+            WHERE product_id = :product_id AND warehouse_id = :warehouse_id
+        """
+
+        return query, query_movement, query_movement_detail, query_update_warehouse_stock
+
     
 
     @staticmethod
