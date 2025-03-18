@@ -163,12 +163,14 @@
                         data-bs-target="#createMovementModal"
                         data-product-id="{{ product.product_id }}"
                         data-product-name="{{ product.productname }}"
-                        data-origin-warehouse-id="{{ product.warehouse_id }}">
+                        data-origin-warehouse-id="{{ product.warehouse_id }}"
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         <img src="{{ url_for('static', filename='images/add.png') }}" alt="Crear" style="width: 16px; height: 16px;">
                     </button>
                 
                     <!-- Botón para generar código de barras -->
-                    <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}">
+                    <button class="btn btn-success btn-sm generate-barcode" data-product-id="{{ product.imei }}"
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         Código
                     </button>
 
@@ -177,15 +179,18 @@
                             data-bs-toggle="modal" 
                             data-bs-target="#editProductModal"
                             data-invoices='{{ active_invoices | tojson | safe }}'
-                            data-product='{{ product | tojson | safe }}'>  
+                            data-product='{{ product | tojson | safe }}'  
+                            {% if not product.user_has_access %}disabled{% endif %}>
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
 
                     <!-- Botones para cambiar estado -->
-                    <button class="btn btn-warning btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="Under Repair">
+                    <button class="btn btn-warning btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="Under Repair"
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         Reparar
                     </button>
-                    <button class="btn btn-secondary btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="In Warehouse">
+                    <button class="btn btn-secondary btn-sm btn-update-status" data-imei="{{ product.imei }}" data-status="In Warehouse"
+                        {% if not product.user_has_access %}disabled{% endif %}>
                         Bodega
                     </button>
                 </td>   

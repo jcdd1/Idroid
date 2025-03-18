@@ -10,7 +10,7 @@ function initializeInvoiceModal() {
     let productList = [];
     let lastImei = "";
 
-    // ✅ Detectar cambios en el IMEI en tiempo real
+    // ✅ Detectar cambios en el IMEI en tiempo reals
     imeiInput.addEventListener("input", function () {
         clearTimeout(this.typingTimer);
         this.typingTimer = setTimeout(fetchProductData, 500);
@@ -59,7 +59,7 @@ function initializeInvoiceModal() {
             });
     }
 
-    // 🔹 Agregar producto a la tabla
+    // 🔹 Agregar producto a la tabla solo al hacer clic
     addProductButton.addEventListener("click", function () {
         const imei = imeiInput.value.trim();
         const product_name = document.getElementById("product_name").value;
@@ -178,6 +178,19 @@ function initializeInvoiceModal() {
     // 🚀 Forzar Bootstrap a redibujar el modal cuando se abra
     document.getElementById("addInvoiceModal").addEventListener("shown.bs.modal", function () {
         $('#addInvoiceModal').modal('handleUpdate');
+    });
+
+    // Prevenir que el formulario se envíe al presionar Enter
+    imeiInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    });
+
+    quantityInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
     });
 }
 
