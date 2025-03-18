@@ -100,6 +100,7 @@
     </div>
 </form>
 
+
 <!-- Tabla de productos -->
 <div class="table-responsive mt-4">
     <table id="tabla-productos" class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
@@ -199,6 +200,13 @@
         </tbody>
     </table>
 </div>
+
+<!-- Vista HTML -->
+<form action="{{ url_for('download_excel') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="products" value='{{ products | tojson | safe }}'>
+    <button type="submit">Descargar Excel</button>
+</form>
 
 
 <!-- Modal para Crear Movimiento -->

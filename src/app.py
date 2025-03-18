@@ -10,6 +10,9 @@ from flask_wtf.csrf import CSRFProtect
 import pandas as pd
 import json
 import math
+from io import BytesIO
+from openpyxl import Workbook
+from xlsxwriter import Workbook
 
 #Código de barras
 import barcode
@@ -1959,6 +1962,36 @@ def carga_masiva():
             return jsonify({"error": f"❌ Error al cargar productos: {str(e)}"}), 500
 
     return jsonify({"error": "❌ Formato de archivo no permitido"}), 400
+
+@app.route('/download_excel', methods=['POST'])
+def download_excel():
+    # Obtener los productos desde el formulario
+    products_json = request.form.get('products')
+
+    if not products_json:
+        return "No se recibieron productos", 400
+
+    try:
+        # Convertir la cadena JSON en una lista de Python
+        products = json.loads(products_json)
+
+        # Crear un DataFrame con los datos
+        df = pd.DataFrame(products)
+
+        # Crear la respuesta HTTP con el archivo Excel
+        response = Response()
+        response.status_code = 200
+        response.mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        response.headers["Content-Disposition"] = "attachment; filename=productos.xlsx"
+
+        # Escribir el DataFrame directamente en la respuesta
+        with pd.ExcelWriter(response.stream, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="Productos")
+
+        return response
+
+    except json.JSONDecodeError as e:
+        return f"Error al procesar JSON: {e}", 400
 
 #Manejo de errores en el servidor
 def status_401(error):
