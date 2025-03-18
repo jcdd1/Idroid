@@ -247,6 +247,8 @@ class ModelProduct():
                 params["productname"] = f"%{productname}%"
                 params["current_status"] = current_status
                 params["warehouse"] = f"%{warehouse}%"
+            elif warehouse and current_status:
+                query = text(str(query) + " w.warehouse_name ILIKE :warehouse AND p.current_status = :current_status")
             elif category:
                 query = text(str(query) + "p.category ILIKE :category ")
                 params["category"] = f"%{category}%"
@@ -333,6 +335,25 @@ class ModelProduct():
                     JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
                     LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
                     WHERE p.productname ILIKE :productname
+                    AND p.current_status = :current_status
+                    GROUP BY p.product_id, w.warehouse_id, ws.units
+                    HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
+                """)
+                params = {
+                    'productname': f"%{productname}%",
+                    'current_status': current_status,
+                    'units_min': units_min
+                }
+                
+            elif warehouse and current_status:
+                query = text("""
+                    SELECT p.*, w.warehouse_name, w.warehouse_id,
+                        (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                    FROM products p
+                    JOIN warehousestock ws ON p.product_id = ws.product_id
+                    JOIN warehouses w ON ws.warehouse_id = w.warehouse_id
+                    LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                    WHERE w.warehouse_name ILIKE :warehouse
                     AND p.current_status = :current_status
                     GROUP BY p.product_id, w.warehouse_id, ws.units
                     HAVING (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) > :units_min
