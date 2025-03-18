@@ -515,10 +515,9 @@ class ModelProduct():
 
     @staticmethod
     def update_product(db, product_id, productname, imei, storage, battery, color, description, cost, 
-                    category, units, supplier, current_user_id, warehouse_id):
+                    category, units, supplier, current_user_id, warehouse_id, current_status):
 
         try:
-            # Obtener las cuatro consultas SQL
             queries = SQLQueries.update_product_query()
 
             if len(queries) != 4:
@@ -526,7 +525,7 @@ class ModelProduct():
 
             query, query_2, query_3, query_4 = map(text, queries)
 
-            # 1️⃣ **Actualizar `products`**
+            # 1️⃣ **Actualizar `products` con estado**
             db.session.execute(query, {
                 "productname": productname,
                 "imei": imei,
@@ -538,6 +537,7 @@ class ModelProduct():
                 "category": category,
                 "units": units,
                 "supplier": supplier,
+                "current_status": current_status,  # ⬅️ Pasar el estado a la consulta
                 "product_id": product_id
             })
 
@@ -547,7 +547,6 @@ class ModelProduct():
                 'current_user': current_user_id
             })
 
-            # Verificar si se obtuvo un `movement_id`
             movement_row = result.fetchone()
             if movement_row is None:
                 raise ValueError("No se pudo obtener el ID del movimiento.")
@@ -561,23 +560,20 @@ class ModelProduct():
             })
 
             # 4️⃣ **Actualizar la cantidad en `warehousestock`**
-            print(f"📌 Actualizando stock en `warehousestock` para product_id={product_id}, warehouse_id={warehouse_id} con {units} unidades.")
-
             db.session.execute(query_4, {
                 "units": units,
                 "product_id": product_id,
                 "warehouse_id": warehouse_id
             })
 
-            # **Confirmar transacción**
             db.session.commit()
-            print(f"✅ Producto {product_id} actualizado en `products`, `warehousestock` y se registró el movimiento.")
+            print(f"✅ Producto {product_id} actualizado correctamente con estado {current_status}")
 
             return True
 
         except Exception as e:
             db.session.rollback()
-            print(f"❌ Error al actualizar el producto en `products`, `warehousestock`: {e}")
+            print(f"❌ Error al actualizar el producto: {e}")
             return False
 
 

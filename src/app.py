@@ -1746,7 +1746,6 @@ def edit_product():
     battery = request.form.get('edit_battery', 0)
     color = request.form.get('edit_color', '').strip()
     description = request.form.get('edit_description', '').strip()
-    cost = request.form.get('edit_cost', 0.0)
     category = request.form.get('edit_category', '').strip()
     units = request.form.get('edit_units', 0)
     supplier = request.form.get('edit_supplier', '').strip()
@@ -1754,6 +1753,11 @@ def edit_product():
     invoice_quantity = request.form.get('edit_quantity', 0)
     price = request.form.get('edit_price', 0.0)
     warehouse_id = request.form.get('edit_warehouse_id')
+    cost = request.form.get('edit_cost')
+    cost = float(cost) if cost and cost.strip() else float('NaN')
+
+    # Nuevo: Capturar el estado del producto
+    current_status = request.form.get('edit_current_status', '').strip()
 
     # Obtiene el usuario actual
     user_id = current_user.user_id  
@@ -1761,7 +1765,7 @@ def edit_product():
     # Actualiza el producto en la base de datos
     success = ModelProduct.update_product(
         db, product_id, productname, imei, storage, battery, color, description, cost,
-        category, units, supplier, user_id, warehouse_id
+        category, units, supplier, user_id, warehouse_id, current_status
     )
 
     # Si se proporciona un número de factura y cantidad, actualiza la factura
@@ -1772,7 +1776,7 @@ def edit_product():
     # Mensajes Flash
     if success_invoice:
         flash("Factura asociada exitosamente.", "success")
-    elif document_number:  # Solo muestra mensaje si intentó asociar factura y falló
+    elif document_number:
         flash("No se asoció el producto a la factura.", "danger")
 
     if success:
@@ -1780,7 +1784,8 @@ def edit_product():
     else:
         flash("Error al actualizar el producto.", "danger")
 
-    return redirect(url_for('show_productsAdmin'))
+    return redirect(url_for('show_products'))
+
 
 
 @app.route('/movements/<string:imei>', methods=['GET'])

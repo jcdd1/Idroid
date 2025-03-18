@@ -383,7 +383,7 @@
                         <!-- Costo -->
                         <div class="col-md-6">
                             <label for="edit_cost" class="form-label">Costo</label>
-                            <input type="number" step="0.01" class="form-control" id="edit_cost" name="edit_cost" required>
+                            <input type="number" step="0.01" class="form-control" id="edit_cost" name="edit_cost">
                         </div>
 
                         <!-- Precio -->
@@ -410,11 +410,16 @@
                             <input type="text" class="form-control" id="edit_supplier" name="edit_supplier">
                         </div>
 
-                        <!-- Estado -->
+                        <!-- Estado (Dropdown) -->
                         <div class="col-md-6">
                             <label for="edit_current_status" class="form-label">Estado</label>
-                            <input type="text" class="form-control" id="edit_current_status" name="edit_current_status">
+                            <select class="form-control" id="edit_current_status" name="edit_current_status">
+                                <option value="In Warehouse">In Warehouse</option>
+                                <option value="Under Repair">Under Repair</option>
+                                <option value="Sold">Sold</option>
+                            </select>
                         </div>
+
 
                         <!-- Fecha de Creación -->
                         <div class="col-md-6">

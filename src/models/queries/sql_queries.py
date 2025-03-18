@@ -506,7 +506,8 @@ class SQLQueries:
                 cost = :cost,
                 category = :category,
                 units = :units,
-                supplier = :supplier
+                supplier = :supplier,
+                current_status = :current_status  -- 🔹 Agregamos la actualización del estado
             WHERE product_id = :product_id
         """
 
@@ -522,14 +523,14 @@ class SQLQueries:
             VALUES(:movement_id, :product_id, 0, 'completed')       
         """
 
-        
         query_update_warehouse_stock = """
             UPDATE warehousestock
-            SET units = :units  -- Cambié `stock` por `units`
+            SET units = :units
             WHERE product_id = :product_id AND warehouse_id = :warehouse_id
         """
 
         return query, query_movement, query_movement_detail, query_update_warehouse_stock
+
 
     
 
