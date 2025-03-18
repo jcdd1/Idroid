@@ -732,7 +732,7 @@ def add_invoiceUser():
                 movement_type="sale",
                 origin_warehouse_id= current_user.warehouse_id,  
                 destination_warehouse_id=None,
-                movement_description=f"Venta asociada a la factura {invoice_id}",
+                movement_description=f"Venta asociada a la factura {document_number}",
                 user_id= current_user.user_id,  
                 products=products
             )
