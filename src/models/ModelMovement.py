@@ -364,7 +364,7 @@ class ModelMovement:
 
     @staticmethod
     def create_movement_invoice(db, movement_type, origin_warehouse_id, 
-                            movement_description, user_id, products, invoice_id):
+                            movement_description, user_id, products, invoice_id,destination_warehouse_id):
             try:
                 # 1️⃣ Crear el movimiento en la tabla `movement`
                 movement_id = db.session.execute(
@@ -526,10 +526,9 @@ class ModelMovement:
 
 
     @staticmethod
-    def get_all_movements_paginated(db, movement_type=None, page=1, per_page=10):
+    def get_all_movements_paginated(db, movement_type=None, movement_status=None, page=1, per_page=10):
         try:
             offset = (page - 1) * per_page
-
             query = """
                 SELECT 
                     m.movement_id,
@@ -560,40 +559,47 @@ class ModelMovement:
                 JOIN users AS creator ON m.created_by_user_id = creator.user_id
                 JOIN users AS handler ON m.handled_by_user_id = handler.user_id
             """
-
-            count_query = "SELECT COUNT(*) FROM movement"
-
+            count_query = """
+                SELECT COUNT(*) FROM movement AS m
+            """
             params = {}
+            where_added = False  
+            
+            # Filtro por tipo de movimiento
             if movement_type:
-                query += " WHERE LOWER(movement_type) = LOWER(:movement_type)"
-                count_query += " WHERE LOWER(movement_type) = LOWER(:movement_type)"
-                params['movement_type'] = movement_type.lower()
-
+                query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+                count_query += " WHERE LOWER(m.movement_type) = LOWER(:movement_type)"
+                params['movement_type'] = str(movement_type)
+                where_added = True
+            
+            # Filtro por estado de movimiento
+            if movement_status:
+                if where_added:
+                    query += " AND LOWER(m.status) = LOWER(:movement_status)"
+                    count_query += " AND LOWER(m.status) = LOWER(:movement_status)"
+                else:
+                    query += " WHERE LOWER(m.status) = LOWER(:movement_status)"
+                    count_query += " WHERE LOWER(m.status) = LOWER(:movement_status)"
+                params['movement_status'] = str(movement_status)
+            
+            # Agregar la paginación y orden
             query += " ORDER BY m.creation_date DESC LIMIT :per_page OFFSET :offset"
-
             params['per_page'] = per_page
             params['offset'] = offset
-
+            
             result = db.session.execute(text(query), params).mappings().fetchall()
             total_movements = db.session.execute(text(count_query), params).scalar()
-
+            
             movements = [dict(row) for row in result] if result else []
-
             return movements, total_movements
-
         except Exception as e:
             print(f"Error al obtener movimientos: {str(e)}")
             return [], 0
 
 
 
-
-
-
-
-
     @staticmethod
-    def get_movements_by_admin(db, warehouse_id, movement_type=None):
+    def get_movements_by_admin(db, warehouse_id, movement_type=None, movement_status=None):
         try:
             query = """
                 SELECT 
@@ -630,12 +636,18 @@ class ModelMovement:
             # Aplicar filtro opcional por tipo de movimiento
             if movement_type:
                 query += " AND LOWER(m.movement_type) = LOWER(:movement_type)"
+            
+            # Aplicar filtro opcional por estado
+            if movement_status:
+                query += " AND LOWER(md.status) = LOWER(:movement_status)"
 
             query += " ORDER BY m.creation_date DESC"
 
             params = {'warehouse_id': warehouse_id}
             if movement_type:
                 params['movement_type'] = movement_type.lower()
+            if movement_status:
+                params['movement_status'] = movement_status.lower()
 
             result = db.session.execute(text(query), params).mappings().fetchall()
             movements = [dict(row) for row in result] if result else []
@@ -645,6 +657,7 @@ class ModelMovement:
         except Exception as e:
             print(f"Error al obtener movimientos de la bodega: {str(e)}")
             return []
+
 
     @staticmethod
     def get_all_movements(db, movement_type=None):
@@ -711,7 +724,7 @@ class ModelMovement:
 
 
     @staticmethod
-    def get_movements_by_user(db, user_id, movement_type=None):
+    def get_movements_by_user(db, user_id, movement_type=None, movement_status=None):
         try:
             query = """
                 SELECT 
@@ -735,15 +748,18 @@ class ModelMovement:
             # Aplicar filtro opcional por tipo de movimiento
             if movement_type:
                 query += " AND LOWER(m.movement_type) = LOWER(:movement_type)"
-
-
+            
+            # Aplicar filtro opcional por estado
+            if movement_status:
+                query += " AND LOWER(m.status) = LOWER(:movement_status)"
 
             query += " ORDER BY m.creation_date DESC"
 
             params = {'user_id': user_id}
             if movement_type:
                 params['movement_type'] = movement_type.lower()
-
+            if movement_status:
+                params['movement_status'] = movement_status.lower()
 
             result = db.session.execute(text(query), params).mappings().fetchall()
             movements = [dict(row) for row in result] if result else []
@@ -753,6 +769,7 @@ class ModelMovement:
         except Exception as e:
             print(f"Error al obtener movimientos: {str(e)}")
             return []
+
 
 
 

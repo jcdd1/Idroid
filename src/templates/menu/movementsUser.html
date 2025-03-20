@@ -1,7 +1,7 @@
 {% extends 'menuUser.html' %}
 
 {% block dynamicContent %}
-<h1 class="text-success"> Mis movimientos</h1>
+<h1 class="text-success">Mis movimientos</h1>
 
 <!-- Mensajes Flash -->
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -20,17 +20,29 @@
 <!-- Formulario de búsqueda por tipo de movimiento -->
 <form method="GET" action="{{ url_for('get_movements_user') }}" class="row g-3 mt-4">
     <div class="col-md-4">
-        <select name="movement_type" class="form-select border-success">
+        <select name="movement_type" class="form-select border-success" id="movementTypeSelect">
             <option value="">Todos los tipos</option>
             <option value="Transferencia" {% if request.args.get('movement_type') == 'Transferencia' %}selected{% endif %}>Transferencia</option>
             <option value="sale" {% if request.args.get('movement_type') == 'sale' %}selected{% endif %}>Venta</option>
             <option value="Entry" {% if request.args.get('movement_type') == 'Entry' %}selected{% endif %}>Entrada</option>
         </select>
     </div>
+
+    <!-- Desplegable de estado (solo visible cuando se selecciona "Transferencia") -->
+    <div class="col-md-4" id="statusSelectDiv" style="display: none;">
+        <select name="movement_status" class="form-select border-success">
+            <option value="">Todos los estados</option>
+            <option value="pendiente" {% if request.args.get('movement_status') == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="rechazado" {% if request.args.get('movement_status') == 'rechazado' %}selected{% endif %}>Rechazado</option>
+            <option value="aprobado" {% if request.args.get('movement_status') == 'aprobado' %}selected{% endif %}>Aprobado</option>
+        </select>
+    </div>
+
     <div class="col-md-2">
         <button type="submit" class="btn btn-success w-100">Buscar</button>
     </div>
 </form>
+
 
 <!-- Tabla de movimientos -->
 <div class="table-responsive mt-4">
@@ -71,4 +83,22 @@
         </tbody>
     </table>
 </div>
+
+<!-- JavaScript para mostrar el desplegable de estados -->
+<script>
+    document.getElementById('movementTypeSelect').addEventListener('change', function() {
+        var statusSelectDiv = document.getElementById('statusSelectDiv');
+        if (this.value === 'Transferencia') {
+            statusSelectDiv.style.display = 'block'; // Muestra el desplegable de estados
+        } else {
+            statusSelectDiv.style.display = 'none'; // Oculta el desplegable de estados
+        }
+    });
+
+    // Verificar si ya se había seleccionado "Transferencia" al cargar la página
+    if (document.getElementById('movementTypeSelect').value === 'Transferencia') {
+        document.getElementById('statusSelectDiv').style.display = 'block';
+    }
+</script>
+
 {% endblock %}

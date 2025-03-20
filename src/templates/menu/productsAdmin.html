@@ -11,6 +11,9 @@
     <script src="{{ url_for('static', filename='js/ScriptEditProduct.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptEditUnits.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ScriptUpdateStatus.js') }}"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stylebutton.css') }}">
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -205,7 +208,7 @@
 <form action="{{ url_for('download_excel') }}" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="products" value='{{ products | tojson | safe }}'>
-    <button type="submit">Descargar Excel</button>
+    <button type="submit" class="download-btn">Descargar Excel</button>
 </form>
 
 

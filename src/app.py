@@ -1645,15 +1645,17 @@ def get_movements_user():
     try:
         user_id = current_user.user_id  # Usuario autenticado
         movement_type = request.args.get('movement_type', None)  # Captura el tipo de movimiento
+        movement_status = request.args.get('movement_status', None)  # Captura el estado del movimiento
 
         # Obtener movimientos filtrados
-        movements = ModelMovement.get_movements_by_user(db, user_id, movement_type)
+        movements = ModelMovement.get_movements_by_user(db, user_id, movement_type, movement_status)
 
         return render_template('menu/movementsUser.html', movements=movements)
 
     except Exception as e:
         flash(f"Error al cargar movimientos: {str(e)}", "danger")
-        return redirect(url_for('menu/movementsUser.html'))
+        return redirect(url_for('menu.movementsUser'))
+
 
 
 @app.route('/movementsAdmin', methods=['GET'])
@@ -1661,37 +1663,47 @@ def get_movements_user():
 def get_movements_admin():
     try:
         warehouse_id = current_user.warehouse_id  # Obtiene la bodega del Admin
-        movement_type = request.args.get('movement_type')  # Obtiene el filtro del formulario
+        movement_type = request.args.get('movement_type')  # Captura el filtro del formulario
+        movement_status = request.args.get('movement_status')  # Captura el estado del movimiento
 
-        # Consulta solo los movimientos dentro de la bodega del Admin
-        movements = ModelMovement.get_movements_by_admin(db, warehouse_id, movement_type)
+        # Consulta los movimientos filtrados por tipo y estado
+        movements = ModelMovement.get_movements_by_admin(db, warehouse_id, movement_type, movement_status)
 
         return render_template('menu/movementsAdmin.html', movements=movements)
 
     except Exception as e:
         flash(f"Error al cargar movimientos: {str(e)}", "danger")
-        return redirect(url_for('menu/movementsAdmin.html'))
-    
+        return redirect(url_for('menu.movementsAdmin'))
+
 
 
 @app.route('/movementsSuperAdmin', methods=['GET'])
 @login_required
 def get_movements_superadmin():
     try:
+        # Verificar que el usuario sea superAdmin
         if current_user.role != 'superAdmin':
             flash("No tienes permisos para acceder a esta vista.", "danger")
             return redirect(url_for('dashboard'))
 
-        # Obtiene el tipo de movimiento del formulario
+        # Obtener los parámetros de filtro del formulario
         movement_type = request.args.get('movement_type')
+        movement_status = request.args.get('movement_status')
 
-        # Obtiene el número de página actual (por defecto 1)
+        # Obtener el número de página actual (por defecto 1)
         page = request.args.get('page', 1, type=int)
         per_page = 10  # Número de movimientos por página
 
         # Consulta con paginación
-        movements, total_movements = ModelMovement.get_all_movements_paginated(db, movement_type, page, per_page)
+        movements, total_movements = ModelMovement.get_all_movements_paginated(
+            db, 
+            movement_type=movement_type, 
+            movement_status=movement_status,
+            page=page, 
+            per_page=per_page
+        )
 
+        # Calcular el número total de páginas
         total_pages = (total_movements // per_page) + (1 if total_movements % per_page > 0 else 0)
 
         return render_template(
@@ -1699,12 +1711,14 @@ def get_movements_superadmin():
             movements=movements,
             page=page,
             total_pages=total_pages,
-            movement_type=movement_type
+            movement_type=movement_type,
+            movement_status=movement_status
         )
 
     except Exception as e:
         flash(f"Error al cargar movimientos: {str(e)}", "danger")
-        return redirect(url_for('get_movements_superadmin'))
+        return redirect(url_for('dashboard'))
+
 
 
 
