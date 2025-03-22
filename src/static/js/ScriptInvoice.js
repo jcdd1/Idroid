@@ -6,16 +6,17 @@ function initializeInvoiceModal() {
     const createInvoiceButton = document.getElementById("createInvoiceButton");
     const imeiAlert = document.getElementById("imeiAlert");
     const form = document.querySelector("#addInvoiceModal form");
+    const priceInput = document.getElementById("price");
 
     let productList = [];
-    let lastImei = "";
 
-    // ✅ Detectar cambios en el IMEI en tiempo reals
+    // ✅ Detectar cambios en el IMEI en tiempo real
     imeiInput.addEventListener("input", function () {
         clearTimeout(this.typingTimer);
         this.typingTimer = setTimeout(fetchProductData, 500);
     });
 
+    // Función para buscar los datos del producto por IMEI
     function fetchProductData() {
         const imei = imeiInput.value.trim();
         if (imei.length < 5) {
@@ -59,7 +60,7 @@ function initializeInvoiceModal() {
             });
     }
 
-    // 🔹 Agregar producto a la tabla solo al hacer clic
+    // Función para agregar producto a la lista
     addProductButton.addEventListener("click", function () {
         const imei = imeiInput.value.trim();
         const product_name = document.getElementById("product_name").value;
@@ -68,12 +69,12 @@ function initializeInvoiceModal() {
         const color = document.getElementById("color").value;
         const units = parseInt(document.getElementById("units").value, 10);
         const quantity = parseInt(quantityInput.value, 10);
-        const price = 1000; // Precio fijo o dinámico según la lógica
+        const price = parseFloat(priceInput.value);  // Obtener el precio ingresado
 
         // 🔍 Validaciones antes de agregar el producto
-        if (!imei || !product_name || quantity <= 0 || quantity > units) {
-            alert("⚠️ Verifica los datos ingresados.");
-            return;
+        if (!imei || !product_name || quantity <= 0 || quantity > units || isNaN(quantity) || isNaN(price) || price <= 0) {
+            alert("⚠️ La cantidad o el precio no son válidos.");
+            return; // No agregar el producto si hay un error de validación
         }
 
         // 🛑 Evitar productos duplicados en la lista
@@ -83,7 +84,7 @@ function initializeInvoiceModal() {
         }
 
         // 📌 Agregar producto a la lista
-        productList.push({ imei, quantity, price });
+        productList.push({ imei, product_name, storage, battery, color, quantity, price });
 
         // 🔹 Crear fila en la tabla
         const row = document.createElement("tr");
@@ -94,17 +95,18 @@ function initializeInvoiceModal() {
             <td>${battery}</td>
             <td>${color}</td>
             <td>${quantity}</td>
+            <td>${price}</td>
             <td><button class="btn btn-danger btn-sm delete-btn">❌</button></td>
         `;
 
         productListBody.appendChild(row);
-        updateCreateButton();
+        updateCreateButton();  // Actualiza el estado del botón de crear factura
 
         // ✅ Quitar los atributos `required` de los campos IMEI y Cantidad
         imeiInput.removeAttribute("required");
         quantityInput.removeAttribute("required");
 
-        // 🧹 Limpiar campos
+        // 🧹 Limpiar campos después de agregar el producto
         clearFields();
     });
 
@@ -162,6 +164,7 @@ function initializeInvoiceModal() {
         document.getElementById("color").value = "";
         document.getElementById("units").value = "";
         quantityInput.value = "";
+        priceInput.value = "";  // Limpiar también el campo de precio
     }
 
     // ⚠️ Mostrar alerta de error
@@ -202,3 +205,4 @@ document.addEventListener("DOMContentLoaded", function () {
         initializeInvoiceModal();
     });
 });
+

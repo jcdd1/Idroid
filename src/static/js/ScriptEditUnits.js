@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log("✅ ScriptEditUnits.js cargado correctamente");
 
@@ -13,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const addButton = field.querySelector('.btn-add');
         const subtractButton = field.querySelector('.btn-subtract');
         const inputField = field.querySelector('.unit-input');
+
+        // Obtener warehouse_id asociado
+        const warehouseId = field.getAttribute('data-warehouse-id'); // Obtén el warehouse_id
 
         // Aplicar estilo verde al botón Editar
         editButton.classList.remove('btn-primary');
@@ -43,26 +45,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Incrementar unidades
         addButton.addEventListener('click', function() {
             console.log(`➕ Incrementando unidades para IMEI: ${field.getAttribute('data-imei')}`);
-            updateUnits(field.getAttribute('data-imei'), 1, inputField, unitDisplay);
+            updateUnits(field.getAttribute('data-imei'), 1, inputField, unitDisplay, warehouseId); // Pasar warehouseId
         });
 
         // Disminuir unidades
         subtractButton.addEventListener('click', function() {
             console.log(`➖ Disminuyendo unidades para IMEI: ${field.getAttribute('data-imei')}`);
-            updateUnits(field.getAttribute('data-imei'), -1, inputField, unitDisplay);
+            updateUnits(field.getAttribute('data-imei'), -1, inputField, unitDisplay, warehouseId); // Pasar warehouseId
         });
     });
 
     // 🌐 Actualizar unidades en el servidor
-    function updateUnits(imei, amount, input, display) {
-        console.log(`📡 Enviando actualización para IMEI: ${imei} | Cantidad: ${amount}`);
+    function updateUnits(imei, amount, input, display, warehouseId) {
+        console.log(`📡 Enviando actualización para IMEI: ${imei} | Cantidad: ${amount} | Bodega: ${warehouseId}`);
         fetch(`/update_units/${imei}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
             },
-            body: JSON.stringify({ amount: amount })
+            body: JSON.stringify({ 
+                amount: amount,
+                warehouse_id: warehouseId  // Enviar warehouse_id junto con amount
+            })
         })
         .then(response => response.json())
         .then(data => {

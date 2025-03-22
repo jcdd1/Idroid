@@ -126,22 +126,30 @@ document.addEventListener('DOMContentLoaded', function () {
     addProductButton.addEventListener('click', function () {
         const imei = imeiInput.value.trim();
         const productName = productNameInput.value.trim();
-        const units = unitsInput.value.trim();
+        const units = parseInt(unitsInput.value.trim(), 10); // Aseguramos que sea número
         const warehouse = warehouseSelect.options[warehouseSelect.selectedIndex]?.text;
         const warehouseId = warehouseSelect.value;
         const user = userSelect.options[userSelect.selectedIndex]?.text;
         const userId = userSelect.value;
 
-        if (!imei || !productName || !units || !warehouseId || !userId) {
+        if (!imei || !productName || isNaN(units) || !warehouseId || !userId) {
             alert("⚠️ Todos los campos son obligatorios.");
             return;
         }
 
+        // ❌ Validar que el producto no esté agotado
+        if (units <= 0) {
+            alert("⚠️ El producto está en 0, no puede ser enviado.");
+            return;
+        }
+
+        // 🛑 Evitar duplicados
         if (productsData.some(product => product.imei === imei)) {
             alert("⚠️ Este producto ya ha sido añadido.");
             return;
         }
 
+        // ✅ Agregar producto a la lista
         productsData.push({ imei, productName, units, warehouse, warehouseId, user, userId });
 
         const row = document.createElement('tr');
@@ -159,6 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
             row.remove();
             productsData = productsData.filter(p => p.imei !== imei);
         });
+    
+
 
         clearFormFields();
     });

@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 data.forEach(item => {
                     var row = `<tr>
+                    <td>${item.imei}</td>
                         <td>${item.product_name}</td>
                         <td class="text-center">${item.quantity}</td>
                         <td class="text-center">$${item.price.toFixed(2)}</td>

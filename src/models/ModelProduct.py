@@ -23,27 +23,45 @@ class ModelProduct():
 
 
     @staticmethod
-    def update_units(db, imei, amount):
-            try:
-                # Actualizar las unidades del producto
-                query = text("""
-                    UPDATE products
+    def update_units(db, imei, amount, warehouse_id):
+        try:
+            # 1️⃣ **Actualizar las unidades del producto en products**
+            query_1 = text("""
+                UPDATE products
+                SET units = units + :amount
+                WHERE imei = :imei
+                RETURNING units
+            """)
+            result_1 = db.session.execute(query_1, {'amount': amount, 'imei': imei})
+            updated_units = result_1.fetchone()
+
+            if updated_units:
+                # 2️⃣ **Actualizar las unidades en warehousestock**
+                query_2 = text("""
+                    UPDATE warehousestock
                     SET units = units + :amount
-                    WHERE imei = :imei
+                    WHERE product_id = (SELECT product_id FROM products WHERE imei = :imei)
+                    AND warehouse_id = :warehouse_id
                     RETURNING units
                 """)
-                result = db.session.execute(query, {'amount': amount, 'imei': imei})
-                updated_units = result.fetchone()
+                result_2 = db.session.execute(query_2, {'amount': amount, 'imei': imei, 'warehouse_id': warehouse_id})
+                updated_units = result_2.fetchone()
 
                 if updated_units:
+                    # Si ambos updates son exitosos, hacer commit
                     db.session.commit()
-                    return {"success": True, "new_units": updated_units[0]}
+                    return {"success": True, "new_units": updated_units[0], "new_units": updated_units[0]}
                 else:
-                    return {"success": False, "error": "Producto no encontrado"}
+                    db.session.rollback()
+                    return {"success": False, "error": "No se pudo actualizar el stock en el almacén"}
+            else:
+                return {"success": False, "error": "Producto no encontrado"}
 
-            except Exception as e:
-                db.session.rollback()
-                return {"success": False, "error": str(e)}
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "error": str(e)}
+
+
 
     @staticmethod
     def update_status(db, imei, new_status):
@@ -87,19 +105,35 @@ class ModelProduct():
     @staticmethod
     def get_units_product(db, product_id, warehouse_id):
         try:
-            query = text(SQLQueries.get_units_product_query())
-            result = db.session.execute(query, {'warehouse_id': warehouse_id, 'product_id': product_id}).mappings().all()
+            print(f"Producto ID recibido: {product_id}, Bodega ID recibido: {warehouse_id}")
 
-            result = [dict(row) for row in result]
-            # df = pd.DataFrame(result)
-            # filtered_df = df.loc[df.groupby('product_id')['units'].idxmax()]
-            #     # Convertir a lista de diccionarios
-            # filtered_data = filtered_df.to_dict(orient="records")
-            return result
+            # Consulta SQL para obtener las unidades disponibles del producto en la bodega especificada
+            query = text("""
+                SELECT p.product_id, p.productname, p.storage, p.battery, p.color, p.units, ws.warehouse_id,
+                    (ws.units - COALESCE(SUM(CASE WHEN md.status = 'Transferencia' THEN md.quantity ELSE 0 END), 0)) AS stock_disponible
+                FROM products p
+                LEFT JOIN warehousestock ws ON p.product_id = ws.product_id
+                LEFT JOIN movementdetail md ON md.product_id = p.product_id AND md.status = 'Transferencia'
+                WHERE p.product_id = :product_id AND ws.warehouse_id = :warehouse_id
+                GROUP BY p.product_id, p.productname, p.storage, p.battery, p.color, ws.units, ws.warehouse_id
+            """)
+
+            # Parámetros de la consulta
+            params = {'product_id': product_id, 'warehouse_id': warehouse_id}
+
+            # Ejecutar la consulta
+            result = db.session.execute(query, params).mappings().fetchall()
+
+
+            # Verificar si se obtuvieron resultados y devolver el stock disponible
+            return [dict(row) for row in result] if result else []
+
         except Exception as e:
-            print(f"Error adding product: {e}")
-            db.session.rollback()  # Rollback on error
-            return False
+            print(f"❌ Error al obtener las unidades: {e}")
+            return []
+
+
+
     @staticmethod
     def add_product_with_initial_movement(db, productname, imei, storage, battery, color, description, 
                                           cost, category, units, supplier, warehouse_id, current_user):

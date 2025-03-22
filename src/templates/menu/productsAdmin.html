@@ -139,7 +139,7 @@
                 <td>{{ product.category }}</td>
 
                 <!-- Edición de unidades -->
-                <td class="unit-field" data-imei="{{ product.imei }}">
+                <td class="unit-field" data-imei="{{ product.imei }}" data-warehouse-id="{{ product.warehouse_id }}">
                     <span class="unit-display">{{ product.stock_disponible }}</span>
                     <button class="btn btn-sm btn-primary btn-edit-units">Edit</button>
                     <div class="unit-editor d-none mt-2">
@@ -150,7 +150,7 @@
                         </div>
                         <button class="btn btn-secondary btn-sm btn-cancel-edit mt-1">Cancelar</button>
                     </div>
-                </td>
+                </td>                
 
                 <td class="text-center">
                     <span class="badge {% if product.current_status == 'Sold' %}bg-success{% elif product.current_status == 'Under Repair' %}bg-warning{% else %}bg-secondary{% endif %}">
@@ -527,7 +527,7 @@
                         </div>
                         <div class="col-md-4">
                             <label for="units_global" class="form-label">Unidades a Enviar</label>
-                            <input type="number" class="form-control" id="units_global" min="1" required>
+                            <input type="number" class="form-control" id="units_global" min="0" required>
                         </div>
                         <div class="col-md-4">
                             <label for="warehouse_global" class="form-label">Bodega Destino</label>

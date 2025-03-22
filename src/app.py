@@ -89,6 +89,7 @@ def show_users():
             SELECT warehouse_id AS id, warehouse_name AS name FROM warehouses
         """)).mappings().all()
 
+
         warehouses_list = [dict(warehouse) for warehouse in warehouses]
 
         return render_template("menu/users.html", users=users_list, warehouses=warehouses_list)
@@ -389,21 +390,25 @@ def update_units(imei):
     try:
         data = request.get_json()
         amount = int(data.get('amount', 0))
+        warehouse_id = data.get('warehouse_id')  
+        if not warehouse_id:
+            return jsonify({'success': False, 'message': 'El ID de la bodega es requerido.'}), 400
 
         if amount == 0:
             return jsonify({'success': False, 'message': 'Cantidad inválida.'}), 400
 
         # Llamar al método del modelo para actualizar unidades
-        response = ModelProduct.update_units(db, imei, amount)
+        response = ModelProduct.update_units(db, imei, amount, warehouse_id)
 
         if response.get('success'):
-            return jsonify({'success': True, 'new_units': response['new_units']})
+            return jsonify({'success': True, 'new_units': response['new_units'], 'new_units': response['new_units']})
         else:
             return jsonify({'success': False, 'message': response.get('error', 'Error desconocido.')}), 404
 
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 
 @app.route('/update_status/<imei>', methods=['POST'])
@@ -433,7 +438,7 @@ def get_invoice_details(invoice_id):
     try:
         details = db.session.execute(
             text("""
-                SELECT p.productname, id.quantity, id.price
+                SELECT p.imei, p.productname, id.quantity, id.price
                 FROM invoicedetail id
                 JOIN products p ON id.product_id = p.product_id
                 WHERE id.invoice_id = :invoice_id
@@ -448,6 +453,7 @@ def get_invoice_details(invoice_id):
 
         return jsonify([
             {
+                "imei": row["imei"],
                 "product_name": row["productname"], 
                 "quantity": row["quantity"], 
                 "price": float(row["price"]) 
@@ -858,18 +864,24 @@ def add_invoice():
             flash('Todos los campos son obligatorios.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
+        # Obtener productos
         products_json = request.form.get('products')  
         if not products_json:
             flash('Debe agregar al menos un producto.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
-        products = json.loads(products_json)
+        # Asegurarse de que los productos están en formato JSON
+        try:
+            products = json.loads(products_json)
+        except json.JSONDecodeError as e:
+            flash('Error en el formato de los productos.', 'error')
+            print(f"❌ Error en el formato JSON: {e}")
+            return redirect(url_for('show_invoicesUser'))
 
         if not products:
             flash('Debe agregar al menos un producto.', 'error')
             return redirect(url_for('show_invoicesUser'))
 
-        
         with db.session.begin():  # Garantiza que todas las operaciones sean atómicas
             # **1️⃣ Crear la factura**
             invoice_id = ModelInvoice.create_invoice(
@@ -897,16 +909,14 @@ def add_invoice():
 
             print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
 
-
-
             # **3️⃣ Crear el movimiento de venta**
             movement_id = ModelMovement.create_movement(
                 db=db,
                 movement_type="sale",
-                origin_warehouse_id= current_user.warehouse_id,  
+                origin_warehouse_id=current_user.warehouse_id,
                 destination_warehouse_id=None,
                 movement_description=f"Venta asociada a la factura {document_number}",
-                user_id= current_user.user_id,  
+                user_id=current_user.user_id,  
                 products=products
             )
 
@@ -925,6 +935,7 @@ def add_invoice():
         flash('Ocurrió un error al procesar la solicitud.', 'error')
 
     return redirect(url_for('show_invoices'))
+
 
 
 
@@ -1178,11 +1189,22 @@ def edit_movement():
 @login_required
 def get_product_units(product_id, warehouse_id):
     try:
+        # Llamamos a la función que obtiene las unidades
         available_units = ModelProduct.get_units_product(db, product_id, warehouse_id)
-        return jsonify({"available_units": available_units[0]['stock_disponible']})
+
+        # Verificamos si la consulta devolvió resultados
+        if available_units:
+            # Retornamos la primera fila de la consulta con 'stock_disponible'
+            return jsonify({"available_units": available_units[0].get('stock_disponible', 0)})
+        else:
+            # Si no hay resultados, devolvemos 0 como unidades disponibles
+            return jsonify({"available_units": 0})
+    
     except Exception as e:
+        # Captura cualquier error y lo muestra
         print(f"❌ Error al obtener unidades: {e}")
         return jsonify({"available_units": 0})
+
 
 
 
