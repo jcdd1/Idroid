@@ -126,6 +126,7 @@
                     <table class="table table-bordered table-hover table-sm shadow-sm rounded">
                         <thead class="bg-success text-white text-center">
                             <tr>
+                                <th>Imei</th>
                                 <th>Producto</th>
                                 <th>Cantidad</th>
                                 <th>Precio Unitario</th>
@@ -194,6 +195,10 @@
                             <label for="quantity" class="form-label">Cantidad a Facturar</label>
                             <input type="number" class="form-control" id="quantity" min="0" required>
                         </div>
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">Precio</label>
+                            <input type="text" class="form-control" id="price" placeholder="Ingrese el precio" >
+                        </div>
                         <div class="col-md-12 text-end">
                             <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
                         </div>
@@ -209,6 +214,7 @@
                                     <th>Batería</th>
                                     <th>Color</th>
                                     <th>Cantidad</th>
+                                    <th>Precio</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>

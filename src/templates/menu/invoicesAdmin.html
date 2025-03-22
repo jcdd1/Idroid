@@ -167,17 +167,18 @@
 <!-- Modal para editar factura -->
 <div class="modal fade" id="editInvoiceModal" tabindex="-1" aria-labelledby="editInvoiceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;"> 
+        <div class="modal-content" style="background-color: #f0fdf4;">
             <form id="editInvoiceForm" method="POST" action="{{ url_for('edit_invoiceAdmin') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="edit_invoice_id" name="invoice_id">
 
-                <div class="modal-header bg-success text-white"> 
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">Editar Factura</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Datos de la factura -->
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="edit_type" class="form-label">Tipo</label>
@@ -199,16 +200,48 @@
 
                     <hr>
 
-                    <!-- IMEI para buscar producto -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="edit_imei" class="form-label">IMEI del Producto</label>
-                            <input type="text" class="form-control border-success" id="edit_imei" placeholder="Ingrese IMEI">
+                    <!-- IMEI y productos a agregar -->
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="imei" class="form-label">IMEI del Producto</label>
+                                <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
+                            </div>
+                            <div id="imeiAlert" class="alert alert-danger d-none" role="alert">
+                                ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
+                            </div>
+                            <div class="col-md-6">
+                                <label for="product_name" class="form-label">Nombre Producto</label>
+                                <input type="text" class="form-control" id="product_name" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="storage" class="form-label">Memoria</label>
+                                <input type="text" class="form-control" id="storage" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="battery" class="form-label">Batería</label>
+                                <input type="text" class="form-control" id="battery" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="color" class="form-label">Color</label>
+                                <input type="text" class="form-control" id="color" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="units" class="form-label">Unidades Disponibles</label>
+                                <input type="text" class="form-control" id="units" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="quantity" class="form-label">Cantidad a Facturar</label>
+                                <input type="number" class="form-control" id="quantity" min="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="price" class="form-label">Precio</label>
+                                <input type="text" class="form-control" id="price" placeholder="Ingrese el precio" >
+                            </div>
+                            <div class="col-md-12 text-end">
+                                <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
+                            </div>
                         </div>
-                        <div class="col-md-6 text-end">
-                            <button type="button" class="btn btn-success" id="edit_addProductButton">+ Agregar Producto</button>
-                        </div>
-                    </div>
 
                     <!-- Tabla de productos -->
                     <div class="table-responsive mt-4">
@@ -221,6 +254,7 @@
                                     <th>Batería</th>
                                     <th>Color</th>
                                     <th>Cantidad</th>
+                                    <th>Precio</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -231,7 +265,7 @@
                     </div>
                 </div>
 
-                <div class="modal-footer" style="background-color: #d4edda;"> 
+                <div class="modal-footer" style="background-color: #d4edda;">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     <button type="submit" class="btn btn-success">Guardar Cambios</button>
                 </div>
@@ -239,6 +273,9 @@
         </div>
     </div>
 </div>
+</div>
+
+
 
 
 
@@ -350,5 +387,7 @@
         </div>
     </div>
 </div>
+
+
 
 {% endblock %}

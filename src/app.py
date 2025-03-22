@@ -591,9 +591,6 @@ def show_invoicesAdmin():
 
 
 
-@app.route('/edit_invoiceUser', methods=['POST'])
-def edit_invoiceUser():
-    return redirect(url_for('show_invoicesUser'))
 
 @app.route('/edit_invoice', methods=['POST'])
 def edit_invoice():

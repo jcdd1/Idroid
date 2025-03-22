@@ -1,18 +1,22 @@
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".editInvoiceBtn").forEach(button => {
+    // Evento para el botón de Editar
+    document.querySelectorAll(".editProductBtn").forEach(button => {
         button.addEventListener("click", async function () {
-            const invoiceId = this.dataset.id;
-            document.getElementById("edit_invoice_id").value = invoiceId;
+            const productId = this.dataset.id;
+            document.getElementById("edit_product_id").value = productId;
 
-            // Obtener datos de la factura
-            const response = await fetch(`/get_invoice_details/${invoiceId}`);
+            // Obtener datos del producto
+            const response = await fetch(`/get_product_details/${productId}`);
             const data = await response.json();
 
-            document.getElementById("edit_type").value = data.type;
-            document.getElementById("edit_date").value = data.date;
-            document.getElementById("edit_status").value = data.status;
+            document.getElementById("edit_product_name").value = data.name;
+            document.getElementById("edit_product_memory").value = data.memory;
+            document.getElementById("edit_product_battery").value = data.battery;
+            document.getElementById("edit_product_color").value = data.color;
+            document.getElementById("edit_product_quantity").value = data.quantity;
+            document.getElementById("edit_product_price").value = data.price;
 
-            // Cargar productos
+            // Cargar productos en la tabla
             const productListBody = document.getElementById("edit_productListBody");
             productListBody.innerHTML = "";
 
@@ -21,17 +25,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 row.innerHTML = `
                     <td>${product.imei}</td>
                     <td>${product.name}</td>
-                    <td>${product.storage}</td>
+                    <td>${product.memory}</td>
                     <td>${product.battery}</td>
                     <td>${product.color}</td>
                     <td>${product.quantity}</td>
-                    <td><button class="btn btn-danger btn-sm delete-btn" data-imei="${product.imei}">❌</button></td>
+                    <td>${product.price}</td>
+                    <td>
+                        <!-- Botón Eliminar -->
+                        <button class="btn btn-danger btn-sm deleteProductBtn" data-imei="${product.imei}">❌ Eliminar</button>
+                    </td>
                 `;
                 productListBody.appendChild(row);
             });
 
             // Eliminar productos
-            document.querySelectorAll(".delete-btn").forEach(btn => {
+            document.querySelectorAll(".deleteProductBtn").forEach(btn => {
                 btn.addEventListener("click", function () {
                     this.closest("tr").remove();
                 });
@@ -39,12 +47,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Confirmar eliminación de factura
-    document.querySelectorAll(".deleteInvoiceBtn").forEach(button => {
+    // Confirmar eliminación de producto
+    document.querySelectorAll(".deleteProductBtn").forEach(button => {
         button.addEventListener("click", function () {
-            const invoiceId = this.dataset.id;
-            if (confirm("¿Seguro que deseas eliminar esta factura?")) {
-                fetch(`/delete_invoice/${invoiceId}`, { method: "POST" })
+            const productId = this.dataset.imei;
+            if (confirm("¿Seguro que deseas eliminar este producto?")) {
+                fetch(`/delete_product/${productId}`, { method: "POST" })
                 .then(response => response.json())
                 .then(() => location.reload());
             }
