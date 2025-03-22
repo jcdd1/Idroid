@@ -801,7 +801,7 @@ def add_invoiceAdmin():
             if not invoice_id:
                 flash('Error al crear la factura.', 'error')
                 db.session.rollback()
-                return redirect(url_for('show_invoicesUser'))
+                return redirect(url_for('show_invoicesAdmin'))
 
             print(f"📄 Factura creada con ID: {invoice_id}")
 
@@ -810,7 +810,7 @@ def add_invoiceAdmin():
             if not success:
                 flash('Error al registrar los productos en la factura.', 'error')
                 db.session.rollback()
-                return redirect(url_for('show_invoicesUser'))
+                return redirect(url_for('show_invoicesAdmin'))
 
             print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
 
@@ -859,26 +859,20 @@ def add_invoice():
 
         if not all([invoice_type, document_number, date, client, status]):
             flash('Todos los campos son obligatorios.', 'error')
-            return redirect(url_for('show_invoicesUser'))
+            return redirect(url_for('show_invoices'))
 
-        # Obtener productos
         products_json = request.form.get('products')  
         if not products_json:
             flash('Debe agregar al menos un producto.', 'error')
-            return redirect(url_for('show_invoicesUser'))
+            return redirect(url_for('show_invoices'))
 
-        # Asegurarse de que los productos están en formato JSON
-        try:
-            products = json.loads(products_json)
-        except json.JSONDecodeError as e:
-            flash('Error en el formato de los productos.', 'error')
-            print(f"❌ Error en el formato JSON: {e}")
-            return redirect(url_for('show_invoicesUser'))
+        products = json.loads(products_json)
 
         if not products:
             flash('Debe agregar al menos un producto.', 'error')
-            return redirect(url_for('show_invoicesUser'))
+            return redirect(url_for('show_invoices'))
 
+        
         with db.session.begin():  # Garantiza que todas las operaciones sean atómicas
             # **1️⃣ Crear la factura**
             invoice_id = ModelInvoice.create_invoice(
@@ -893,7 +887,7 @@ def add_invoice():
             if not invoice_id:
                 flash('Error al crear la factura.', 'error')
                 db.session.rollback()
-                return redirect(url_for('show_invoicesUser'))
+                return redirect(url_for('show_invoices'))
 
             print(f"📄 Factura creada con ID: {invoice_id}")
 
@@ -902,25 +896,27 @@ def add_invoice():
             if not success:
                 flash('Error al registrar los productos en la factura.', 'error')
                 db.session.rollback()
-                return redirect(url_for('show_invoicesUser'))
+                return redirect(url_for('show_invoicesAdmin'))
 
             print(f"📑 Detalles de factura registrados para Invoice ID: {invoice_id}")
+
+
 
             # **3️⃣ Crear el movimiento de venta**
             movement_id = ModelMovement.create_movement(
                 db=db,
                 movement_type="sale",
-                origin_warehouse_id=current_user.warehouse_id,
+                origin_warehouse_id= current_user.warehouse_id,  
                 destination_warehouse_id=None,
                 movement_description=f"Venta asociada a la factura {document_number}",
-                user_id=current_user.user_id,  
+                user_id= current_user.user_id,  
                 products=products
             )
 
             if not movement_id:
                 flash('Error al registrar el movimiento.', 'error')
                 db.session.rollback()
-                return redirect(url_for('show_invoices'))
+                return redirect(url_for('show_invoicesAdmin'))
 
             print(f"🚀 Movimiento de venta creado con ID: {movement_id}")
 

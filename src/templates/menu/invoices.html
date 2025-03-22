@@ -131,6 +131,121 @@
 
 </div>
 
+<!-- Modal para crear factura -->
+<div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;"> 
+            <form method="POST" action="{{ url_for('add_invoice') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-header bg-success text-white"> 
+                    <h5 class="modal-title" id="addInvoiceModalLabel">Crear Factura</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- IMEI con búsqueda dinámica -->
+                        <div class="col-md-6">
+                            <label for="imei" class="form-label">IMEI del Producto</label>
+                            <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
+                        </div>
+                        <div id="imeiAlert" class="alert alert-danger d-none" role="alert">
+                            ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
+                        </div>
+                        <div class="col-md-6">
+                            <label for="product_name" class="form-label">Nombre Producto</label>
+                            <input type="text" class="form-control" id="product_name" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="storage" class="form-label">Memoria</label>
+                            <input type="text" class="form-control" id="storage" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="battery" class="form-label">Batería</label>
+                            <input type="text" class="form-control" id="battery" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="color" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="units" class="form-label">Unidades Disponibles</label>
+                            <input type="text" class="form-control" id="units" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="quantity" class="form-label">Cantidad a Facturar</label>
+                            <input type="number" class="form-control" id="quantity" min="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">Precio</label>
+                            <input type="text" class="form-control" id="price" placeholder="Ingrese el precio" >
+                        </div>
+                        <div class="col-md-12 text-end">
+                            <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered table-hover table-sm shadow-sm rounded">
+                            <thead class="bg-success text-white text-center">
+                                <tr>
+                                    <th>IMEI</th>
+                                    <th>Producto</th>
+                                    <th>Memoria</th>
+                                    <th>Batería</th>
+                                    <th>Color</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productListBody">
+                                <!-- Productos añadidos dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <label for="client" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="client" name="client" placeholder="Nombre del cliente" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="document_number" class="form-label">Número de Documento</label>
+                            <input type="text" class="form-control" id="document_number" name="document_number" autocomplete="off" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="type" class="form-label">Tipo</label>
+                            <input type="text" class="form-control" id="type" name="type" placeholder="Ejemplo: Venta" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="date" class="form-label">Fecha</label>
+                            <input type="datetime-local" class="form-control" id="date" name="date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Estado</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Pagada">Pagada</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="background-color: #d4edda;"> 
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-success" id="createInvoiceButton" disabled>Crear Factura</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+
 
 <!-- Modal para Detalle de Factura -->
 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" aria-labelledby="invoiceDetailModalLabel" aria-hidden="true">
@@ -287,119 +402,6 @@
 
 
 
-
-<!-- Modal para crear factura -->
-<div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;"> 
-            <form method="POST" action="{{ url_for('add_invoice') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="modal-header bg-success text-white"> 
-                    <h5 class="modal-title" id="addInvoiceModalLabel">Crear Factura</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <!-- IMEI con búsqueda dinámica -->
-                        <div class="col-md-6">
-                            <label for="imei" class="form-label">IMEI del Producto</label>
-                            <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
-                        </div>
-                        <div id="imeiAlert" class="alert alert-danger d-none" role="alert">
-                            ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
-                        </div>
-                        <div class="col-md-6">
-                            <label for="product_name" class="form-label">Nombre Producto</label>
-                            <input type="text" class="form-control" id="product_name" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="storage" class="form-label">Memoria</label>
-                            <input type="text" class="form-control" id="storage" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="battery" class="form-label">Batería</label>
-                            <input type="text" class="form-control" id="battery" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="color" class="form-label">Color</label>
-                            <input type="text" class="form-control" id="color" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="units" class="form-label">Unidades Disponibles</label>
-                            <input type="text" class="form-control" id="units" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="quantity" class="form-label">Cantidad a Facturar</label>
-                            <input type="number" class="form-control" id="quantity" min="0" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="price" class="form-label">Precio</label>
-                            <input type="text" class="form-control" id="price" placeholder="Ingrese el precio" >
-                        </div>
-                        <div class="col-md-12 text-end">
-                            <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive mt-4">
-                        <table class="table table-bordered table-hover table-sm shadow-sm rounded">
-                            <thead class="bg-success text-white text-center">
-                                <tr>
-                                    <th>IMEI</th>
-                                    <th>Producto</th>
-                                    <th>Memoria</th>
-                                    <th>Batería</th>
-                                    <th>Color</th>
-                                    <th>Cantidad</th>
-                                    <th>Precio</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="productListBody">
-                                <!-- Productos añadidos dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="row g-3 mt-3">
-                        <div class="col-md-6">
-                            <label for="client" class="form-label">Cliente</label>
-                            <input type="text" class="form-control" id="client" name="client" placeholder="Nombre del cliente" autocomplete="off" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="document_number" class="form-label">Número de Documento</label>
-                            <input type="text" class="form-control" id="document_number" name="document_number" autocomplete="off" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="type" class="form-label">Tipo</label>
-                            <input type="text" class="form-control" id="type" name="type" placeholder="Ejemplo: Venta" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="date" class="form-label">Fecha</label>
-                            <input type="datetime-local" class="form-control" id="date" name="date" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="status" class="form-label">Estado</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Pagada">Pagada</option>
-                                <option value="Cancelada">Cancelada</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer" style="background-color: #d4edda;"> 
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-success" id="createInvoiceButton" disabled>Crear Factura</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 
 
