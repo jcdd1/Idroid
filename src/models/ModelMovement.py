@@ -622,7 +622,8 @@ class ModelMovement:
                     r.return_id,
                     r.quantity AS returned_quantity,
                     r.return_date,
-                    r.notes AS return_notes
+                    r.notes AS return_notes,
+                    p.imei
                 FROM movement AS m
                 JOIN movementdetail AS md ON m.movement_id = md.movement_id
                 LEFT JOIN return AS r ON md.detail_id = r.movement_detail_id
@@ -630,6 +631,7 @@ class ModelMovement:
                 JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
                 JOIN users AS creator ON m.created_by_user_id = creator.user_id
                 JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+                JOIN products AS p ON md.product_id = p.product_id
                 WHERE (m.origin_warehouse_id = :warehouse_id OR m.destination_warehouse_id = :warehouse_id)
             """
 
