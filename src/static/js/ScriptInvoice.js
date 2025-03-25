@@ -195,14 +195,23 @@ function initializeInvoiceModal() {
             event.preventDefault();
         }
     });
+
+    imeiInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Evita que el formulario se envíe o haga submit
+            fetchProductData(); // Dispara la búsqueda del producto manualmente
+        }
+    });
 }
 
 // 🚀 Inicializar el modal cuando se abra
-document.addEventListener("DOMContentLoaded", function () {
-    const addInvoiceModal = document.getElementById("addInvoiceModal");
+    document.addEventListener("DOMContentLoaded", function () {
+        const addInvoiceModal = document.getElementById("addInvoiceModal");
 
-    addInvoiceModal.addEventListener("show.bs.modal", function () {
-        initializeInvoiceModal();
-    });
+        addInvoiceModal.addEventListener("show.bs.modal", function () {
+            initializeInvoiceModal();
+        });
+
+
 });
 

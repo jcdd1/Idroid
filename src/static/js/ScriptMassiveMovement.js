@@ -259,6 +259,13 @@ document.addEventListener('DOMContentLoaded', function () {
         alertBox.classList.add('d-none');
     }
 
+    imeiInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Evita que el formulario se envíe o haga submit
+            fetchProductData(); // Dispara la búsqueda del producto manualmente
+        }
+    });
+
     // ✅ El botón siempre está activo, pero valida si hay productos antes de enviar
     createMovementButton.disabled = false;
 });
