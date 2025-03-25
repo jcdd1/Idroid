@@ -160,25 +160,32 @@ class ModelMovement:
             return False
 
     @staticmethod
-    def reject_movement(db, movement_id, reason=""):
+    def reject_movement(db, movement_id, product_id,reason=""):
         try:
             db.session.execute(
                 text("""
                 UPDATE movementdetail 
                 SET status = 'Rechazado', rejection_reason = :reason
-                WHERE movement_id = :movement_id
+                WHERE movement_id = :movement_id AND product_id = :product_id
                 """),
-                {"movement_id": movement_id, "reason": reason}
+                {"movement_id": movement_id, "reason": reason, "product_id": product_id}
             )
 
-            db.session.execute(
-                text("""
-                UPDATE movement 
-                SET status = 'Rechazado', notes = :reason
-                WHERE movement_id = :movement_id
-                """),
-                {"movement_id": movement_id, "reason": reason}
-            )
+            movement_pending = db.session.execute(
+                    text("""
+                    Select md.movement_id FROM movementdetail as md
+                         WHERE md.movement_id = :movement_id AND md.status = 'Pendiente'
+                    """),{"movement_id": movement_id}).fetchone()
+            if movement_pending is None:
+                    # Marcar como aprobado
+                    db.session.execute(
+                        text("""
+                        UPDATE movement 
+                        SET status = 'Rechazado', notes = CONCAT(notes, ' ', :reason)
+                        WHERE movement_id = :movement_id
+                        """),
+                        {"movement_id": movement_id, "reason": reason}
+                    )
 
             db.session.commit()
             return True

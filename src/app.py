@@ -303,8 +303,9 @@ def reject_movement(movement_id):
     print(f" Recibida solicitud para rechazar movimiento ID: {movement_id}")  
     data = request.get_json()
     reason = data.get("reason", "Sin motivo")
+    product_id = data.get("product_id")
 
-    success = ModelMovement.reject_movement(db, movement_id, reason)
+    success = ModelMovement.reject_movement(db, movement_id, product_id, reason)
     return jsonify({"success": success, "message": "Movimiento rechazado con éxito." if success else "Error al rechazar el movimiento."}), (200 if success else 500)
 
 

@@ -68,7 +68,9 @@ function rejectMovement(movementId) {
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken  // Agregar CSRF Token aquí
         },
-        body: JSON.stringify({ reason: reason })
+        body: JSON.stringify({ reason: reason,
+            product_id: productId
+         })
     })
     .then(response => {
         if (!response.ok) {
