@@ -306,6 +306,14 @@
                     <!-- Datos de la factura -->
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label for="edit_client" class="form-label">Cliente</label>
+                            <input type="text" class="form-control border-success" id="edit_client" name="client" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit_document_number" class="form-label">Número de Documento</label>
+                            <input type="text" class="form-control border-success" id="edit_document_number" name="document_number" required>
+                        </div>
+                        <div class="col-md-6">
                             <label for="edit_type" class="form-label">Tipo</label>
                             <input type="text" class="form-control border-success" id="edit_type" name="type" required>
                         </div>
@@ -325,49 +333,6 @@
 
                     <hr>
 
-                    <!-- IMEI y productos a agregar -->
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="imei" class="form-label">IMEI del Producto</label>
-                                <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
-                            </div>
-                            <div id="imeiAlert" class="alert alert-danger d-none" role="alert">
-                                ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
-                            </div>
-                            <div class="col-md-6">
-                                <label for="product_name" class="form-label">Nombre Producto</label>
-                                <input type="text" class="form-control" id="product_name" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="storage" class="form-label">Memoria</label>
-                                <input type="text" class="form-control" id="storage" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="battery" class="form-label">Batería</label>
-                                <input type="text" class="form-control" id="battery" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="color" class="form-label">Color</label>
-                                <input type="text" class="form-control" id="color" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="units" class="form-label">Unidades Disponibles</label>
-                                <input type="text" class="form-control" id="units" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="quantity" class="form-label">Cantidad a Facturar</label>
-                                <input type="number" class="form-control" id="quantity" min="0" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="price" class="form-label">Precio</label>
-                                <input type="text" class="form-control" id="price" placeholder="Ingrese el precio" >
-                            </div>
-                            <div class="col-md-12 text-end">
-                                <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
-                            </div>
-                        </div>
-
                     <!-- Tabla de productos -->
                     <div class="table-responsive mt-4">
                         <table class="table table-bordered table-hover table-sm shadow-sm rounded">
@@ -385,6 +350,51 @@
                             </thead>
                             <tbody id="edit_productListBody">
                                 <!-- Productos de la factura -->
+                                {% for product in invoices.products %}
+                                <tr class="table-light">
+                                    <td class="text-center">{{ product.imei }}</td>
+                                    <td class="text-center">{{ product.name }}</td>
+                                    <td class="text-center">{{ product.storage }}</td>
+                                    <td class="text-center">{{ product.battery }}</td>
+                                    <td class="text-center">{{ product.color }}</td>
+                                    <td class="text-center">{{ product.quantity }}</td>
+                                    <td class="text-center">{{ product.price }}</td>
+                                    <td class="text-center">
+                                        <!-- Botón Eliminar Producto -->
+                                        <button type="button" class="btn btn-danger btn-sm deleteProductBtn" data-product-id="{{ product.id }}">
+                                            Eliminar
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                <!-- Fila para agregar un nuevo producto -->
+                                <tr>
+                                    <td>
+                                        <input type="text" class="form-control" id="imei" name="imei" placeholder="Ingrese IMEI" autocomplete="off" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" id="product_name" readonly>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" id="storage" readonly>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" id="battery" readonly>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" id="color" readonly>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control" id="quantity" min="0" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" id="price" placeholder="Precio">
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-success" id="addProductButton">+ Agregar Producto</button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -398,7 +408,8 @@
         </div>
     </div>
 </div>
-</div>
+
+
 
 
 
