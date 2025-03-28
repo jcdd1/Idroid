@@ -13,11 +13,12 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".reject-btn").forEach(button => {
         button.addEventListener("click", function () {
             const movementId = this.getAttribute("data-movement-id");
-            console.log(`Rechazando movimiento: ${movementId}`);
-            rejectMovement(movementId);
+            const productId = this.getAttribute("data-product-id");
+            console.log(`Rechazando movimiento: ${movementId}, Producto ID: ${productId}`);  
+            rejectMovement(movementId, productId);
         });
-    });
-});
+    });    
+    
 
 function approveMovement(movementId, productId) {
     console.log(`Enviando solicitud para aprobar movimiento ${movementId}`);
@@ -50,14 +51,14 @@ function approveMovement(movementId, productId) {
     });
 }
 
-function rejectMovement(movementId) {
+function rejectMovement(movementId, productId) {
     let reason = prompt("Ingrese la razón del rechazo:");
     if (reason === null || reason.trim() === "") {
         alert("Debe ingresar una razón válida.");
         return;
     }
 
-    console.log(`Enviando solicitud para rechazar movimiento ${movementId} con razón: ${reason}`);
+    console.log(`Enviando solicitud para rechazar movimiento ${movementId} con razón: ${reason} y producto ID: ${productId}`);
 
     // Obtener CSRF Token desde el <meta>
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -68,9 +69,7 @@ function rejectMovement(movementId) {
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken  // Agregar CSRF Token aquí
         },
-        body: JSON.stringify({ reason: reason,
-            product_id: productId
-         })
+        body: JSON.stringify({ reason: reason, product_id: productId })  // Asegúrate de enviar product_id
     })
     .then(response => {
         if (!response.ok) {
@@ -87,3 +86,5 @@ function rejectMovement(movementId) {
         alert("Ocurrió un error al rechazar el movimiento. Ver consola.");
     });
 }
+})
+

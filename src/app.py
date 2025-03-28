@@ -294,19 +294,31 @@ def approve_movement(movement_id):
 
 
 
-
-
-
 @app.route('/reject_movement/<int:movement_id>', methods=['POST'])
 @login_required
 def reject_movement(movement_id):
-    print(f" Recibida solicitud para rechazar movimiento ID: {movement_id}")  
-    data = request.get_json()
-    reason = data.get("reason", "Sin motivo")
-    product_id = data.get("product_id")
+    print(f"Recibida solicitud para rechazar movimiento ID: {movement_id}")
+    
+    try:
+        data = request.get_json()
+        print(f"Datos recibidos: {data}")  # Imprime los datos completos para verificar lo que llega
+        
+        product_id = data.get("product_id")
+        reason = data.get("reason", "Sin motivo")
+        
+        print(f"Producto ID recibido: {product_id}")  # Verifica que el product_id se esté recibiendo correctamente
+        
+        success = ModelMovement.reject_movement(db, movement_id, product_id, reason)
+        
+        if success:
+            return jsonify({"success": True, "message": "Movimiento rechazado con éxito."}), 200
+        else:
+            return jsonify({"success": False, "message": "No se pudo rechazar el movimiento."}), 500
 
-    success = ModelMovement.reject_movement(db, movement_id, product_id, reason)
-    return jsonify({"success": success, "message": "Movimiento rechazado con éxito." if success else "Error al rechazar el movimiento."}), (200 if success else 500)
+    except Exception as e:
+        print(f"Error al rechazar movimiento: {str(e)}")
+        return jsonify({"success": False, "message": "Error interno del servidor."}), 500
+
 
 
 
