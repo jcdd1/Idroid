@@ -2013,6 +2013,7 @@ def download_excel():
     if not products_json:
         return "No se recibieron productos", 400
 
+
     try:
         # Convertir la cadena JSON en una lista de Python
         products = json.loads(products_json)
