@@ -182,59 +182,77 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
     
-        // Get the CSRF token from your form
+        // Obtener el CSRF token desde el formulario
         const csrfToken = document.querySelector('input[name="csrf_token"]').value;
     
-        // Format products data correctly
-        const formattedProducts = productsData.map(product => ({
-            product_id: product.imei,
-            units_to_send: parseInt(product.units)
-        }));
+        // Agrupar los productos por bodega y usuario de destino
+        const groupedByDestination = {};
     
-        const requestData = {
-            products: formattedProducts,
-            origin_warehouse_id: userWarehouseId,
-            destination_warehouse_id: productsData[0].warehouseId,
-            destination_user_id: productsData[0].userId,
-            movement_description: ""  // Remove notesInput reference if it doesn't exist
-        };
-        
-        console.log("Sending data to server:", requestData);
-    
-        fetch('/create_movement', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify(requestData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    try {
-                        // Try to parse as JSON first
-                        const data = JSON.parse(text);
-                        console.error("Server error:", data);
-                        throw new Error(data.message || "Error en el servidor");
-                    } catch (e) {
-                        // If not valid JSON, log the HTML response
-                        console.error("Server returned HTML error:", text);
-                        throw new Error("Error en el servidor - respuesta no válida");
-                    }
-                });
+        productsData.forEach(product => {
+            const key = `${product.warehouseId}-${product.userId}`;
+            if (!groupedByDestination[key]) {
+                groupedByDestination[key] = {
+                    destination_warehouse_id: product.warehouseId,
+                    destination_user_id: product.userId,
+                    products: []
+                };
             }
-            return response.json();
-        })
-        .then(data => {
-            alert(data.success ? "✅ Movimiento creado exitosamente." : `❌ Error: ${data.message}`);
-            if (data.success) location.reload();
-        })
-        .catch((error) => {
-            console.error("Error in fetch:", error);
-            alert(`❌ Error: ${error.message || "Error en el envío"}`);
+            groupedByDestination[key].products.push({
+                product_id: product.imei,
+                units_to_send: parseInt(product.units)
+            });
         });
-    });
+    
+        // Verificar los productos agrupados antes de enviar
+        console.log("Productos agrupados por destino:", groupedByDestination);
+    
+        // Enviar la solicitud POST al servidor
+        Promise.all(Object.values(groupedByDestination).map(group => {
+            const requestData = {
+                products: group.products,
+                origin_warehouse_id: userWarehouseId, // Bodega de origen del usuario
+                destination_warehouse_id: group.destination_warehouse_id,
+                destination_user_id: group.destination_user_id,
+                movement_description: ""
+            };
+    
+            console.log("Enviando datos al servidor:", requestData);
+    
+            return fetch('/create_movement', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        try {
+                            // Intenta parsear como JSON
+                            const data = JSON.parse(text);
+                            console.error("Error del servidor:", data);
+                            throw new Error(data.message || "Error en el servidor");
+                        } catch (e) {
+                            // Si no es JSON, muestra el error
+                            console.error("Respuesta HTML del servidor:", text);
+                            throw new Error("Error en el servidor - respuesta no válida");
+                        }
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.success ? "✅ Movimiento creado exitosamente." : `❌ Error: ${data.message}`);
+                if (data.success) location.reload();
+            })
+            .catch((error) => {
+                console.error("Error en fetch:", error);
+                alert(`❌ Error: ${error.message || "Error en el envío"}`);
+            });
+        }));
+    });    
 
     function clearProductFields() {
         productNameInput.value = '';
