@@ -293,6 +293,17 @@ def approve_movement(movement_id):
     
 
 
+@app.route('/check_document_exists/<document_number>', methods=['GET'])
+def check_document_exists(document_number):
+    # Verificar si el número de documento ya existe usando la función estática
+    document_exists = ModelInvoice.check_document_exists(db, document_number)
+
+    if document_exists:
+        return jsonify({"exists": True}), 200
+    else:
+        return jsonify({"exists": False}), 200
+
+
 
 @app.route('/reject_movement/<int:movement_id>', methods=['POST'])
 @login_required

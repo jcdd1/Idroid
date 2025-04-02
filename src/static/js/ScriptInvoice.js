@@ -10,6 +10,64 @@ function initializeInvoiceModal() {
 
     let productList = [];
 
+
+    // Función para verificar si el número de documento ya existe
+    function checkDocumentExistence(documentNumber) {
+        return fetch(`/check_document_exists/${documentNumber}?_=${new Date().getTime()}`)
+            .then(response => response.json())
+            .then(data => {
+                return data.exists;
+            })
+            .catch(error => {
+                console.error("❌ Error al verificar documento:", error);
+                return false; // Si hay error, asumir que no existe
+            });
+    }
+    
+
+    // Función para manejar el envío del formulario
+    form.addEventListener("submit", async function (event) {
+        const clientName = document.getElementById("client").value.trim();
+        const clientDocument = document.getElementById("document_number").value.trim();
+
+        // Verificar si el documento ya existe
+        if (clientDocument) {
+            const documentExists = await checkDocumentExistence(clientDocument);
+
+            if (documentExists) {
+                alert("⚠️ El número de documento ya existe. No puedes crear una nueva factura para este cliente.");
+                event.preventDefault();  // Prevenir el envío del formulario si el documento ya existe
+                return;
+            }
+        }
+
+        // Verificar que haya productos antes de enviar el formulario
+        if (productList.length === 0) {
+            alert("⚠️ Debes agregar al menos un producto antes de crear la factura.");
+            event.preventDefault();
+            return;
+        }
+
+        // Verificar que los datos del cliente estén completos
+        if (!clientName || !clientDocument) {
+            alert("⚠️ Debes completar los datos del cliente.");
+            event.preventDefault();
+            return;
+        }
+
+        // Agregar los productos como un input oculto en el formulario antes de enviarlo
+        let productInput = document.getElementById("product_data");
+        if (!productInput) {
+            productInput = document.createElement("input");
+            productInput.type = "hidden";
+            productInput.name = "products";
+            productInput.id = "product_data";
+            form.appendChild(productInput);
+        }
+        productInput.value = JSON.stringify(productList);
+    });
+
+
     // ✅ Detectar cambios en el IMEI en tiempo real
     imeiInput.addEventListener("input", function () {
         clearTimeout(this.typingTimer);

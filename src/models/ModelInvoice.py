@@ -141,6 +141,33 @@ class ModelInvoice:
         except Exception as e:
             print(f"❌ Error filtering invoices: {e}")
             return [], 0
+        
+    
+
+
+    @staticmethod
+    def check_document_exists(db, document_number):
+        try:
+            # Consulta SQL para verificar si el documento existe
+            query = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM invoices
+                WHERE document_number = :document_number
+            );
+            """
+            params = {"document_number": document_number}
+
+            # Ejecutar la consulta
+            result = db.session.execute(text(query), params).scalar()  # Utilizamos scalar para obtener directamente el valor
+
+            # Devolver True si el documento existe, False si no
+            return result  # Si 'result' es True, el documento existe, si es False, no
+
+        except Exception as e:
+            print(f"❌ Error checking document existence: {e}")
+            return False  # En caso de error, devolvemos False
+
 
 
 
