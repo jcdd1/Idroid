@@ -280,7 +280,7 @@
 <!-- Modal de Movimiento Masivo -->
 <div class="modal fade" id="massiveMovementModal" tabindex="-1" aria-labelledby="massiveMovementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4; height: 90vh;">
+        <div class="modal-content" style="background-color: #f0fdf4; max-height: 80vh; overflow-y: auto;">
             <form id="massiveMovementForm" onsubmit="return false;"> 
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
