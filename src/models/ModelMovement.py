@@ -551,8 +551,9 @@ class ModelMovement:
         try:
             offset = (page - 1) * per_page
             query = """
-                SELECT 
+                SELECT
                     m.movement_id,
+                    p.imei,
                     ow.warehouse_name AS origin_warehouse,
                     dw.warehouse_name AS destination_warehouse,
                     m.creation_date,
@@ -579,6 +580,7 @@ class ModelMovement:
                 JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
                 JOIN users AS creator ON m.created_by_user_id = creator.user_id
                 JOIN users AS handler ON m.handled_by_user_id = handler.user_id
+                JOIN products AS p ON md.product_id = p.product_id
             """
             count_query = """
                 SELECT COUNT(*) FROM movement AS m
@@ -737,21 +739,13 @@ class ModelMovement:
 
 
 
-
-
-
-
-
-
-
-
-
     @staticmethod
     def get_movements_by_user(db, user_id, movement_type=None, movement_status=None):
         try:
             query = """
                 SELECT 
                     m.movement_id,
+                    p.imei,  
                     ow.warehouse_name AS origin_warehouse,
                     dw.warehouse_name AS destination_warehouse,
                     m.creation_date,
@@ -765,26 +759,30 @@ class ModelMovement:
                 JOIN warehouses AS ow ON m.origin_warehouse_id = ow.warehouse_id
                 JOIN warehouses AS dw ON m.destination_warehouse_id = dw.warehouse_id
                 JOIN users AS creator ON m.created_by_user_id = creator.user_id
+                JOIN products AS p ON md.product_id = p.product_id
                 WHERE (m.created_by_user_id = :user_id OR m.handled_by_user_id = :user_id)
             """
 
-            # Aplicar filtro opcional por tipo de movimiento
+            # Añadir filtros opcionales si se proporcionan
             if movement_type:
                 query += " AND LOWER(m.movement_type) = LOWER(:movement_type)"
-            
-            # Aplicar filtro opcional por estado
             if movement_status:
                 query += " AND LOWER(m.status) = LOWER(:movement_status)"
 
+            # Añadir el ordenamiento por fecha de creación
             query += " ORDER BY m.creation_date DESC"
 
+            # Configurar los parámetros de la consulta
             params = {'user_id': user_id}
             if movement_type:
                 params['movement_type'] = movement_type.lower()
             if movement_status:
                 params['movement_status'] = movement_status.lower()
 
+            # Ejecutar la consulta
             result = db.session.execute(text(query), params).mappings().fetchall()
+
+            # Convertir el resultado en un diccionario
             movements = [dict(row) for row in result] if result else []
 
             return movements
@@ -792,15 +790,6 @@ class ModelMovement:
         except Exception as e:
             print(f"Error al obtener movimientos: {str(e)}")
             return []
-
-
-
-
-
-
-
-
-
 
 
 

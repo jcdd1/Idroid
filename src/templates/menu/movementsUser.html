@@ -50,6 +50,7 @@
         <thead class="bg-success text-white text-center">
             <tr>
                 <th>ID</th>
+                <th>imei</th>
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Fecha</th>
@@ -65,6 +66,7 @@
                 {% for movement in movements %}
                 <tr>
                     <td>{{ movement.movement_id }}</td>
+                    <td>{{ movement.imei }}</td>
                     <td>{{ movement.origin_warehouse }}</td>
                     <td>{{ movement.destination_warehouse }}</td>
                     <td>{{ movement.creation_date.strftime('%d/%m/%Y %H:%M') }}</td>

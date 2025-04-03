@@ -45,11 +45,13 @@
 
 
 <!-- Tabla de movimientos -->
+<!-- Tabla de movimientos -->
 <div class="table-responsive mt-4">
     <table class="table table-striped table-bordered table-hover shadow-sm rounded">
         <thead class="bg-success text-white text-center">
             <tr>
                 <th>ID</th>
+                <th>imei</th>
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Fecha</th>
@@ -73,6 +75,7 @@
                 {% for movement in movements %}
                 <tr>
                     <td>{{ movement.movement_id }}</td>
+                    <td>{{ movement.imei }}</td>
                     <td>{{ movement.origin_warehouse }}</td>
                     <td>{{ movement.destination_warehouse }}</td>
                     <td>{{ movement.creation_date.strftime('%d/%m/%Y %H:%M') }}</td>
@@ -93,7 +96,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="17" class="text-center text-muted">⚠️ No hay movimientos registrados.</td>
+                    <td colspan="17" class="text-center text-muted">⚠️ No hay movimientos en esta bodega.</td>
                 </tr>
             {% endif %}
         </tbody>
