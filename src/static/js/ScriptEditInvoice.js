@@ -1,18 +1,17 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const imeiInput = document.getElementById("imei");
-    const quantityInput = document.getElementById("quantity");
-    const addProductButton = document.getElementById("addProductButton");
-    const productListBody = document.getElementById("edit_productListBody");
-    const priceInput = document.getElementById("price");
-    const imeiAlert = document.getElementById("imeiAlert");
+    const imeiInput = document.getElementById("update_imei");
+    const quantityInput = document.getElementById("update_quantity");
+    const addProductButton = document.getElementById("update_addProductButton");
+    const productListBody = document.getElementById("update_productListBody");
+    const priceInput = document.getElementById("update_price");
+    const imeiAlert = document.getElementById("update_imeiAlert");
 
     let productList = [];
 
     // Función para cargar los productos asociados a la factura
-    function initializeEditInvoiceModal(products) {
-        productList = products; // Guardamos los productos en el arreglo 'productList'
+    function initializeUpdateInvoiceModal(products) {
+        productList = products;
 
-        // Rellenamos la tabla con los productos asociados
         products.forEach(product => {
             const row = document.createElement("tr");
             row.innerHTML = `
@@ -29,7 +28,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Cargar los datos del producto al seleccionar el IMEI
     function fetchProductData() {
         const imei = imeiInput.value.trim();
         if (imei.length < 5) {
@@ -42,58 +40,50 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(data => {
                 if (data.success && data.product) {
                     imeiAlert.classList.add("d-none");
-
-                    // Rellenar los campos con la información del producto
-                    document.getElementById("product_name").value = data.product.productname;
-                    document.getElementById("storage").value = data.product.storage;
-                    document.getElementById("battery").value = data.product.battery;
-                    document.getElementById("color").value = data.product.color;
-                    document.getElementById("units").value = data.product.units;
+                    document.getElementById("update_product_name").value = data.product.productname;
+                    document.getElementById("update_storage").value = data.product.storage;
+                    document.getElementById("update_battery").value = data.product.battery;
+                    document.getElementById("update_color").value = data.product.color;
+                    document.getElementById("update_units").value = data.product.units;
                     quantityInput.max = data.product.units;
                 } else {
                     showAlert("⚠️ Producto no encontrado.");
                     clearFields();
                 }
             })
-            .catch(error => {
+            .catch(() => {
                 showAlert("⚠️ Error al obtener la información del producto.");
                 clearFields();
             });
     }
 
-    // Detectar cambios en el IMEI en tiempo real
     imeiInput.addEventListener("input", function () {
         clearTimeout(this.typingTimer);
         this.typingTimer = setTimeout(fetchProductData, 500);
     });
 
-    // Agregar el producto a la lista
     addProductButton.addEventListener("click", function () {
         const imei = imeiInput.value.trim();
-        const product_name = document.getElementById("product_name").value;
-        const storage = document.getElementById("storage").value;
-        const battery = document.getElementById("battery").value;
-        const color = document.getElementById("color").value;
-        const units = parseInt(document.getElementById("units").value, 10);
+        const product_name = document.getElementById("update_product_name").value;
+        const storage = document.getElementById("update_storage").value;
+        const battery = document.getElementById("update_battery").value;
+        const color = document.getElementById("update_color").value;
+        const units = parseInt(document.getElementById("update_units").value, 10);
         const quantity = parseInt(quantityInput.value, 10);
         const price = parseFloat(priceInput.value);
 
-        // Validaciones antes de agregar el producto
         if (!imei || !product_name || quantity <= 0 || quantity > units || isNaN(quantity) || isNaN(price) || price <= 0) {
             alert("⚠️ La cantidad o el precio no son válidos.");
             return;
         }
 
-        // Evitar productos duplicados en la lista
         if (productList.some(product => product.imei === imei)) {
             alert("⚠️ Este producto ya está en la tabla.");
             return;
         }
 
-        // Agregar producto a la lista
         productList.push({ imei, product_name, storage, battery, color, quantity, price });
 
-        // Crear fila en la tabla
         const row = document.createElement("tr");
         row.innerHTML = `
             <td>${imei}</td>
@@ -107,11 +97,9 @@ document.addEventListener("DOMContentLoaded", function () {
         `;
         productListBody.appendChild(row);
 
-        // Limpiar los campos después de agregar el producto
         clearFields();
     });
 
-    // Eliminar producto de la tabla
     productListBody.addEventListener("click", function (event) {
         if (event.target.classList.contains("delete-btn")) {
             const row = event.target.closest("tr");
@@ -121,24 +109,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Mostrar alerta de error
     function showAlert(message) {
         imeiAlert.textContent = message;
         imeiAlert.classList.remove("d-none");
     }
 
-    // Limpiar los campos después de agregar un producto
     function clearFields() {
         imeiInput.value = "";
-        document.getElementById("product_name").value = "";
-        document.getElementById("storage").value = "";
-        document.getElementById("battery").value = "";
-        document.getElementById("color").value = "";
-        document.getElementById("units").value = "";
+        document.getElementById("update_product_name").value = "";
+        document.getElementById("update_storage").value = "";
+        document.getElementById("update_battery").value = "";
+        document.getElementById("update_color").value = "";
+        document.getElementById("update_units").value = "";
         quantityInput.value = "";
         priceInput.value = "";
     }
-    
 
-
+    // Exponer la función globalmente si se necesita usar desde otros scripts
+    window.initializeUpdateInvoiceModal = initializeUpdateInvoiceModal;
 });
