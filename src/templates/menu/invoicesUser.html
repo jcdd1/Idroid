@@ -70,6 +70,7 @@
                 <th>Fecha</th>
                 <th>Cliente</th>
                 <th>Estado</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -93,6 +94,14 @@
                     <span class="badge {% if invoice.status == 'Pagada' %}bg-success{% elif invoice.status == 'Pendiente' %}bg-warning{% else %}bg-danger{% endif %}">
                         {{ invoice.status }}
                     </span>
+                </td>
+
+                <td class="text-center">
+                    <a href="{{ url_for('download_invoice', factura_id=invoice.invoice_id) }}"
+                        class="btn btn-sm btn-secondary d-inline-flex align-items-center gap-1"
+                        title="Descargar PDF">
+                        <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+                    </a>
                 </td>
             </tr>
             {% endfor %}

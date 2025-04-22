@@ -13,6 +13,7 @@ import math
 from io import BytesIO
 from openpyxl import Workbook
 from xlsxwriter import Workbook
+import os
 
 #Código de barras
 import barcode
@@ -2046,6 +2047,98 @@ def download_excel():
 
     except json.JSONDecodeError as e:
         return f"Error al procesar JSON: {e}", 400
+
+@app.route('/download_invoice/<int:factura_id>')
+def download_invoice(factura_id):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    # === LOGO ===
+    logo_path = os.path.join(app.root_path, 'static', 'images', 'logo.jpeg')
+    try:
+        c.drawImage(logo_path, 20, height - 150, width=100, preserveAspectRatio=True, mask='auto')
+    except Exception as e:
+        print(f"Error al cargar el logo: {e}")  # Para detectar cualquier problema
+
+    # Encabezado
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(306, height - 10, f"C.C. Monterrey")
+    c.setFont("Helvetica", 8)
+    c.drawString(301, height - 17, "Medellín, Antioquia")
+    c.drawString(293, height - 25, "Tel: +573002619370")
+    c.drawString(306, height - 32, "idroid.com.co")
+    c.drawString(281, height - 39, "servicioalcliente@idroid.com.co")
+    # --- Datos básicos ---
+    # c.setFont("Helvetica-Bold", 14)
+    # c.drawString(50, height - 50, f"Cuenta de Cobro No. {factura_id}")
+    
+    # Información Factura
+    c.setFont("Helvetica", 9)
+    c.drawString(450, height - 32, "Cuenta de cobro")
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(450, height - 41, f"No. {factura_id}")
+    c.setFont("Helvetica", 9)
+    c.drawString(450, height - 49, "No responsable de IVA")
+    c.drawString(450, height - 57, "Cuenta de cobro original")
+    
+    c.setStrokeColorRGB(0, 0, 0)
+    c.setLineWidth(0.5)
+    c.setFillColorRGB(0.8, 0.8, 0.8)
+    c.rect(20, 620, 420,520,  fill=0, stroke=1)
+    c.line(50, 500, 550, 500)
+
+    # --- Detalle de ítems ---
+    y = height - 170
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, y, "Ítem")
+    c.drawString(250, y, "Precio")
+    c.drawString(350, y, "Cantidad")
+    c.drawString(450, y, "Total")
+    
+
+    
+    c.setFillColorRGB(0, 0, 0) 
+    
+    y -= 20
+    c.setFont("Helvetica", 10)
+    items = [
+        {"nombre": "IPHONE 15 PRO 256 GB NEGRO", "precio": 3550000, "cantidad": 1},
+        {"nombre": "CARGADOR GENERICO 25W USB-C (OBSEQUIO)", "precio": 0, "cantidad": 1}
+    ]
+
+    total = 0
+    for item in items:
+        total_item = item["precio"] * item["cantidad"]
+        c.drawString(50, y, item["nombre"])
+        c.drawString(250, y, f"${item['precio']:,}")
+        c.drawString(350, y, str(item["cantidad"]))
+        c.drawString(450, y, f"${total_item:,}")
+        y -= 20
+        total += total_item
+
+    # --- Total ---
+    y -= 20
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(350, y, "Subtotal:")
+    c.drawString(450, y, f"${total:,}")
+
+    y -= 15
+    c.drawString(350, y, "Total:")
+    c.drawString(450, y, f"${total:,}")
+
+    # --- Pie de página ---
+    y -= 50
+    c.setFont("Helvetica", 8)
+    c.drawString(50, y, "Esta factura se asimila en todos sus efectos a una letra de cambio de conformidad con el Art. 774 del código de comercio.")
+    y -= 12
+    c.drawString(50, y, "Autorizo que en caso de incumplimiento de esta obligación sea reportado a las centrales de riesgo.")
+
+    c.showPage()
+    c.save()
+
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="factura_2712.pdf", mimetype='application/pdf')
 
 #Manejo de errores en el servidor
 def status_401(error):
