@@ -31,7 +31,6 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from io import BytesIO
 import os
-from num2words import num2words
 
 #Modelos
 from models.ModelLog import ModelLog
@@ -2127,7 +2126,6 @@ def download_invoice(factura_id):
 
         # Información de la factura (columna derecha)
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(width - 150, height - 35, "Cuenta de cobro")
         c.drawString(width - 150, height - 45, f"No. {factura.invoice_id}")
         c.setFont("Helvetica", 7)
         c.drawString(width - 150, height - 55, "No responsable de IVA")

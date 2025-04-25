@@ -102,7 +102,7 @@ class ModelInvoice:
             SELECT 
                 *
             FROM invoices
-            ORDER BY invoice_id ASC
+            ORDER BY invoice_id DESC
             LIMIT :limit OFFSET :offset;
         """)
         result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
