@@ -35,6 +35,51 @@ class ModelInvoice:
             return False
 
 
+    @staticmethod
+    def get_invoice_by_id(db, invoice_id):
+        query = text("""
+            SELECT invoice_id, type, document_number, date, client
+            FROM invoices
+            WHERE invoice_id = :invoice_id
+        """)
+        row = db.session.execute(query, {"invoice_id": invoice_id}).fetchone()
+        if row:
+            return Invoice(
+                invoice_id=row[0],
+                type=row[1],
+                document_number=row[2],
+                date=row[3],
+                client=row[4]
+            )
+        return None
+    
+    @staticmethod
+    def get_productos_by_factura(db, invoice_id):
+        query = text("""
+            SELECT p.product_id, p.name, p.price, id.quantity, id.discount, id.tax
+            FROM products p
+            JOIN invoice_details id ON p.product_id = id.product_id
+            WHERE id.invoice_id = :invoice_id
+        """)
+        
+        result = db.session.execute(query, {"invoice_id": invoice_id}).fetchall()
+        
+        # Crear un diccionario de productos con la información de la factura
+        productos = [
+            {
+                "product_id": row[0],
+                "name": row[1],
+                "price": row[2],
+                "quantity": row[3],
+                "discount": row[4],
+                "tax": row[5]
+            }
+            for row in result
+        ]
+        
+        return productos
+
+
 
     @staticmethod
     def get_invoices_active(db):

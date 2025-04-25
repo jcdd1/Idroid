@@ -4,7 +4,7 @@
 <script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoiceDetail.js') }}"></script>
-
+<script src="{{ url_for('static', filename='js/ScriptPdfEdit.js') }}"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -120,6 +120,95 @@
     {% if page < total_pages %}
         <a href="{{ url_for('show_invoicesUser', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
     {% endif %}
+</div>
+
+<!-- Anuncio de Confirmación -->
+{% if get_flashed_messages(with_categories=true) %}
+    {% for category, message in get_flashed_messages() %}
+        {% if category == 'info' %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <strong>{{ message }}</strong>
+                <form method="POST" action="{{ url_for('download_invoice', factura_id=factura.invoice_id) }}">
+                    <button type="submit" name="edit" class="btn btn-warning">Sí, editar</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="alert" aria-label="Close">No, continuar</button>
+                </form>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<!-- Modal para editar PDF -->
+<div class="modal fade" id="editPdfModal" tabindex="-1" aria-labelledby="editPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="editPdfModalLabel">Editar contenido del PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPdfForm">
+                    <input type="hidden" id="editPdfInvoiceId" name="invoice_id">
+                    
+                    <h6 class="mb-3">Información de Encabezado</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="pdfHeader1" class="form-label">Línea 1</label>
+                            <input type="text" class="form-control" id="pdfHeader1" value="CC Monterrey">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader2" class="form-label">Línea 2</label>
+                            <input type="text" class="form-control" id="pdfHeader2" value="Medellín, Antioquia">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader3" class="form-label">Línea 3</label>
+                            <input type="text" class="form-control" id="pdfHeader3" value="Tel: +573002619370">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader4" class="form-label">Línea 4</label>
+                            <input type="text" class="form-control" id="pdfHeader4" value="idroid.com.co">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader5" class="form-label">Línea 5</label>
+                            <input type="text" class="form-control" id="pdfHeader5" value="servicioalcliente@idroid.com.co">
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-3">Texto de Garantía</h6>
+                    <div class="mb-3">
+                        <textarea class="form-control" id="pdfWarranty" rows="4">La reparación del producto no genera costo siempre y cuando esté dentro del periodo de garantía y cumpla con los términos señalados dentro de la misma. *No se da garantía por humedades, No aplica la garantía por bloqueos por no registro, No tienen garantía equipos golpeados, apagados, por display, por táctil o por software.</textarea>
+                    </div>
+                    
+                    <h6 class="mb-3">Nota Legal</h6>
+                    <div class="mb-3">
+                        <textarea class="form-control" id="pdfLegal" rows="3">Esta factura se asimila en todos sus efectos a una letra de cambio de conformidad con el Art. 774 del código de comercio. Autorizo que en caso de incumplimiento de esta obligación sea reportado a las centrales de riesgo. Se cobrarán intereses por mora.</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="generateEditedPdf">Generar PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para edición de PDF -->
+<div class="modal fade" id="confirmEditPdfModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Confirmar acción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Desea editar el contenido del PDF antes de generarlo?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="noPdfEdit">No, generar PDF</button>
+                <button type="button" class="btn btn-success" id="yesPdfEdit">Sí, editar PDF</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal para Detalle de Factura -->
