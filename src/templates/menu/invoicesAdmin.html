@@ -1,10 +1,11 @@
 {% extends 'menuAdmin.html' %}
 
 {% block customScripts %}
+
 <script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoice.js') }}"></script>
-<script src="{{ url_for('static', filename='js/ScriptEditInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoiceDetail.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ScriptPdfEdit.js') }}"></script> 
 
 {% endblock %}
 
@@ -60,6 +61,7 @@
     </div>
 </form>
 
+
 <!-- Tabla de facturas -->
 <div class="table-responsive mt-4">
     <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
@@ -95,10 +97,10 @@
                 </td>
                 <td class="text-center">
                     <!-- Botón Editar -->
-                    <button class="btn btn-success btn-sm editInvoiceBtn" 
+                    <button class="btn btn-success btn-sm edit-invoice-btn" 
                         data-bs-toggle="modal" 
                         data-bs-target="#updateInvoiceModal"
-                        data-id="{{ invoice.invoice_id }}">
+                        data-invoice-id="{{ invoice.invoice_id }}">
                         <img src="{{ url_for('static', filename='images/edit.png') }}" alt="Editar" style="width: 16px; height: 16px;">
                     </button>
                 
@@ -108,7 +110,14 @@
                         data-id="{{ invoice.invoice_id }}">
                         ❌ Eliminar
                     </button>
-                </td>
+                
+                    <!-- Botón PDF -->
+                    <a href="{{ url_for('download_invoice', factura_id=invoice.invoice_id) }}"
+                        class="btn btn-sm btn-secondary d-inline-flex align-items-center gap-1"
+                        title="Descargar PDF">
+                        <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+                    </a>
+                </td>                
                 
             </tr>
             {% endfor %}
@@ -119,16 +128,105 @@
 <!-- Paginación -->
 <div class="d-flex justify-content-between align-items-center mt-4">
     {% if page > 1 %}
-        <a href="{{ url_for('show_invoicesAdmin', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
+        <a href="{{ url_for('show_invoices', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
     {% endif %}
 
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
+<span class="text-success">Página {{ page }} de {{ total_pages }}</span>
 
     {% if page < total_pages %}
-        <a href="{{ url_for('show_invoicesAdmin', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
+        <a href="{{ url_for('show_invoices', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
     {% endif %}
+
 </div>
 
+<!-- Anuncio de Confirmación -->
+{% if get_flashed_messages(with_categories=true) %}
+    {% for category, message in get_flashed_messages() %}
+        {% if category == 'info' %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <strong>{{ message }}</strong>
+                <form method="POST" action="{{ url_for('download_invoice', factura_id=factura.invoice_id) }}">
+                    <button type="submit" name="edit" class="btn btn-warning">Sí, editar</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="alert" aria-label="Close">No, continuar</button>
+                </form>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<!-- Modal para editar PDF -->
+<div class="modal fade" id="editPdfModal" tabindex="-1" aria-labelledby="editPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="editPdfModalLabel">Editar contenido del PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPdfForm">
+                    <input type="hidden" id="editPdfInvoiceId" name="invoice_id">
+                    
+                    <h6 class="mb-3">Información de Encabezado</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="pdfHeader1" class="form-label">Línea 1</label>
+                            <input type="text" class="form-control" id="pdfHeader1" value="CC Monterrey">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader2" class="form-label">Línea 2</label>
+                            <input type="text" class="form-control" id="pdfHeader2" value="Medellín, Antioquia">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader3" class="form-label">Línea 3</label>
+                            <input type="text" class="form-control" id="pdfHeader3" value="Tel: +573002619370">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader4" class="form-label">Línea 4</label>
+                            <input type="text" class="form-control" id="pdfHeader4" value="idroid.com.co">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="pdfHeader5" class="form-label">Línea 5</label>
+                            <input type="text" class="form-control" id="pdfHeader5" value="servicioalcliente@idroid.com.co">
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-3">Texto de Garantía</h6>
+                    <div class="mb-3">
+                        <textarea class="form-control" id="pdfWarranty" rows="4">La reparación del producto no genera costo siempre y cuando esté dentro del periodo de garantía y cumpla con los términos señalados dentro de la misma. *No se da garantía por humedades, No aplica la garantía por bloqueos por no registro, No tienen garantía equipos golpeados, apagados, por display, por táctil o por software.</textarea>
+                    </div>
+                    
+                    <h6 class="mb-3">Nota Legal</h6>
+                    <div class="mb-3">
+                        <textarea class="form-control" id="pdfLegal" rows="3">Esta factura se asimila en todos sus efectos a una letra de cambio de conformidad con el Art. 774 del código de comercio. Autorizo que en caso de incumplimiento de esta obligación sea reportado a las centrales de riesgo. Se cobrarán intereses por mora.</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="generateEditedPdf">Generar PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para edición de PDF -->
+<div class="modal fade" id="confirmEditPdfModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Confirmar acción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Desea editar el contenido del PDF antes de generarlo?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="noPdfEdit">No, generar PDF</button>
+                <button type="button" class="btn btn-success" id="yesPdfEdit">Sí, editar PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal para crear factura -->
 <div class="modal fade" id="addInvoiceModal" tabindex="-1" aria-labelledby="addInvoiceModalLabel" aria-hidden="true">
@@ -243,116 +341,9 @@
     </div>
 </div>
 </div>
-<!-- Modal para actualizar factura -->
-<div class="modal fade" id="updateInvoiceModal" tabindex="-1" aria-labelledby="updateInvoiceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #f0fdf4;">
-            <form id="updateInvoiceForm" method="POST" action="{{ url_for('edit_invoice') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" id="update_invoice_id" name="invoice_id">
 
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Actualizar Factura</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
 
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <!-- Datos generales de la factura -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="update_type" class="form-label">Tipo</label>
-                            <input type="text" class="form-control border-success" id="update_type" name="type" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="update_date" class="form-label">Fecha</label>
-                            <input type="datetime-local" class="form-control border-success" id="update_date" name="date" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="update_status" class="form-label">Estado</label>
-                            <select class="form-select border-success" id="update_status" name="status">
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Pagada">Pagada</option>
-                                <option value="Cancelada">Cancelada</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <hr>
-
-                    <!-- Agregar productos -->
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="update_imei" class="form-label">IMEI del Producto</label>
-                                <input type="text" class="form-control" id="update_imei" name="update_imei" placeholder="Ingrese IMEI" autocomplete="off" required>
-                            </div>
-                            <div id="update_imeiAlert" class="alert alert-danger d-none" role="alert">
-                                ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
-                            </div>
-                            <div class="col-md-6">
-                                <label for="update_product_name" class="form-label">Nombre Producto</label>
-                                <input type="text" class="form-control" id="update_product_name" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_storage" class="form-label">Memoria</label>
-                                <input type="text" class="form-control" id="update_storage" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_battery" class="form-label">Batería</label>
-                                <input type="text" class="form-control" id="update_battery" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_color" class="form-label">Color</label>
-                                <input type="text" class="form-control" id="update_color" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_units" class="form-label">Unidades Disponibles</label>
-                                <input type="text" class="form-control" id="update_units" readonly>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_quantity" class="form-label">Cantidad a Facturar</label>
-                                <input type="number" class="form-control" id="update_quantity" min="0" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="update_price" class="form-label">Precio</label>
-                                <input type="text" class="form-control" id="update_price" placeholder="Ingrese el precio">
-                            </div>
-                            <div class="col-md-12 text-end">
-                                <button type="button" class="btn btn-success" id="update_addProductButton">+ Agregar Producto</button>
-                            </div>
-                        </div>
-
-                        <!-- Tabla de productos -->
-                        <div class="table-responsive mt-4">
-                            <table class="table table-bordered table-hover table-sm shadow-sm rounded">
-                                <thead class="bg-success text-white text-center">
-                                    <tr>
-                                        <th>IMEI</th>
-                                        <th>Producto</th>
-                                        <th>Memoria</th>
-                                        <th>Batería</th>
-                                        <th>Color</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="update_productListBody">
-                                    <!-- Productos de la factura -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer" style="background-color: #d4edda;">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" class="btn btn-success">Guardar Cambios</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 
 
@@ -395,6 +386,112 @@
         </div>
     </div>
 </div>
+
+
+
+<!-- Modal para actualizar factura -->
+<div class="modal fade" id="updateInvoiceModal" tabindex="-1" aria-labelledby="updateInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f0fdf4;">
+            <form method="POST" action="{{ url_for('edit_invoiceAdmin') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="update_invoice_id" name="invoice_id">
+
+                <!-- Encabezado -->
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="updateInvoiceModalLabel">Actualizar Factura</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Cuerpo del modal -->
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="row g-3">
+                        <!-- Buscar IMEI -->
+                        <div class="col-md-6">
+                            <label for="update_imei" class="form-label">IMEI del Producto</label>
+                            <input type="text" class="form-control" id="update_imei" name="update_imei" placeholder="Ingrese IMEI" autocomplete="off">
+                        </div>
+                        <div id="update_imeiAlert" class="alert alert-danger d-none" role="alert">
+                            ⚠️ El producto no se encuentra en la bodega asociada al usuario o no existe.
+                        </div>
+                        <!-- Datos del producto -->
+                        <div class="col-md-6">
+                            <label for="update_product_name" class="form-label">Nombre Producto</label>
+                            <input type="text" class="form-control" id="update_product_name" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_storage" class="form-label">Memoria</label>
+                            <input type="text" class="form-control" id="update_storage" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_battery" class="form-label">Batería</label>
+                            <input type="text" class="form-control" id="update_battery" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="update_color" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_units" class="form-label">Unidades Disponibles</label>
+                            <input type="text" class="form-control" id="update_units" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_quantity" class="form-label">Cantidad a Facturar</label>
+                            <input type="number" class="form-control" id="update_quantity" min="1">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="update_price" class="form-label">Precio</label>
+                            <input type="text" class="form-control" id="update_price" placeholder="Ingrese el precio">
+                        </div>
+                        <div class="col-md-12 text-end">
+                            <button type="button" class="btn btn-success" id="updateProductButton">+ Agregar Producto</button>
+                        </div>                        
+                    </div>
+
+                    <!-- Tabla de productos -->
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered table-hover table-sm shadow-sm rounded">
+                            <thead class="bg-success text-white text-center">
+                                <tr>
+                                    <th>IMEI</th>
+                                    <th>Producto</th>
+                                    <th>Memoria</th>
+                                    <th>Batería</th>
+                                    <th>Color</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="update_productListBody">
+                                <!-- Productos se cargan dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Estado de la factura -->
+                    <div class="col-md-6 mt-3">
+                        <label for="update_status" class="form-label">Estado</label>
+                        <select class="form-select" id="update_status" name="status">
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Pagada">Pagada</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer" style="background-color: #d4edda;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-success" id="saveChangesButton">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
 
 
 

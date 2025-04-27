@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, Response, session, flash, jsonify, get_flashed_messages, send_file
 from config import Config
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
@@ -465,7 +466,7 @@ def update_status(imei):
         return jsonify({'success': False, 'message': str(e)}), 500
     
 
-@app.route('/get_invoice_details/<int:invoice_id>')
+@app.route('/get_invoice_details/<int:invoice_id>', methods=['GET'])
 @login_required
 def get_invoice_details(invoice_id):
     try:
@@ -484,6 +485,7 @@ def get_invoice_details(invoice_id):
         if not details:
             return jsonify({"message": f"La factura {invoice_id} no tiene productos asociados."}), 200
 
+        # Devuelve los productos asociados a la factura
         return jsonify([
             {
                 "imei": row["imei"],
@@ -497,6 +499,333 @@ def get_invoice_details(invoice_id):
     except Exception as e:
         print(f"Error al obtener detalles de la factura {invoice_id}: {str(e)}")
         return jsonify({"error": "Error en el servidor"}), 500
+
+
+
+
+
+
+# Ruta para obtener los datos de la factura para editar
+@app.route('/get_invoice_for_edit/<int:invoice_id>', methods=['GET'])
+@login_required
+def get_invoice_for_edit(invoice_id):
+    try:
+        invoice = ModelInvoice.get_invoice_by_id(db, invoice_id)
+
+        if not invoice:
+            return jsonify({"error": "Factura no encontrada"}), 404
+        
+        # Obtener los productos asociados a la factura
+        products = ModelInvoice.get_productos_by_factura(db, invoice_id)
+
+        # Asegúrate de que el cliente está siendo obtenido correctamente
+        print(f"Cliente de la factura {invoice_id}: {invoice.client}")
+
+        invoice_data = {
+            'invoice_id': invoice.invoice_id,
+            'type': invoice.type,
+            'document_number': invoice.document_number,
+            'date': invoice.date.strftime('%Y-%m-%dT%H:%M'),
+            'status': invoice.status,
+            'client': invoice.client,  # Asegúrate de que este valor esté correcto
+            'products': products
+        }
+
+        return jsonify(invoice_data)
+
+    except Exception as e:
+        print(f"Error al obtener la factura {invoice_id}: {str(e)}")
+        return jsonify({"error": "Error en el servidor"}), 500
+
+
+
+
+
+
+@app.route('/edit_invoice', methods=['POST'])
+def edit_invoice():
+    try:
+        print(f"📝 Datos del formulario de edición: {request.form}")
+        invoice_id = request.form.get('invoice_id')
+        status = request.form.get('status')
+        products_json = request.form.get('products')
+        products = json.loads(products_json) if products_json else []
+
+        with db.session.begin():  # Inicio de la transacción
+
+            # 1️⃣ Actualizar el estado de la factura
+            db.session.execute(
+                text("UPDATE invoices SET status = :status WHERE invoice_id = :invoice_id"),
+                {"status": status, "invoice_id": invoice_id}
+            )
+
+            # 2️⃣ Obtener productos actuales en la factura
+            current_products = db.session.execute(
+                text("""
+                    SELECT p.imei, idetail.quantity 
+                    FROM invoicedetail idetail 
+                    JOIN products p ON idetail.product_id = p.product_id 
+                    WHERE idetail.invoice_id = :invoice_id
+                """),
+                {"invoice_id": invoice_id}
+            ).fetchall()
+            current_products_dict = {row.imei: row.quantity for row in current_products}
+
+            new_imeis = [product["imei"] for product in products]
+            current_imeis = list(current_products_dict.keys())
+
+            # 3️⃣ Procesar productos eliminados (devolver stock y crear movimiento reverso)
+            deleted_imeis = list(set(current_imeis) - set(new_imeis))
+            for imei in deleted_imeis:
+                product_id = db.session.execute(
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": imei}
+                ).scalar()
+                deleted_quantity = current_products_dict[imei]
+
+                # Eliminar del invoicedetail
+                db.session.execute(
+                    text("DELETE FROM invoicedetail WHERE invoice_id = :invoice_id AND product_id = :product_id"),
+                    {"invoice_id": invoice_id, "product_id": product_id}
+                )
+
+                # Registrar movimiento de reverso (el movimiento se encarga de devolver stock)
+                movement_description = f"Reverso por eliminación de producto IMEI {imei} en edición de factura {invoice_id}"
+                movement_id = ModelMovement.create_movement(
+                    db=db,
+                    movement_type="reverso",
+                    origin_warehouse_id=current_user.warehouse_id,
+                    destination_warehouse_id=None,
+                    movement_description=movement_description,
+                    user_id=current_user.user_id,
+                    products=[{"imei": imei, "quantity": deleted_quantity}]
+                )
+                print(f"🔄 Movimiento de reverso creado ID: {movement_id}")
+
+            # 4️⃣ Procesar productos nuevos o actualizados
+            for product in products:
+                imei = product["imei"]
+                quantity = int(product["quantity"])
+                price = float(product["price"])
+
+                result = db.session.execute(
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": imei}
+                ).fetchone()
+                if not result:
+                    continue
+                product_id = result[0]
+
+                exists = db.session.execute(
+                    text("""SELECT 1 FROM invoicedetail 
+                            WHERE invoice_id = :invoice_id AND product_id = :product_id"""),
+                    {"invoice_id": invoice_id, "product_id": product_id}
+                ).fetchone()
+
+                if exists:
+                    # Si el producto ya está en la factura, actualizar solo el precio
+                    db.session.execute(
+                        text("""UPDATE invoicedetail 
+                                SET price = :price 
+                                WHERE invoice_id = :invoice_id AND product_id = :product_id"""),
+                        {"price": price, "invoice_id": invoice_id, "product_id": product_id}
+                    )
+                else:
+                    # Insertar producto nuevo en invoicedetail
+                    db.session.execute(
+                        text("""INSERT INTO invoicedetail (invoice_id, product_id, quantity, price) 
+                                VALUES (:invoice_id, :product_id, :quantity, :price)"""),
+                        {"invoice_id": invoice_id, "product_id": product_id, "quantity": quantity, "price": price}
+                    )
+                    # Registrar movimiento de venta (el movimiento se encarga de disminuir el stock)
+                    movement_description = f"Venta asociada a edición de factura {invoice_id} (producto nuevo agregado)"
+                    movement_id = ModelMovement.create_movement(
+                        db=db,
+                        movement_type="sale",
+                        origin_warehouse_id=current_user.warehouse_id,
+                        destination_warehouse_id=None,
+                        movement_description=movement_description,
+                        user_id=current_user.user_id,
+                        products=[{"imei": imei, "quantity": quantity}]
+                    )
+                    print(f"🚀 Movimiento de venta creado ID: {movement_id}")
+
+        flash('Factura y movimientos actualizados correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error al actualizar la factura: {e}")
+        flash('Ocurrió un error al actualizar la factura.', 'error')
+    return redirect(url_for('show_invoices'))
+
+
+@app.route('/edit_invoiceAdmin', methods=['POST'])
+def edit_invoiceAdmin():
+    try:
+        print(f"📝 Datos del formulario de edición: {request.form}")
+        invoice_id = request.form.get('invoice_id')
+        status = request.form.get('status')
+        products_json = request.form.get('products')
+        products = json.loads(products_json) if products_json else []
+
+        with db.session.begin():  # Inicio de la transacción
+
+            # 1️⃣ Actualizar el estado de la factura
+            db.session.execute(
+                text("UPDATE invoices SET status = :status WHERE invoice_id = :invoice_id"),
+                {"status": status, "invoice_id": invoice_id}
+            )
+
+            # 2️⃣ Obtener productos actuales en la factura
+            current_products = db.session.execute(
+                text("""
+                    SELECT p.imei, idetail.quantity 
+                    FROM invoicedetail idetail 
+                    JOIN products p ON idetail.product_id = p.product_id 
+                    WHERE idetail.invoice_id = :invoice_id
+                """),
+                {"invoice_id": invoice_id}
+            ).fetchall()
+            current_products_dict = {row.imei: row.quantity for row in current_products}
+
+            new_imeis = [product["imei"] for product in products]
+            current_imeis = list(current_products_dict.keys())
+
+            # 3️⃣ Procesar productos eliminados (devolver stock y crear movimiento reverso)
+            deleted_imeis = list(set(current_imeis) - set(new_imeis))
+            for imei in deleted_imeis:
+                product_id = db.session.execute(
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": imei}
+                ).scalar()
+                deleted_quantity = current_products_dict[imei]
+
+                # Eliminar del invoicedetail
+                db.session.execute(
+                    text("DELETE FROM invoicedetail WHERE invoice_id = :invoice_id AND product_id = :product_id"),
+                    {"invoice_id": invoice_id, "product_id": product_id}
+                )
+
+                # Registrar movimiento de reverso (el movimiento se encarga de devolver stock)
+                movement_description = f"Reverso por eliminación de producto IMEI {imei} en edición de factura {invoice_id}"
+                movement_id = ModelMovement.create_movement(
+                    db=db,
+                    movement_type="reverso",
+                    origin_warehouse_id=current_user.warehouse_id,
+                    destination_warehouse_id=None,
+                    movement_description=movement_description,
+                    user_id=current_user.user_id,
+                    products=[{"imei": imei, "quantity": deleted_quantity}]
+                )
+                print(f"🔄 Movimiento de reverso creado ID: {movement_id}")
+
+            # 4️⃣ Procesar productos nuevos o actualizados
+            for product in products:
+                imei = product["imei"]
+                quantity = int(product["quantity"])
+                price = float(product["price"])
+
+                result = db.session.execute(
+                    text("SELECT product_id FROM products WHERE imei = :imei"),
+                    {"imei": imei}
+                ).fetchone()
+                if not result:
+                    continue
+                product_id = result[0]
+
+                exists = db.session.execute(
+                    text("""SELECT 1 FROM invoicedetail 
+                            WHERE invoice_id = :invoice_id AND product_id = :product_id"""),
+                    {"invoice_id": invoice_id, "product_id": product_id}
+                ).fetchone()
+
+                if exists:
+                    # Si el producto ya está en la factura, actualizar solo el precio
+                    db.session.execute(
+                        text("""UPDATE invoicedetail 
+                                SET price = :price 
+                                WHERE invoice_id = :invoice_id AND product_id = :product_id"""),
+                        {"price": price, "invoice_id": invoice_id, "product_id": product_id}
+                    )
+                else:
+                    # Insertar producto nuevo en invoicedetail
+                    db.session.execute(
+                        text("""INSERT INTO invoicedetail (invoice_id, product_id, quantity, price) 
+                                VALUES (:invoice_id, :product_id, :quantity, :price)"""),
+                        {"invoice_id": invoice_id, "product_id": product_id, "quantity": quantity, "price": price}
+                    )
+                    # Registrar movimiento de venta (el movimiento se encarga de disminuir el stock)
+                    movement_description = f"Venta asociada a edición de factura {invoice_id} (producto nuevo agregado)"
+                    movement_id = ModelMovement.create_movement(
+                        db=db,
+                        movement_type="sale",
+                        origin_warehouse_id=current_user.warehouse_id,
+                        destination_warehouse_id=None,
+                        movement_description=movement_description,
+                        user_id=current_user.user_id,
+                        products=[{"imei": imei, "quantity": quantity}]
+                    )
+                    print(f"🚀 Movimiento de venta creado ID: {movement_id}")
+
+        flash('Factura y movimientos actualizados correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error al actualizar la factura: {e}")
+        flash('Ocurrió un error al actualizar la factura.', 'error')
+    return redirect(url_for('show_invoicesAdmin'))
+
+
+
+
+
+    
+    
+@app.route('/get_invoice_data/<int:invoice_id>')
+def get_invoice_data(invoice_id):
+    try:
+        # Obtener el estado de la factura
+        invoice = db.session.execute(
+            text("SELECT status FROM invoices WHERE invoice_id = :invoice_id"),
+            {"invoice_id": invoice_id}
+        ).fetchone()
+
+        if not invoice:
+            return jsonify({"error": "Factura no encontrada"})
+
+        # CORREGIDA: usar productname AS name
+        products = db.session.execute(
+            text("""
+                SELECT p.imei, p.productname AS name, p.storage, p.battery, p.color, idetail.quantity, idetail.price
+                FROM invoicedetail idetail
+                JOIN products p ON idetail.product_id = p.product_id
+                WHERE idetail.invoice_id = :invoice_id
+            """),
+            {"invoice_id": invoice_id}
+        ).fetchall()
+
+        product_list = []
+        for row in products:
+            product_list.append({
+                "imei": row.imei,
+                "name": row.name,  # Aquí sí debe quedar "name" porque lo pusiste en el AS
+                "storage": row.storage,
+                "battery": row.battery,
+                "color": row.color,
+                "quantity": row.quantity,
+                "price": row.price
+            })
+
+        return jsonify({
+            "status": invoice.status,
+            "products": product_list
+        })
+    except Exception as e:
+        print(f"❌ Error al obtener los datos de la factura: {e}")
+        return jsonify({"error": "Error interno del servidor"})
+
+
+
+
+
 
 
 
@@ -624,15 +953,6 @@ def show_invoicesAdmin():
 
 
 
-
-@app.route('/edit_invoice', methods=['POST'])
-def edit_invoice():
-    return redirect(url_for('show_invoices'))
-
-
-@app.route('/edit_invoiceAdmin', methods=['POST'])
-def edit_invoiceAdmin():
-    return redirect(url_for('show_invoicesAdmin'))
 
 
 
@@ -1455,25 +1775,21 @@ def get_product_by_imei(imei):
     try:
         print(f"📡 Solicitud recibida para IMEI: {imei}")
 
-        start_time = time.time()  # ⏱️ Medir tiempo de ejecución
+        start_time = time.time()
 
-        product = ModelProduct.get_product_imei(db, imei)
+        product_list = ModelProduct.get_product_imei(db, imei, current_user.warehouse_id)
 
-        if product:
-            product = product[0]
+        if product_list:
+            product = product_list[0] 
 
             response_data = {
                 "success": True,
-                "product": product,
+                "product": product,  
                 "current_user_warehouse_id": current_user.warehouse_id
             }
 
             print(f"✅ Producto encontrado en {time.time() - start_time:.4f} segundos")
-
-            # 🔹 Convertir la respuesta en JSON
             response = make_response(jsonify(response_data))
-
-            # 🔹 Evitar que el navegador almacene en caché la respuesta
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "-1"
@@ -1486,6 +1802,7 @@ def get_product_by_imei(imei):
     except Exception as e:
         print(f"❌ Error en la búsqueda del IMEI: {e}")
         return make_response(jsonify({"success": False, "message": str(e)}), 500)
+
 
 
 
@@ -1927,6 +2244,11 @@ def edit_product():
 
 
 
+
+
+
+
+
 @app.route('/movements/<string:imei>', methods=['GET'])
 def get_movements_by_imei(imei):
     try:
@@ -2140,17 +2462,17 @@ def download_invoice(factura_id):
         # Encabezados dentro del cuadro
         c.setFont("Helvetica-Bold", 8)
         c.drawString(55, y_start + 60, "SEÑOR(ES):")
-        c.drawString(220, y_start + 60, "DIRECCIÓN:")
+        c.drawString(220, y_start + 60, "CORREO:")
         c.drawString(350, y_start + 60, "TELÉFONO:")
-        c.drawString(470, y_start + 60, "CC:")
+        c.drawString(460, y_start + 60, "CC:")
 
         # Información del cliente en una sola línea dentro del cuadro
         y_row = y_start + 45
         c.setFont("Helvetica", 8)
         c.drawString(55, y_row + 4, factura.client)  # Cliente nombre
-        c.drawString(225, y_row + 4, "Colombia")  # Dirección
+        c.drawString(225, y_row + 4, "         ")  # correo
         c.drawString(355, y_row + 4, "         ")  # Teléfono
-        c.drawString(475, y_row + 4, factura.document_number) 
+        c.drawString(460, y_row + 4, factura.document_number) 
 
         # Fechas dentro del cuadro 
         y_start = y_row - 20
@@ -2158,9 +2480,9 @@ def download_invoice(factura_id):
         c.roundRect(50, y_start, 170, 20, 10, fill=1, stroke=0)
         c.roundRect(220, y_start, 120, 20, 10, fill=1, stroke=0)
         c.setFillColor(negro)
-        c.setFont("Helvetica-Bold", 9)
+        c.setFont("Helvetica-Bold", 8)
         c.drawString(55, y_start + 6, "FECHA DE EXPEDICIÓN")
-        c.drawString(225, y_start + 6, "FECHA DE VENCIMIENTO")
+        c.drawString(220, y_start + 6, "FECHA DE VENCIMIENTO")
 
         # Obtener la fecha actual
         fecha_actual = datetime.now().strftime("%Y-%m-%d")  # Formato: YYYY-MM-DD
@@ -2192,16 +2514,16 @@ def download_invoice(factura_id):
         c.drawString(300, y_tabla + 4, "Descuento")
         c.drawString(365, y_tabla + 4, "Impuesto")
         c.drawString(430, y_tabla + 4, "Total")
-        c.drawString(510, y_tabla + 4, "Código de Barras")
+        c.drawString(490, y_tabla + 4, "Código de Barras")
 
         # Contenedor de la tabla (solo borde exterior)
         y_row = y_tabla - 0
-        altura_tabla = 390
+        altura_tabla = 400
         c.rect(35, y_row - altura_tabla, width - 70, altura_tabla, fill=0, stroke=1)  # Ampliar el ancho total
 
 
         # Añadir productos
-        altura_fila = 40  # altura para cada fila de productos
+        altura_fila = 50  # altura para cada fila de productos
         total = 0
         for item in items:
             total_item = item["precio"] * item["cantidad"]
@@ -2216,7 +2538,6 @@ def download_invoice(factura_id):
             barcode_img = generate_barcode(imei_producto)
             img_reader = ImageReader(barcode_img)
 
-            # Dividir nombres largos en múltiples líneas
             nombre = item["nombre"]
             partes = [nombre[i:i+15] for i in range(0, len(nombre), 15)]
 
@@ -2231,11 +2552,14 @@ def download_invoice(factura_id):
             c.drawString(365, y_row - 10, f"${item['impuesto']:,}")
             c.drawString(425, y_row - 10, f"${total_item:,}")
 
-            # Reducir tamaño del código de barras 
-            barcode_width = 65
-            barcode_height = 25
-            barcode_x = 495  
-            c.drawImage(img_reader, barcode_x, y_row - 25, width=barcode_width, height=barcode_height)
+            barcode_width = 55
+            barcode_height = 15
+            barcode_x = 495
+            barcode_y = y_row - 17
+            c.drawImage(img_reader, barcode_x, barcode_y, width=barcode_width, height=barcode_height)
+
+            c.setFont("Helvetica", 6)
+            c.drawCentredString(barcode_x + barcode_width / 2, barcode_y - 5, imei_producto)
 
             y_row -= altura_fila
             total += total_item

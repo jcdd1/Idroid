@@ -495,8 +495,9 @@ class ModelProduct():
 
 
         
+
     @staticmethod
-    def get_product_imei(db, imei):
+    def get_product_imei(db, imei, warehouse_id):  # ✅ Se recibe warehouse_id como parámetro
         try:
             print(f" IMEI recibido (sin procesar): '{imei}'")
 
@@ -505,21 +506,32 @@ class ModelProduct():
             print(f" IMEI después de limpieza avanzada: '{imei}'")
 
             query = text("""
-                SELECT p.product_id, p.productname, p.storage, p.battery, p.color, p.units, ws.warehouse_id
+                SELECT 
+                    p.product_id, 
+                    p.productname, 
+                    p.storage, 
+                    p.battery, 
+                    p.color, 
+                    ws.units AS units,      -- ✅ Stock de la bodega específica
+                    ws.warehouse_id
                 FROM products p
-                LEFT JOIN warehousestock ws ON p.product_id = ws.product_id
+                JOIN warehousestock ws ON p.product_id = ws.product_id
                 WHERE TRIM(BOTH FROM p.imei) = :imei
+                  AND ws.warehouse_id = :warehouse_id  -- ✅ Filtra por la bodega del usuario
             """)
-            params = {'imei': imei}
+            params = {
+                'imei': imei,
+                'warehouse_id': warehouse_id
+            }
 
             result = db.session.execute(query, params).mappings().fetchall()
-
             print(f" Resultado de búsqueda para IMEI '{imei}': {result}")
 
             return [dict(row) for row in result] if result else []
         except Exception as e:
-            print(f" Error searching products: {e}")
+            print(f"❌ Error searching products: {e}")
             return []
+
 
 
     @staticmethod

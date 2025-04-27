@@ -77,7 +77,7 @@ function initializeInvoiceModal() {
     // Función para buscar los datos del producto por IMEI
     function fetchProductData() {
         const imei = imeiInput.value.trim();
-        if (imei.length < 5) {
+        if (imei.length < 1) {
             clearFields();
             return;
         }

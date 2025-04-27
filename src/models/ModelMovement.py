@@ -215,12 +215,15 @@ class ModelMovement:
 
     @staticmethod
     def create_movement(db, movement_type, origin_warehouse_id, destination_warehouse_id, movement_description, user_id, products):
-        """ 
-        Crea un movimiento y registra los detalles asegurando que product_id sea un INT válido 
+        """
+        Crea un movimiento y registra los detalles, asegurando que product_id sea un INT válido.
+        Ajustado para que en movimientos 'sale' y 'reverso' se use el mismo warehouse como destino.
+        Verifica el stock antes de disminuir.
         """
         try:
-            if movement_type == "sale":
-                destination_warehouse_id = origin_warehouse_id  
+            # ✅ Ajuste aquí: reverso y sale usan la misma bodega como destino
+            if movement_type in ("sale", "reverso"):
+                destination_warehouse_id = origin_warehouse_id
 
             # 🔹 Crear el movimiento
             movement_id = db.session.execute(
@@ -262,7 +265,7 @@ class ModelMovement:
 
             # 🔹 Registrar cada producto en `movementdetail`
             for product_data in products:
-                imei = product_data.get("imei")  
+                imei = product_data.get("imei")
                 units_to_move = int(product_data.get("quantity", 0))
 
                 if not imei or units_to_move <= 0:
@@ -277,11 +280,11 @@ class ModelMovement:
 
                 if not result:
                     print(f"⚠️ No se encontró un product_id para IMEI: {imei}, omitiendo...")
-                    continue  # Saltar este producto si no existe en la base de datos
+                    continue
 
-                product_id = result[0]  # Ahora product_id es un INT válido
+                product_id = result[0]
 
-                # 🔹 Insertar en `movementdetail` con el product_id correcto
+                # 🔹 Insertar en `movementdetail`
                 db.session.execute(
                     text("""
                     INSERT INTO movementdetail (
@@ -303,82 +306,77 @@ class ModelMovement:
                     }
                 )
 
-                # 🔹 Reducir stock en el almacén de origen (ahora en `warehousestock`)
-                db.session.execute(
-                    text("""
-                    UPDATE warehousestock 
-                    SET units = units - :units 
-                    WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
-                    """),
-                    {
-                        "product_id": product_id,
-                        "units": units_to_move,
-                        "origin_warehouse_id": origin_warehouse_id
-                    }
-                )
-
-                db.session.execute(
-                    text("""
-                    UPDATE products 
-                    SET units = units - :units 
-                    WHERE product_id = :product_id
-                    """),
-                    {
-                        "product_id": product_id,
-                        "units": units_to_move
-                    }
-                )
-
-                # 🔹 Si es transferencia, aumentar stock en el destino
-                if movement_type == "transfer":
-                    # Verificar si el producto ya existe en el almacén destino
-                    existing_product = db.session.execute(
-                        text("""
-                        SELECT product_id FROM warehousestock 
-                        WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
-                        """),
-                        {"product_id": product_id, "destination_warehouse_id": destination_warehouse_id}
+                # 🔹 Verificar stock suficiente antes de mover (solo para venta)
+                if movement_type == "sale":
+                    stock_check = db.session.execute(
+                        text("""SELECT units FROM warehousestock 
+                                WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id"""),
+                        {"product_id": product_id, "origin_warehouse_id": origin_warehouse_id}
                     ).fetchone()
 
-                    if existing_product:
-                        # Si ya existe en el destino, aumentar unidades
-                        db.session.execute(
-                            text("""
-                            UPDATE warehousestock 
-                            SET units = units + :units 
-                            WHERE product_id = :product_id AND warehouse_id = :destination_warehouse_id
-                            """),
-                            {
-                                "product_id": product_id,
-                                "units": units_to_move,
-                                "destination_warehouse_id": destination_warehouse_id
-                            }
-                        )
-                    else:
-                        # Si no existe, crear un nuevo registro en la bodega destino
-                        db.session.execute(
-                            text("""
-                            INSERT INTO warehousestock (
-                                warehouse_id, product_id, units
-                            ) VALUES (
-                                :warehouse_id, :product_id, :units
-                            )
-                            """),
-                            {
-                                "warehouse_id": destination_warehouse_id,
-                                "product_id": product_id,
-                                "units": units_to_move
-                            }
-                        )
+                    if not stock_check or stock_check.units < units_to_move:
+                        print(f"❌ Stock insuficiente para producto {product_id} en bodega {origin_warehouse_id}. Requiere {units_to_move}, disponible {stock_check.units if stock_check else 0}.")
+                        continue  # Evita mover si no hay stock suficiente
 
-            # 🔹 Confirmar los cambios
-            db.session.commit()
+                # 🔹 Ajustar stock global y por bodega
+                if movement_type == "sale":
+                    # Disminuir stock por venta
+                    db.session.execute(
+                        text("""
+                        UPDATE warehousestock 
+                        SET units = units - :units 
+                        WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                        """),
+                        {
+                            "product_id": product_id,
+                            "units": units_to_move,
+                            "origin_warehouse_id": origin_warehouse_id
+                        }
+                    )
+                    db.session.execute(
+                        text("""
+                        UPDATE products 
+                        SET units = units - :units 
+                        WHERE product_id = :product_id
+                        """),
+                        {
+                            "product_id": product_id,
+                            "units": units_to_move
+                        }
+                    )
+                elif movement_type == "reverso":
+                    # Aumentar stock por reverso
+                    db.session.execute(
+                        text("""
+                        UPDATE warehousestock 
+                        SET units = units + :units 
+                        WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                        """),
+                        {
+                            "product_id": product_id,
+                            "units": units_to_move,
+                            "origin_warehouse_id": origin_warehouse_id
+                        }
+                    )
+                    db.session.execute(
+                        text("""
+                        UPDATE products 
+                        SET units = units + :units 
+                        WHERE product_id = :product_id
+                        """),
+                        {
+                            "product_id": product_id,
+                            "units": units_to_move
+                        }
+                    )
+
             return movement_id
 
         except Exception as e:
-            db.session.rollback()
             print(f"❌ Error en create_movement: {e}")
             return None
+
+
 
 
 

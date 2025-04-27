@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from .entities.invoice import Invoice
 from .queries.sql_queries import SQLQueries
+from sqlalchemy.exc import SQLAlchemyError
 
 class ModelInvoice:
 
@@ -8,7 +9,7 @@ class ModelInvoice:
     def update_invoicedetail(db, invoice_id, product_id, quantity, price):
         try:
             query = text("""
-                UPDATE invoice_details
+                UPDATE invoicedetail
                 SET quantity = :quantity, price = :price
                 WHERE invoice_id = :invoice_id AND product_id = :product_id
             """)
@@ -33,26 +34,7 @@ class ModelInvoice:
             db.session.rollback()
             print(f"Error al actualizar el detalle de la factura: {e}")
             return False
-
-
-    @staticmethod
-    def get_invoice_by_id(db, invoice_id):
-        query = text("""
-            SELECT invoice_id, type, document_number, date, client
-            FROM invoices
-            WHERE invoice_id = :invoice_id
-        """)
-        row = db.session.execute(query, {"invoice_id": invoice_id}).fetchone()
-        if row:
-            return Invoice(
-                invoice_id=row[0],
-                type=row[1],
-                document_number=row[2],
-                date=row[3],
-                client=row[4]
-            )
-        return None
-    
+        
     @staticmethod
     def get_productos_by_factura(db, invoice_id):
         query = text("""
@@ -78,6 +60,118 @@ class ModelInvoice:
         ]
         
         return productos
+
+
+    @staticmethod
+    def get_invoice_by_id(db, invoice_id):
+        query = text("""
+            SELECT invoice_id, type, document_number, date, client
+            FROM invoices
+            WHERE invoice_id = :invoice_id
+        """)
+        row = db.session.execute(query, {"invoice_id": invoice_id}).fetchone()
+        if row:
+            return Invoice(
+                invoice_id=row[0],
+                type=row[1],
+                document_number=row[2],
+                date=row[3],
+                client=row[4]
+            )
+        return None
+
+
+   
+
+    @staticmethod
+    def update_invoicedetail(db, invoice_id, product_id, quantity, price):
+        try:
+            # Realizar la actualización utilizando SQLAlchemy
+            query = text("""
+                UPDATE invoicedetail
+                SET quantity = :quantity, price = :price
+                WHERE invoice_id = :invoice_id AND product_id = :product_id
+            """)
+            
+            params = {
+                "invoice_id": invoice_id,
+                "product_id": product_id,
+                "quantity": quantity,
+                "price": price
+            }
+
+            result = db.session.execute(query, params)
+
+            # Verificar si se actualizó alguna fila
+            if result.rowcount == 0:
+                raise ValueError("No se encontró el detalle de factura para actualizar.")
+
+            db.session.commit()
+            return True
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            print(f"Error de base de datos al actualizar el detalle de la factura: {str(e)}")
+            return False
+
+        except ValueError as e:
+            print(f"Error en los datos: {str(e)}")
+            return False
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error inesperado al actualizar el detalle de la factura: {str(e)}")
+            return False
+
+
+
+    @staticmethod
+    def get_invoice_by_id(db, invoice_id):
+        query = text("""
+            SELECT invoice_id, type, document_number, date, client
+            FROM invoices
+            WHERE invoice_id = :invoice_id
+        """)
+        row = db.session.execute(query, {"invoice_id": invoice_id}).fetchone()
+        if row:
+            return Invoice(
+                invoice_id=row[0],
+                type=row[1],
+                document_number=row[2],
+                date=row[3],
+                client=row[4]
+            )
+        return None
+    
+    @staticmethod
+    def get_productos_by_factura(db, invoice_id):
+        query = text("""
+            SELECT p.imei, p.productname, p.color, p.storage, p.battery, id.price, id.quantity
+            FROM products p
+            JOIN invoicedetail id ON p.product_id = id.product_id
+            WHERE id.invoice_id = :invoice_id
+        """)
+
+        result = db.session.execute(query, {"invoice_id": invoice_id}).fetchall()
+        
+        # Crear un diccionario de productos con la información de la factura
+        productos = [
+            {
+                "imei": row[0],
+                "product_name": row[1],
+                "color": row[2],  # Color del producto
+                "storage": row[3],  # Memoria del producto
+                "battery": row[4],  # Batería del producto
+                "price": row[5],  # Precio del producto
+                "quantity": row[6]  # Cantidad del producto
+            }
+            for row in result
+        ]
+        
+        return productos
+
+
+
 
 
 
@@ -217,22 +311,47 @@ class ModelInvoice:
 
 
     @staticmethod
-    def get_invoice_by_id(db, invoice_id):
+    def update_invoice(db, invoice):
         query = text("""
-            SELECT invoice_id, type, document_number, date, client
-            FROM invoices
-            WHERE invoice_id = :invoice_id
+            UPDATE invoices
+            SET type = :type,
+                document_number = :document_number,
+                date = :date,
+                client = :client
+            WHERE invoice_id = :invoice_id;
         """)
-        row = db.session.execute(query, {"invoice_id": invoice_id}).fetchone()
-        if row:
-            return Invoice(
-                invoice_id=row[0],
-                type=row[1],
-                document_number=row[2],
-                date=row[3],
-                client=row[4]
-            )
-        return None
+        
+        params = {
+            "type": invoice.type,
+            "document_number": invoice.document_number,
+            "date": invoice.date,
+            "client": invoice.client,
+            "invoice_id": invoice.invoice_id
+        }
+
+        try:
+            result = db.session.execute(query, params)
+            
+            # Verificar si se actualizó alguna fila
+            if result.rowcount == 0:
+                raise ValueError("No se encontró la factura con el ID proporcionado.")
+            
+            db.session.commit()
+            return True
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            print(f"Error de base de datos al actualizar la factura: {str(e)}")
+            return False
+
+        except ValueError as e:
+            print(f"Error en los datos: {str(e)}")
+            return False
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error inesperado al actualizar la factura: {str(e)}")
+            return False
 
     @staticmethod
     def update_invoice(db, invoice):
