@@ -2369,215 +2369,172 @@ def download_excel():
 @login_required
 def download_invoice(factura_id):
     try:
-        # Get edit data if posted
         edit_data = None
         if request.method == 'POST' and request.form.get('edit_data'):
             edit_data = json.loads(request.form.get('edit_data'))
 
-        # Obtener la factura usando la función get_invoice_by_id
         factura = ModelInvoice.get_invoice_by_id(db, factura_id)
         if not factura:
-            return "Factura no encontrada", 404  # Si no se encuentra la factura, devolver un error 404
+            return "Factura no encontrada", 404
 
-        # Obtener los detalles de la factura (productos, cantidades, precios)
         query = text("""
             SELECT p.imei, p.productname, id.quantity, id.price
-                FROM invoicedetail id
-                JOIN products p ON id.product_id = p.product_id
-                WHERE id.invoice_id = :invoice_id
-
+            FROM invoicedetail id
+            JOIN products p ON id.product_id = p.product_id
+            WHERE id.invoice_id = :invoice_id
         """)
         details = db.session.execute(query, {"invoice_id": factura_id}).mappings().fetchall()
-
-        # Si no se encuentran productos asociados a la factura
         if not details:
             return "La factura no tiene productos asociados", 404
 
-        # Arreglo para almacenar los productos en el formato deseado
         items = [
-            {
-                "nombre": row["productname"],
-                "imei": row["imei"],  
-                "unidad": "Unidad",
-                "precio": float(row["price"]),
-                "cantidad": int(row["quantity"]),
-                "descuento": 0,
-                "impuesto": 0,
-            }
+            {"nombre": row["productname"], "imei": row["imei"], "unidad": "Unidad",
+             "precio": float(row["price"]), "cantidad": int(row["quantity"]),
+             "descuento": 0, "impuesto": 0}
             for row in details
         ]
 
-
-        # Crear el PDF
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
 
-        # Colores
-        gris_claro = colors.Color(0.9, 0.9, 0.9)  # Para fondos de encabezados
-        gris_medio = colors.gray  # Para líneas y bordes
+        gris_claro = colors.Color(0.9, 0.9, 0.9)
         negro = colors.black
-
-        # Logo
         logo_path = os.path.join(app.root_path, 'static', 'images', 'Logo3.png')
-        try:
-            c.drawImage(logo_path, 50, height - 150, width=100, preserveAspectRatio=True, mask='auto')
-        except Exception as e:
-            print(f"Error al cargar el logo: {e}")
 
-        # Datos de negocio 
-        if edit_data and 'header_lines' in edit_data:
-            text_lines = edit_data['header_lines']
-        else:
-            text_lines = [
-                "CC Monterrey",
-                "Medellín, Antioquia",
-                "Tel: +573002619370",
-                "idroid.com.co",
-                "servicioalcliente@idroid.com.co"
-            ]
+        def draw_header():
+            try:
+                c.drawImage(logo_path, 50, height - 150, width=100, preserveAspectRatio=True, mask='auto')
+            except Exception as e:
+                print(f"Error al cargar el logo: {e}")
 
-        # Establecer la fuente
-        c.setFont("Helvetica", 8)
-        y_position = height - 35  # Posición inicial en y
-        for line in text_lines:
-            text_width = c.stringWidth(line, "Helvetica", 8)  # Calculamos el ancho del texto
-            x_position = (width - text_width) / 2  # Centrado horizontalmente
-            c.drawString(x_position, y_position, line)
-            y_position -= 10  # Espacio entre líneas de texto
+            text_lines = edit_data['header_lines'] if edit_data and 'header_lines' in edit_data else [
+                "CC Monterrey", "Medellín, Antioquia", "Tel: +573002619370",
+                "idroid.com.co", "servicioalcliente@idroid.com.co"]
 
-        # Información de la factura (columna derecha)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(width - 150, height - 45, f"No. {factura.invoice_id}")
-        c.setFont("Helvetica", 7)
-        c.drawString(width - 150, height - 55, "No responsable de IVA")
-        c.drawString(width - 150, height - 65, "Cuenta de cobro original")
+            c.setFont("Helvetica", 8)
+            y_position = height - 35
+            for line in text_lines:
+                text_width = c.stringWidth(line, "Helvetica", 8)
+                x_position = (width - text_width) / 2
+                c.drawString(x_position, y_position, line)
+                y_position -= 10
 
-        # Datos del cliente (dentro de un cuadro)
-        y_start = height - 155
-        c.setFillColor(gris_claro)
-        c.roundRect(40, y_start, width - 100, 75, 10, fill=1, stroke=0)  # Un solo cuadro para toda la información
-        c.setFillColor(negro)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(width - 150, height - 45, f"No. {factura.invoice_id}")
+            c.setFont("Helvetica", 7)
+            c.drawString(width - 150, height - 55, "No responsable de IVA")
+            c.drawString(width - 150, height - 65, "Cuenta de cobro original")
 
-        # Encabezados dentro del cuadro
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(55, y_start + 60, "SEÑOR(ES):")
-        c.drawString(220, y_start + 60, "CORREO:")
-        c.drawString(350, y_start + 60, "TELÉFONO:")
-        c.drawString(460, y_start + 60, "CC:")
+            y_start = height - 155
+            c.setFillColor(gris_claro)
+            c.roundRect(40, y_start, width - 100, 75, 10, fill=1, stroke=0)
+            c.setFillColor(negro)
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(55, y_start + 60, "SEÑOR(ES):")
+            c.drawString(220, y_start + 60, "CORREO:")
+            c.drawString(350, y_start + 60, "TELÉFONO:")
+            c.drawString(460, y_start + 60, "CC:")
 
-        # Información del cliente en una sola línea dentro del cuadro
-        y_row = y_start + 45
-        c.setFont("Helvetica", 8)
-        c.drawString(55, y_row + 4, factura.client)  # Cliente nombre
-        c.drawString(225, y_row + 4, "         ")  # correo
-        c.drawString(355, y_row + 4, "         ")  # Teléfono
-        c.drawString(460, y_row + 4, factura.document_number) 
+            y_row = y_start + 45
+            c.setFont("Helvetica", 8)
+            c.drawString(55, y_row + 4, factura.client)
+            c.drawString(225, y_row + 4, "         ")
+            c.drawString(355, y_row + 4, "         ")
+            c.drawString(460, y_row + 4, factura.document_number)
 
-        # Fechas dentro del cuadro 
-        y_start = y_row - 20
-        c.setFillColor(gris_claro)
-        c.roundRect(50, y_start, 170, 20, 10, fill=1, stroke=0)
-        c.roundRect(220, y_start, 120, 20, 10, fill=1, stroke=0)
-        c.setFillColor(negro)
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(55, y_start + 6, "FECHA DE EXPEDICIÓN")
-        c.drawString(220, y_start + 6, "FECHA DE VENCIMIENTO")
+            y_start = y_row - 20
+            c.setFillColor(gris_claro)
+            c.roundRect(50, y_start, 170, 20, 10, fill=1, stroke=0)
+            c.roundRect(220, y_start, 120, 20, 10, fill=1, stroke=0)
+            c.setFillColor(negro)
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(55, y_start + 6, "FECHA DE EXPEDICIÓN")
+            c.drawString(220, y_start + 6, "FECHA DE VENCIMIENTO")
+            fecha_actual = datetime.now().strftime("%Y-%m-%d")
+            fecha_vencimiento = datetime.now().strftime("%Y-%m-%d")
+            y_row = y_start - 10
+            c.setFont("Helvetica", 8)
+            c.drawString(55, y_row + 6, fecha_actual)
+            c.drawString(225, y_row + 6, fecha_vencimiento)
+            return y_row - 40
 
-        # Obtener la fecha actual
-        fecha_actual = datetime.now().strftime("%Y-%m-%d")  # Formato: YYYY-MM-DD
-        fecha_vencimiento = datetime.now().strftime("%Y-%m-%d")  
+        def draw_table_header(y_tabla):
+            col_widths = [45, 70, 55, 55, 55, 60, 100]
+            x_start = 35
+            for ancho in col_widths:
+                x_start += ancho
+                c.line(x_start, y_tabla, x_start, y_tabla + 10)
+            c.setFillColor(gris_claro)
+            c.rect(35, y_tabla, width - 70, 15, fill=1)
+            c.setFillColor(negro)
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(45, y_tabla + 4, "Ítem")
+            c.drawString(160, y_tabla + 4, "Precio")
+            c.drawString(230, y_tabla + 4, "Cantidad")
+            c.drawString(300, y_tabla + 4, "Descuento")
+            c.drawString(365, y_tabla + 4, "Impuesto")
+            c.drawString(430, y_tabla + 4, "Total")
+            c.drawString(500, y_tabla + 4, "Código de Barras")
 
-        y_row = y_start - 10
-        c.setFont("Helvetica", 8)
-        c.drawString(55, y_row + 6, fecha_actual)  # Fecha de expedición
-        c.drawString(225, y_row + 6, fecha_vencimiento)  # Fecha de vencimiento
+        y_tabla = draw_header()
+        draw_table_header(y_tabla)
+        y_row = y_tabla
 
-        # Tabla de productos
-        y_tabla = y_row - 40
-        # Redefinir los anchos de columna 
-        col_widths = [45, 55, 70, 55, 55, 55, 60, 100]  #
-        x_start = 35  
-        for ancho in col_widths:
-            x_start += ancho
-            c.line(x_start, y_tabla, x_start, y_tabla + 10)  # Líneas verticales
-
-        c.setFillColor(gris_claro)
-        c.rect(35, y_tabla, width - 70, 15, fill=1)  # Ampliar el rectángulo del encabezado
-
-        c.setFillColor(negro)
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(45, y_tabla + 4, "Ítem")
-        c.drawString(110, y_tabla + 4, "Unidad")
-        c.drawString(175, y_tabla + 4, "Precio")
-        c.drawString(245, y_tabla + 4, "Cantidad")
-        c.drawString(300, y_tabla + 4, "Descuento")
-        c.drawString(365, y_tabla + 4, "Impuesto")
-        c.drawString(430, y_tabla + 4, "Total")
-        c.drawString(490, y_tabla + 4, "Código de Barras")
-
-        # Contenedor de la tabla (solo borde exterior)
-        y_row = y_tabla - 0
-        altura_tabla = 400
-        c.rect(35, y_row - altura_tabla, width - 70, altura_tabla, fill=0, stroke=1)  # Ampliar el ancho total
-
-
-        # Añadir productos
-        altura_fila = 50  # altura para cada fila de productos
         total = 0
-        for item in items:
-            total_item = item["precio"] * item["cantidad"]
+        altura_fila = 50
+        items_por_pagina = 8
+        item_count = 0
 
-            # Verificar que el IMEI esté presente
+        for idx, item in enumerate(items):
+            total_item = item["precio"] * item["cantidad"]
             imei_producto = item.get("imei")
             if not imei_producto:
-                print(f"Error: El producto no tiene IMEI. Producto: {item['nombre']}")
                 continue
 
-            # Generar el código de barras para cada producto (usando el IMEI real)
             barcode_img = generate_barcode(imei_producto)
             img_reader = ImageReader(barcode_img)
 
             nombre = item["nombre"]
-            partes = [nombre[i:i+15] for i in range(0, len(nombre), 15)]
+            partes = [nombre[i:i + 15] for i in range(0, len(nombre), 15)]
 
-            c.setFont("Helvetica", 7)
+            c.setFont("Helvetica", 8)
             for i, parte in enumerate(partes):
                 c.drawString(40, y_row - 10 - (i * 10), parte)
 
-            c.drawString(105, y_row - 10, str(item["unidad"]))
-            c.drawString(170, y_row - 10, f"${item['precio']:,}")
-            c.drawString(245, y_row - 10, str(item["cantidad"]))
+            c.drawString(160, y_row - 10, f"${item['precio']:,}")
+            c.drawString(230, y_row - 10, str(item["cantidad"]))
             c.drawString(300, y_row - 10, f"${item['descuento']:,}")
             c.drawString(365, y_row - 10, f"${item['impuesto']:,}")
-            c.drawString(425, y_row - 10, f"${total_item:,}")
+            c.drawString(420, y_row - 10, f"${total_item:,}")
 
-            barcode_width = 55
-            barcode_height = 15
-            barcode_x = 495
-            barcode_y = y_row - 17
+            barcode_width = 100
+            barcode_height = 30
+            barcode_x = 475
+            barcode_y = y_row - 32
             c.drawImage(img_reader, barcode_x, barcode_y, width=barcode_width, height=barcode_height)
-
-            c.setFont("Helvetica", 6)
-            c.drawCentredString(barcode_x + barcode_width / 2, barcode_y - 5, imei_producto)
+            c.drawCentredString(barcode_x + barcode_width / 2, barcode_y - 8, imei_producto)
 
             y_row -= altura_fila
             total += total_item
+            item_count += 1
 
+            if item_count == items_por_pagina and idx != len(items) - 1:
+                c.showPage()
+                y_tabla = draw_header()
+                draw_table_header(y_tabla)
+                y_row = y_tabla
+                item_count = 0
 
-        # Coordenada después de la tabla
-        y_info = y_tabla - altura_tabla - 20
+        # Total en letras
+        total_en_letras = num2words(total, lang='es').upper() + " PESOS"
+        y_info = y_row - 20
         c.setFont("Helvetica", 8)
         c.drawString(50, y_info, "Moneda: COP")
-        c.drawString(50, y_info - 10, f"Fecha de expedición: {fecha_actual}")
-
+        c.drawString(50, y_info - 10, f"Fecha de expedición: {datetime.now().strftime('%Y-%m-%d')}")
         c.drawString(50, y_info - 20, "Forma de pago: Contado")
         c.drawString(50, y_info - 30, "Medio de pago: Efectivo")
 
-        # Convertir el total en letras
-        total_en_letras = num2words(total, lang='es').upper() + " PESOS"
-
-        # Total en letras
         y_letras = y_info - 60
         c.setFillColor(gris_claro)
         c.rect(50, y_letras, width - 100, 15, fill=1, stroke=0)
@@ -2585,95 +2542,79 @@ def download_invoice(factura_id):
         c.setFont("Helvetica", 8)
         c.drawString(55, y_letras + 4, total_en_letras)
 
-        # Garantía 
-        if edit_data and 'warranty_text' in edit_data:
-            warranty_text = edit_data['warranty_text']
-        else:
-            warranty_text = "La reparación del producto no genera costo siempre y cuando esté dentro del periodo de garantía y cumpla con los términos señalados dentro de la misma. *No se da garantía por humedades, No aplica la garantía por bloqueos por no registro, No tienen garantía equipos golpeados, apagados, por display, por táctil o por software."
+        warranty_text = edit_data['warranty_text'] if edit_data and 'warranty_text' in edit_data else (
+            "La reparación del producto no genera costo siempre y cuando esté dentro del periodo de garantía "
+            "y cumpla con los términos señalados dentro de la misma. *No se da garantía por humedades, "
+            "no aplica la garantía por bloqueos por no registro, no tienen garantía equipos golpeados, apagados, "
+            "por display, por táctil o por software.")
 
-        # Dividir el texto de garantía en múltiples líneas (máximo 100 caracteres por línea)
         warranty_lines = []
         words = warranty_text.split()
         current_line = ""
-
         for word in words:
             if len(current_line + " " + word) <= 100:
                 current_line += " " + word if current_line else word
             else:
                 warranty_lines.append(current_line)
                 current_line = word
-
-        if current_line:  # Añadir la última línea
+        if current_line:
             warranty_lines.append(current_line)
 
-        # Dibujar texto de garantía
         y_garantia = y_letras - 10
         c.setFont("Helvetica", 7)
         for i, line in enumerate(warranty_lines):
             c.drawString(50, y_garantia - (i * 8), line.strip())
 
-        # Ajustar posición después de la garantía
         y_after_warranty = y_garantia - (len(warranty_lines) * 8) - 5
 
-        # Subtotal y total
         c.setFont("Helvetica-Bold", 9)
         c.drawString(420, y_after_warranty - -35, "Subtotal:")
         c.drawString(490, y_after_warranty - -35, f"${total:,}")
-
         c.drawString(420, y_after_warranty - -25, "Total:")
         c.drawString(490, y_after_warranty - -25, f"${total:,}")
-
         c.drawString(420, y_after_warranty - -15, "Total de Items:")
         c.drawString(500, y_after_warranty - -15, f"{len(items)}")
 
-        # Nota legal (usando el texto editado si existe)
-        if edit_data and 'legal_text' in edit_data:
-            legal_text = edit_data['legal_text']
-        else:
-            legal_text = "Esta factura se asimila en todos sus efectos a una letra de cambio de conformidad con el Art. 774 del código de comercio. Autorizo que en caso de incumplimiento de esta obligación sea reportado a las centrales de riesgo. Se cobrarán intereses por mora."
+        legal_text = edit_data['legal_text'] if edit_data and 'legal_text' in edit_data else (
+            "Esta factura se asimila en todos sus efectos a una letra de cambio de conformidad con el Art. 774 del código de comercio. "
+            "Autorizo que en caso de incumplimiento de esta obligación sea reportado a las centrales de riesgo. "
+            "Se cobrarán intereses por mora.")
 
-        # Dividir el texto legal en múltiples líneas (máximo 100 caracteres por línea)
         legal_lines = []
         words = legal_text.split()
         current_line = ""
-
         for word in words:
             if len(current_line + " " + word) <= 100:
                 current_line += " " + word if current_line else word
             else:
                 legal_lines.append(current_line)
                 current_line = word
-
-        if current_line:  # Añadir la última línea
+        if current_line:
             legal_lines.append(current_line)
 
-        # Dibujar texto legal
         y_legal = y_after_warranty - 0
         c.setFont("Helvetica", 7)
         for i, line in enumerate(legal_lines):
             c.drawString(50, y_legal - (i * 8), line.strip())
 
-        # Ajustar posición después del texto legal
         y_after_legal = y_legal - (len(legal_lines) * 8) - 5
 
-        # Pie de página: Elaborado por / firma - más cerca del final
         y_firma = y_after_legal - 20
         c.setFont("Helvetica-Bold", 8)
         c.drawString(50, y_firma, "ELABORADO POR")
         c.drawString(350, y_firma, "ACEPTADA, FIRMA Y/O SELLO Y FECHA")
-
-        c.line(50, y_firma - 30, 250, y_firma - 30)  # Línea para firma
-        c.line(350, y_firma - 30, 550, y_firma - 30)  # Línea para firma
+        c.line(50, y_firma - 30, 250, y_firma - 30)
+        c.line(350, y_firma - 30, 550, y_firma - 30)
 
         c.showPage()
         c.save()
-
         buffer.seek(0)
         return send_file(buffer, as_attachment=True, download_name=f"factura_{factura_id}.pdf", mimetype='application/pdf')
 
     except Exception as e:
         print(f"Error al generar el PDF de la factura {factura_id}: {str(e)}")
         return jsonify({"error": "Error al generar el PDF. Intente nuevamente más tarde."}), 500
+
 
 
 
