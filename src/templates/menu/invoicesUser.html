@@ -123,8 +123,9 @@
 </div>
 
 <!-- Anuncio de Confirmación -->
-{% if get_flashed_messages(with_categories=true) %}
-    {% for category, message in get_flashed_messages() %}
+{% set messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, message in messages %}
         {% if category == 'info' %}
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 <strong>{{ message }}</strong>
