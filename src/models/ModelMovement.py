@@ -218,7 +218,7 @@ class ModelMovement:
         """
         Crea un movimiento y registra los detalles, asegurando que product_id sea un INT válido.
         Ajustado para que en movimientos 'sale' y 'reverso' se use el mismo warehouse como destino.
-        Verifica el stock antes de disminuir.
+        Verifica el stock antes de disminuir y crea entrada de warehousestock si no existe en reverso.
         """
         try:
             # ✅ Ajuste aquí: reverso y sale usan la misma bodega como destino
@@ -344,20 +344,47 @@ class ModelMovement:
                             "units": units_to_move
                         }
                     )
+
                 elif movement_type == "reverso":
-                    # Aumentar stock por reverso
-                    db.session.execute(
-                        text("""
-                        UPDATE warehousestock 
-                        SET units = units + :units 
-                        WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
-                        """),
+                    # 🔄 Verificar si existe entrada en stock por bodega
+                    stock_entry = db.session.execute(
+                        text("""SELECT 1 FROM warehousestock 
+                                WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id"""),
                         {
                             "product_id": product_id,
-                            "units": units_to_move,
                             "origin_warehouse_id": origin_warehouse_id
                         }
-                    )
+                    ).fetchone()
+
+                    if stock_entry:
+                        # Aumentar stock existente
+                        db.session.execute(
+                            text("""
+                            UPDATE warehousestock 
+                            SET units = units + :units 
+                            WHERE product_id = :product_id AND warehouse_id = :origin_warehouse_id
+                            """),
+                            {
+                                "product_id": product_id,
+                                "units": units_to_move,
+                                "origin_warehouse_id": origin_warehouse_id
+                            }
+                        )
+                    else:
+                        # Crear nueva entrada si no existe
+                        db.session.execute(
+                            text("""
+                            INSERT INTO warehousestock (product_id, warehouse_id, units)
+                            VALUES (:product_id, :origin_warehouse_id, :units)
+                            """),
+                            {
+                                "product_id": product_id,
+                                "origin_warehouse_id": origin_warehouse_id,
+                                "units": units_to_move
+                            }
+                        )
+
+                    # Aumentar stock global
                     db.session.execute(
                         text("""
                         UPDATE products 
@@ -369,12 +396,14 @@ class ModelMovement:
                             "units": units_to_move
                         }
                     )
+                    print(f"✅ Stock devuelto: Producto {product_id}, +{units_to_move} unidades")
 
             return movement_id
 
         except Exception as e:
             print(f"❌ Error en create_movement: {e}")
             return None
+
 
 
 
