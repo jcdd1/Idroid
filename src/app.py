@@ -537,11 +537,6 @@ def get_invoice_for_edit(invoice_id):
         print(f"Error al obtener la factura {invoice_id}: {str(e)}")
         return jsonify({"error": "Error en el servidor"}), 500
 
-
-
-
-
-
 @app.route('/edit_invoice', methods=['POST'])
 def edit_invoice():
     try:
@@ -868,10 +863,6 @@ def show_invoicesUser():
     )
 
 
-
-
-
-
 @app.route('/invoices', methods=['GET'])
 @login_required
 def show_invoices():
@@ -894,15 +885,15 @@ def show_invoices():
             db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
         )
     else:
-        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        invoices = ModelInvoice.get_invoices_paginated(db)
         total = ModelInvoice.count_invoices(db)
 
     total_pages = (total + per_page - 1) // per_page
     print(f"📊 Total de facturas: {total}, Total de páginas: {total_pages}, Página actual: {page}")
-
+    invoices_dict = [inv.to_dict() for inv in invoices]
     return render_template(
         'menu/invoices.html',
-        invoices=invoices,
+        invoices=invoices_dict,
         page=page,
         total_pages=total_pages,
         document_number=document_number,
@@ -2334,6 +2325,7 @@ def carga_masiva():
     return jsonify({"error": "❌ Formato de archivo no permitido"}), 400
 
 @app.route('/download_excel', methods=['POST'])
+@login_required
 def download_excel():
     # Obtener los productos desde el formulario
     products_json = request.form.get('products')
@@ -2364,6 +2356,39 @@ def download_excel():
     except json.JSONDecodeError as e:
         return f"Error al procesar JSON: {e}", 400
     
+
+@app.route('/download_excel_invoices', methods=['POST'])
+@login_required
+def download_excel_invoices():
+    # Obtener los productos desde el formulario
+    invoices_json = request.form.get('invoices')
+
+    if not invoices_json:
+        return "No se recibieron productos", 400
+
+    try:
+        # Convertir la cadena JSON en una lista de Python
+        invoices = json.loads(invoices_json)
+
+        # Crear un DataFrame con los datos
+        df = pd.DataFrame(invoices)
+
+        # Crear la respuesta HTTP con el archivo Excel
+        response = Response()
+        response.status_code = 200
+        response.mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        response.headers["Content-Disposition"] = "attachment; filename=invoices.xlsx"
+
+        # Escribir el DataFrame directamente en la respuesta
+        with pd.ExcelWriter(response.stream, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="invoices")
+
+        return response
+
+    except json.JSONDecodeError as e:
+        return f"Error al procesar JSON: {e}", 400
+
+
 
 @app.route('/download_invoice/<int:factura_id>', methods=['GET', 'POST'])
 @login_required

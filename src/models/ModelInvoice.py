@@ -171,10 +171,6 @@ class ModelInvoice:
         return productos
 
 
-
-
-
-
     @staticmethod
     def get_invoices_active(db):
         query = text(SQLQueries.get_invoices_active_query())
@@ -191,15 +187,14 @@ class ModelInvoice:
 
 
     @staticmethod
-    def get_invoices_paginated(db, limit, offset):
+    def get_invoices_paginated(db):
         query = text("""
             SELECT 
                 *
             FROM invoices
-            ORDER BY invoice_id DESC
-            LIMIT :limit OFFSET :offset;
+            ORDER BY invoice_id ASC
         """)
-        result = db.session.execute(query, {"limit": limit, "offset": offset}).fetchall()
+        result = db.session.execute(query).fetchall()
         
         return [
             Invoice(
@@ -250,12 +245,8 @@ class ModelInvoice:
                 (SELECT COUNT(*) FROM filtered_invoices) AS total_count,
                 fi.*
             FROM filtered_invoices fi
-            ORDER BY invoice_id ASC
-            LIMIT :limit OFFSET :offset;
+            ORDER BY invoice_id ASC;
         """
-        
-            params["limit"] = limit
-            params["offset"] = offset
 
             print(f"🛠 SQL Generado: {query}")
             print(f"📊 Parámetros: {params}")

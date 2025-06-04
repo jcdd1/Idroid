@@ -5,6 +5,30 @@
 <script src="{{ url_for('static', filename='js/ScriptInvoice.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptInvoiceDetail.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ScriptPdfEdit.js') }}"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#tabla-invoices').DataTable({
+            "ordering": true,  // Habilita ordenamiento
+            "paging": true,    // Habilita paginación
+            "searching": false, // Habilita la barra de búsqueda
+            "columnDefs": [
+                { "orderable": false, "targets": -1 }  // Desactiva el orden en la última columna (Acciones)
+            ],
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.12.1/i18n/Spanish.json"
+            }
+        });
+    });
+</script>
+<!-- jQuery primero -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css">
+
+<!-- DataTables JS (debe ir después de jQuery) -->
+<script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
 {% endblock %}
 
 {% block dynamicContent %}
@@ -61,7 +85,7 @@
 
 <!-- Tabla de facturas -->
 <div class="table-responsive mt-4">
-    <table class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
+    <table id = "tabla-invoices"class="table table-striped table-bordered table-hover table-sm shadow-sm rounded">
         <thead class="bg-success text-white text-center">
             <tr>
                 <th>ID</th>
@@ -109,18 +133,6 @@
     </table>
 </div>
 
-<!-- Paginación -->
-<div class="d-flex justify-content-between align-items-center mt-4">
-    {% if page > 1 %}
-        <a href="{{ url_for('show_invoicesUser', page=page-1) }}" class="btn btn-outline-success">Anterior</a>
-    {% endif %}
-
-    <span class="text-success">Página {{ page }} de {{ total_pages }}</span>
-
-    {% if page < total_pages %}
-        <a href="{{ url_for('show_invoicesUser', page=page+1) }}" class="btn btn-outline-success">Siguiente</a>
-    {% endif %}
-</div>
 
 <!-- Anuncio de Confirmación -->
 {% set messages = get_flashed_messages(with_categories=true) %}
