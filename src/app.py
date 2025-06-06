@@ -846,7 +846,7 @@ def show_invoicesUser():
             db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
         )
     else:
-        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        invoices = ModelInvoice.get_invoices_paginated(db)
         total = ModelInvoice.count_invoices(db)
 
     total_pages = (total + per_page - 1) // per_page
@@ -925,7 +925,7 @@ def show_invoicesAdmin():
             db, document_number=document_number, client_name=client_name, invoice_type=invoice_type, status=status, limit=per_page, offset=offset
         )
     else:
-        invoices = ModelInvoice.get_invoices_paginated(db, limit=per_page, offset=offset)
+        invoices = ModelInvoice.get_invoices_paginated(db)
         total = ModelInvoice.count_invoices(db)
 
     total_pages = (total + per_page - 1) // per_page
